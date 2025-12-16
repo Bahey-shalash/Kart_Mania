@@ -1,0 +1,37 @@
+{
+    "tasks": [
+        {
+            "label": "Compile NDS project",
+            "type": "shell",
+            "osx": {"command": "make"},
+            "linux": {"command": "make"},
+            "windows": {"command": "C:\\devkitPro\\msys2\\usr\\bin\\make.exe"},
+            "options": {
+                "env": {
+                    "DEVKITARM": "/opt/devkitpro/devkitARM",
+                    "DEVKITPRO": "/opt/devkitpro"
+                },
+            },
+            "args": [],
+            "group": "build",
+            "detail": "Compile NDS project"
+        },
+        {
+            "label": "Clean NDS project",
+            "type": "shell",
+            "osx": {"command": "make"},
+            "linux": {"command": "make"},
+            "windows": {"command": "C:\\devkitPro\\msys2\\usr\\bin\\make.exe"},
+            "options": {
+                "env": {
+                    "DEVKITARM": "/opt/devkitpro/devkitARM",
+                    "DEVKITPRO": "/opt/devkitpro"
+                },
+            },
+            "args": ["clean"],
+            "group": "build",
+            "detail": "Clean NDS project"
+        }
+    ],
+    "version": "2.0.0"
+}

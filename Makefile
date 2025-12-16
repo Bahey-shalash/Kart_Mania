@@ -18,17 +18,17 @@ include $(DEVKITARM)/ds_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(shell basename $(CURDIR))
 BUILD		:=	build
-SOURCES		:=	source
-DATA		:=  
+SOURCES 	:= 	$(shell [ -d source ] && find source -type d) # source folder + all directories inside it
+DATA		:=
 INCLUDES	:=	include
-GRAPHICS	:=	data
-AUDIO       :=  audio
-PRECOMPILED := precompiled
+GRAPHICS	:= 	data
+AUDIO       := 	audio
+PRECOMPILED := 	precompiled
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH	:=	-mthumb -mthumb-interwork
+ARCH	:=	-mthumb-interwork
 
 CFLAGS	:=	-g -Wall -O0\
  		-march=armv5te -mtune=arm946e-s -fomit-frame-pointer\
@@ -44,24 +44,25 @@ LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:= -lnds9 -lmm9 -lm
- 
- 
+LIBS	:= -lfat -lmm9 -ldswifi9 -lnds9 -lm
+
+
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
 LIBDIRS	:=	$(LIBNDS)
- 
+
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
 # rules for different file extensions
 #---------------------------------------------------------------------------------
 ifneq ($(BUILD),$(notdir $(CURDIR)))
 #---------------------------------------------------------------------------------
- 
-export OUTPUT	:=	$(CURDIR)/$(TARGET)
- 
+
+export OUTPUT 		:= $(CURDIR)/$(BUILD)/$(TARGET)
+export OUTPUT_NDS 	:= $(CURDIR)/$(TARGET)
+
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 					$(foreach dir,$(DATA),$(CURDIR)/$(dir)) \
 					$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir))
@@ -71,13 +72,19 @@ export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-BINFILES	:=	$(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*))) soundbank.bin
+BINFILES 	:=  $(foreach dir,$(DATA),$(notdir $(wildcard $(dir)/*.*))) $(if $(wildcard $(AUDIO)/*.*),soundbank.bin)
 PNGFILES	:=	$(foreach dir,$(GRAPHICS),$(notdir $(wildcard $(dir)/*.png)))
-PRECFILES	:=	$(foreach dir,$(PRECOMPILED),$(notdir $(wildcard $(dir)/*.o)))	
+GRITFILES	:=	$(foreach dir,$(GRAPHICS),$(notdir $(wildcard $(dir)/*.grit)))
+PRECFILES	:=	$(foreach dir,$(PRECOMPILED),$(notdir $(wildcard $(dir)/*.o)))
+
+# Keep only PNG files that have a grit file
+BASES_PNG := $(basename $(PNGFILES))
+BASES_GRIT := $(basename $(GRITFILES))
+PNGFILES := $(foreach base,$(BASES_PNG),$(if $(filter $(base),$(BASES_GRIT)),$(base).png))
 
 # build audio file list, include full path
 export AUDIOFILES	:=	$(foreach dir,$(notdir $(wildcard $(AUDIO)/*.*)),$(CURDIR)/$(AUDIO)/$(dir))
- 
+
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C
 #---------------------------------------------------------------------------------
@@ -95,42 +102,62 @@ endif
 export OFILES	:=	$(addsuffix .o,$(BINFILES)) \
 					$(PNGFILES:.png=.o) \
 					$(CPPFILES:.cpp=.o) $(CFILES:.c=.o) $(SFILES:.s=.o)\
-					$(PRECFILES)					
- 
+					$(PRECFILES)
+
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 					-I$(CURDIR)/$(BUILD)
- 
+
 export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
- 
+
 .PHONY: $(BUILD) clean
- 
+
 #---------------------------------------------------------------------------------
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
- 
+
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
-	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).arm9 $(TARGET).ds.gba 
- 
- 
+	@rm -fr $(BUILD) $(TARGET).elf $(TARGET).nds $(TARGET).ds.gba
+
+
+#---------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------
 else
- 
-DEPENDS	:=	$(OFILES:.o=.d) precompiled
- 
+
+DEPENDS := $(OFILES:.o=.d) precompiled
+
 #---------------------------------------------------------------------------------
 # main targets
 #---------------------------------------------------------------------------------
-$(OUTPUT).nds	: 	$(OUTPUT).arm9
-$(OUTPUT).arm9	:	$(OUTPUT).elf
-$(OUTPUT).elf	:	$(OFILES)
- 
+# $(LD) $(LDFLAGS) $(OFILES) $(LIBPATHS) $(LIBS) -o $(OUTPUT).nds
+# @mv $(OUTPUT).nds $(OUTPUT_NDS).nds
+
+$(OUTPUT).nds 	: $(OUTPUT).elf
+
+# Rules to compile .cpp and .c files (we need g++ for mixed c/c++ projects)
+%.o: %.cpp
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+%.o: %.c
+	$(LD) -c $(CFLAGS) $< -o $@
+
+$(OUTPUT).elf : $(OFILES)
+	@echo "Linking..."
+	$(LD) $(LDFLAGS) -Wl,-Map,$(OUTPUT).map $(OFILES) $(LIBPATHS) $(LIBS) -o $@
+	@echo "Creating disassembly..."
+	@arm-none-eabi-objdump -D $(OUTPUT).elf > $(OUTPUT).s
+
+# Adjust the clean rule:
+clean:
+	@echo clean ...
+	@rm -fr $(BUILD) $(OUTPUT).nds $(OUTPUT).elf $(OUTPUT).s
+
 #---------------------------------------------------------------------------------
-%.bin.o	:	%.bin
+%.bin.o : %.bin
 #---------------------------------------------------------------------------------
 	@echo $(notdir $<)
 	@$(bin2o)
@@ -138,9 +165,10 @@ $(OUTPUT).elf	:	$(OFILES)
 #---------------------------------------------------------------------------------
 # Copying precompiled code
 #---------------------------------------------------------------------------------
-precompiled: 
-	@ cp $(CURDIR)/../$(PRECOMPILED)/* .
-
+precompiled:
+	@ if [ -d $(CURDIR)/../$(PRECOMPILED) ] && [ "$(wildcard $(CURDIR)/../$(PRECOMPILED)/*)" != "" ]; then \
+    	cp $(CURDIR)/../$(PRECOMPILED)/* .; \
+  	fi
 
 #---------------------------------------------------------------------------------
 # rule to build soundbank from music files
@@ -150,12 +178,12 @@ soundbank.bin : $(AUDIOFILES)
 	@mmutil $^ -osoundbank.bin -hsoundbank.h -d
 
 #---------------------------------------------------------------------------------
-%.s %.h	: %.png %.grit
+%.s %.h : %.png %.grit
 #---------------------------------------------------------------------------------
 	grit $< -fts -o$*
 
 -include $(DEPENDS)
- 
+
 #---------------------------------------------------------------------------------------
 endif
 #---------------------------------------------------------------------------------------

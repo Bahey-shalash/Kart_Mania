@@ -1,0 +1,47 @@
+{
+    "configurations": [
+
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/${workspaceFolderBasename}.elf",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+
+            "osx": {
+                "miDebuggerPath": "/opt/devkitpro/devkitARM/bin/arm-none-eabi-gdb",
+            },
+
+            "linux": {
+                "debugServerPath": "/usr/games/desmume-cli",
+                "debugServerArgs": "--arm9gdb 20000 --arm7gdb 20001 --load-type=1 ${workspaceFolder}/build/${workspaceFolderBasename}.nds",
+                "serverStarted": ".*",
+                "filterStdout": true,
+                "filterStderr": true,
+
+                "miDebuggerPath": "/opt/devkitpro/devkitARM/bin/arm-none-eabi-gdb",
+                "preLaunchTask": "Compile NDS project"
+            },
+
+            "windows": {
+                "miDebuggerPath": "C:\\devkitPro\\devkitARM\\bin\\arm-none-eabi-gdb.exe",
+            },
+
+            "miDebuggerServerAddress": "localhost:20000",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+
+        },
+    ],
+    "version": "2.0.0"
+}

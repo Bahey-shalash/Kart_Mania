@@ -1,0 +1,68 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:\\devkitPro\\libnds\\include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "ARM9",
+                "ARM7"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "C:\\devkitPro\\libnds\\include"
+                ]
+            },
+            "compilerPath": "C:\\devkitPro\\devkitARM\\bin\\arm-none-eabi-gcc.exe"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/devkitpro/libnds/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "ARM9",
+                "ARM7"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "/opt/devkitpro/libnds/include"
+                ]
+            },
+            "compilerPath": "/opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc"
+        },
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/devkitpro/libnds/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE",
+                "ARM9",
+                "ARM7"
+            ],
+            "browse": {
+                "path": [
+                    "${workspaceFolder}",
+                    "/opt/devkitpro/libnds/include"
+                ]
+            },
+            "compilerPath": "/opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc"
+        }
+    ],
+    "version": 4
+}
