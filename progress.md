@@ -87,12 +87,6 @@ u16 *settings_gfx[3];
 - One VRAM allocation per frame  
 - Memory allocated using `oamAllocateGfx()`  
 - Graphics copied using `swiCopy()` in 2048-byte blocks  
-
-**Reason for using `oamAllocateGfx()`:**
-- Avoids manual tile offset calculations  
-- Prevents VRAM fragmentation  
-- Safer when switching states  
-
 ---
 
 ### Button Size Rationale
