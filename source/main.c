@@ -1,19 +1,29 @@
 /*
- * Template Nintendo DS
- * May 2011
+ * Kart Mania - Main Source File
  */
 
 #include <nds.h>
 #include <stdio.h>
 
+#include "game_types.h"
 #include "home_page.h"
 
 int main(void) {
+    enum GameState currentState = HOME_PAGE;
     //---sub screen graphics setup---
-    configureGraphics_Sub_home_page();
-    configBG2_Sub_homepage();
+    HomePage_initialize();
     //------------------------------
 
-    while (1)
+    while (true) {
+        // Touchscreen status (struct)
+        scanKeys();
+        touchPosition touch;
+        touchRead(&touch);
+        if (currentState == HOME_PAGE) {
+            // Handle home page interactions here
+            touchscreen_controlls_home_page(&touch);
+        }
+
         swiWaitForVBlank();
+    }
 }
