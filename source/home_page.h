@@ -2,16 +2,11 @@
 #define HOME_PAGE_H
 
 #include <nds.h>
-#include "game_types.h"
 #include <stdbool.h>
-// MenuButton struct - represents a single button sprite on screen
-typedef struct
-{
-    int id;       // Sprite OAM index (0, 1, 2, etc.)
-    int x;        // X position on screen
-    int y;        // Y position on screen
-    bool pressed; // Whether button is currently pressed
-} MenuButton;
+
+#include "game_types.h"
+
+
 
 void configureGraphics_MAIN_home_page();
 void configBG_Main_homepage();
@@ -99,6 +94,6 @@ void HomePage_updateMenu(void);
  * Selects the appropriate frame (normal/highlighted/pressed) and updates OAM entry
  * Called internally by HomePage_updateMenu() for each button
  */
-void updateButtonSprite(MenuButton *btn, bool isSelected, bool isPressed);
+void updateButtonSprite(MenuButton* btn, bool isSelected, bool isPressed);
 
-#endif // HOME_PAGE_H
+#endif  // HOME_PAGE_H

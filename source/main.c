@@ -3,31 +3,26 @@
  */
 #include <nds.h>
 #include <stdio.h>
+
 #include "game_types.h"
 #include "home_page.h"
 
-int main(void)
-{
+int main(void) {
     enum GameState currentState = HOME_PAGE;
 
     // Initialize home page
     HomePage_initialize();
 
     // Main game loop
-    while (true)
-    {
+    while (true) {
         // Read input
         scanKeys();
         // Handle current game state
-        if (currentState == HOME_PAGE)
-        {
+        if (currentState == HOME_PAGE) {
             HomePage_handleInput();
             HomePage_updateMenu();
             move_homeKart();
         }
-        // Add other game states here as needed
-        // else if (currentState == IN_GAME) { ... }
-        // else if (currentState == SETTINGS) { ... }
 
         // Wait for vertical blank
         swiWaitForVBlank();

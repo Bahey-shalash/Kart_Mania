@@ -3,5 +3,4 @@
 
 void settings_pressed();
 
-
-#endif // SETTINGS_H
+#endif  // SETTINGS_H

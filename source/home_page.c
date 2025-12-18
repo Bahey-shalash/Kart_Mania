@@ -1,14 +1,13 @@
 #include "home_page.h"
+
 #include <stdio.h>
+
 #include "ds_menu.h"
 #include "game.h"
 #include "game_types.h"
 #include "home_top.h"
 #include "kart_home.h"
 #include "settings.h"
-#include "button_single_player.h"
-#include "button_multi_player.h"
-#include "button_settings.h"
 
 static HomeKartSprite homeKart;
 
@@ -24,16 +23,15 @@ static HomeKartSprite homeKart;
 #define BTN_X 128
 
 //----Sprite Graphics pointers (3 frames each: normal/hovering/pressed)----
-u16 *single_player_gfx[3];
-u16 *multi_player_gfx[3];
-u16 *settings_gfx[3];
+u16* single_player_gfx[3];
+u16* multi_player_gfx[3];
+u16* settings_gfx[3];
 
 MenuButton buttons[3];
 int selectedButton = 0;
 
 //----------Initialization & Cleanup----------
-void HomePage_initialize()
-{
+void HomePage_initialize() {
     configGraphics_Sub();
     configBackground_Sub();
     configSprites_Sub();
@@ -42,11 +40,9 @@ void HomePage_initialize()
     configurekartSpritehome();
 }
 
-void HomePage_cleanup(void)
-{
+void HomePage_cleanup(void) {
     // Free all allocated sprite graphics
-    for (int i = 0; i < 3; i++)
-    {
+    for (int i = 0; i < 3; i++) {
         oamFreeGfx(&oamSub, single_player_gfx[i]);
         oamFreeGfx(&oamSub, multi_player_gfx[i]);
         oamFreeGfx(&oamSub, settings_gfx[i]);
@@ -54,8 +50,7 @@ void HomePage_cleanup(void)
 }
 //----------Configuration Functions (Main Engine)----------
 
-void configureGraphics_MAIN_home_page()
-{
+void configureGraphics_MAIN_home_page() {
     // Configure the MAIN engine in mode 5 and activate background 2
     REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
 
@@ -63,8 +58,7 @@ void configureGraphics_MAIN_home_page()
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
-void configBG_Main_homepage()
-{
+void configBG_Main_homepage() {
     BGCTRL[2] = BG_BMP_BASE(0) | BgSize_B8_256x256;
 
     // Transfer image and palette to the corresponding memory locations.
@@ -78,8 +72,7 @@ void configBG_Main_homepage()
     REG_BG2PD = 256;
 }
 
-void configurekartSpritehome()
-{
+void configurekartSpritehome() {
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
 
     // Initialize sprite manager and the engine
@@ -97,29 +90,27 @@ void configurekartSpritehome()
     swiCopy(kart_homeTiles, homeKart.gfx, kart_homeTilesLen / 2);
 }
 
-void move_homeKart()
-{
+void move_homeKart() {
     // Update sprite attributes
-    oamSet(&oamMain,                   // Main OAM
-           homeKart.id,                // Sprite number
-           homeKart.x,                 // X position
-           homeKart.y,                 // Y position
-           0,                          // Priority
-           0,                          // Palette to use
-           SpriteSize_64x64,           // Size of the sprite
-           SpriteColorFormat_256Color, // Color format
-           homeKart.gfx,               // Pointer to the graphics
-           -1,                         // Affine rotation/scaling index (-1 = none)
-           false,                      // Double size if rotating
-           false,                      // Hide this sprite
-           false, false,               // Horizontal or vertical flip
-           false                       // Mosaic
+    oamSet(&oamMain,                    // Main OAM
+           homeKart.id,                 // Sprite number
+           homeKart.x,                  // X position
+           homeKart.y,                  // Y position
+           0,                           // Priority
+           0,                           // Palette to use
+           SpriteSize_64x64,            // Size of the sprite
+           SpriteColorFormat_256Color,  // Color format
+           homeKart.gfx,                // Pointer to the graphics
+           -1,                          // Affine rotation/scaling index (-1 = none)
+           false,                       // Double size if rotating
+           false,                       // Hide this sprite
+           false, false,                // Horizontal or vertical flip
+           false                        // Mosaic
     );
 
-    homeKart.x++; // Move right
-    if (homeKart.x > 256)
-    {
-        homeKart.x = -64; // Reset position when it goes off-screen
+    homeKart.x++;  // Move right
+    if (homeKart.x > 256) {
+        homeKart.x = -64;  // Reset position when it goes off-screen
     }
 
     // Update OAM to apply changes
@@ -128,15 +119,13 @@ void move_homeKart()
 
 //----------Configuration Functions (Sub Engine)----------
 
-void configGraphics_Sub(void)
-{
+void configGraphics_Sub(void) {
     REG_DISPCNT_SUB = MODE_5_2D | DISPLAY_BG2_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
     VRAM_D_CR = VRAM_ENABLE | VRAM_D_SUB_SPRITE;
 }
 
-void configBackground_Sub(void)
-{
+void configBackground_Sub(void) {
     BGCTRL_SUB[2] = BG_BMP_BASE(0) | BgSize_B8_256x256;
     swiCopy(ds_menuBitmap, BG_BMP_RAM_SUB(0), ds_menuBitmapLen / 2);
     swiCopy(ds_menuPal, BG_PALETTE_SUB, ds_menuPalLen / 2);
@@ -148,28 +137,29 @@ void configBackground_Sub(void)
     REG_BG2PD_SUB = 256;
 }
 
-void configSprites_Sub(void)
-{
+void configSprites_Sub(void) {
     oamInit(&oamSub, SpriteMapping_1D_128, false);
 
     // Allocate graphics for all button frames
-    for (int i = 0; i < 3; i++)
-    {
-        single_player_gfx[i] = oamAllocateGfx(&oamSub, SpriteSize_64x32, SpriteColorFormat_256Color);
-        multi_player_gfx[i] = oamAllocateGfx(&oamSub, SpriteSize_64x32, SpriteColorFormat_256Color);
-        settings_gfx[i] = oamAllocateGfx(&oamSub, SpriteSize_64x32, SpriteColorFormat_256Color);
+    for (int i = 0; i < 3; i++) {
+        single_player_gfx[i] =
+            oamAllocateGfx(&oamSub, SpriteSize_64x32, SpriteColorFormat_256Color);
+        multi_player_gfx[i] =
+            oamAllocateGfx(&oamSub, SpriteSize_64x32, SpriteColorFormat_256Color);
+        settings_gfx[i] =
+            oamAllocateGfx(&oamSub, SpriteSize_64x32, SpriteColorFormat_256Color);
     }
 
     // Load palette (shared between all buttons)
-    swiCopy(button_single_playerPal, SPRITE_PALETTE_SUB, button_single_playerPalLen / 2);
+    swiCopy(button_single_playerPal, SPRITE_PALETTE_SUB,
+            button_single_playerPalLen / 2);
 
     // Load tile data for each button (each frame is 2048 bytes)
-    u8 *sp_tiles = (u8 *)button_single_playerTiles;
-    u8 *mp_tiles = (u8 *)button_multi_playerTiles;
-    u8 *set_tiles = (u8 *)button_settingsTiles;
+    u8* sp_tiles = (u8*)button_single_playerTiles;
+    u8* mp_tiles = (u8*)button_multi_playerTiles;
+    u8* set_tiles = (u8*)button_settingsTiles;
 
-    for (int i = 0; i < 3; i++)
-    {
+    for (int i = 0; i < 3; i++) {
         swiCopy(sp_tiles + (i * 2048), single_player_gfx[i], 2048 / 2);
         swiCopy(mp_tiles + (i * 2048), multi_player_gfx[i], 2048 / 2);
         swiCopy(set_tiles + (i * 2048), settings_gfx[i], 2048 / 2);
@@ -194,46 +184,39 @@ void configSprites_Sub(void)
 
 //----------Rendering (Sub Engine)----------
 
-void updateButtonSprite(MenuButton *btn, bool isSelected, bool isPressed)
-{
+void updateButtonSprite(MenuButton* btn, bool isSelected, bool isPressed) {
     // Determine frame based on state
     int frame = isPressed ? 2 : (isSelected ? 1 : 0);
 
     // Select graphics pointer based on button ID
-    u16 *gfx_ptr;
-    switch (btn->id)
-    {
-    case SPRITE_SINGLE_PLAYER:
-        gfx_ptr = single_player_gfx[frame];
-        break;
-    case SPRITE_MULTIPLAYER:
-        gfx_ptr = multi_player_gfx[frame];
-        break;
-    case SPRITE_SETTINGS:
-        gfx_ptr = settings_gfx[frame];
-        break;
-    default:
-        return;
+    u16* gfx_ptr;
+    switch (btn->id) {
+        case SPRITE_SINGLE_PLAYER:
+            gfx_ptr = single_player_gfx[frame];
+            break;
+        case SPRITE_MULTIPLAYER:
+            gfx_ptr = multi_player_gfx[frame];
+            break;
+        case SPRITE_SETTINGS:
+            gfx_ptr = settings_gfx[frame];
+            break;
+        default:
+            return;
     }
 
     // Update sprite in OAM
-    oamSet(&oamSub,
-           btn->id,
-           btn->x - 32, // Center X
-           btn->y - 16, // Center Y
-           0,           // Priority
-           0,           // Palette
-           SpriteSize_64x32,
-           SpriteColorFormat_256Color,
-           gfx_ptr,
-           -1, false, false, false, false, false);
+    oamSet(&oamSub, btn->id,
+           btn->x - 32,  // Center X
+           btn->y - 16,  // Center Y
+           0,            // Priority
+           0,            // Palette
+           SpriteSize_64x32, SpriteColorFormat_256Color, gfx_ptr, -1, false, false,
+           false, false, false);
 }
 
-void HomePage_updateMenu(void)
-{
+void HomePage_updateMenu(void) {
     // Update all button sprites
-    for (int i = 0; i < 3; i++)
-    {
+    for (int i = 0; i < 3; i++) {
         updateButtonSprite(&buttons[i], i == selectedButton, buttons[i].pressed);
     }
 
@@ -243,42 +226,36 @@ void HomePage_updateMenu(void)
 
 //----------Input Handling(Sub Engine)----------
 
-void handleDPadInput(void)
-{
+void handleDPadInput(void) {
     int keys = keysDown();
 
     // Navigate with UP/DOWN
-    if (keys & KEY_UP)
-    {
+    if (keys & KEY_UP) {
         selectedButton = (selectedButton - 1 + 3) % 3;
     }
-    if (keys & KEY_DOWN)
-    {
+    if (keys & KEY_DOWN) {
         selectedButton = (selectedButton + 1) % 3;
     }
 
     // Activate with A button
-    if (keys & KEY_A)
-    {
+    if (keys & KEY_A) {
         buttons[selectedButton].pressed = true;
 
-        switch (selectedButton)
-        {
-        case 0:
-            single_player_pressed();
-            break;
-        case 1:
-            multiplayer_pressed();
-            break;
-        case 2:
-            settings_pressed();
-            break;
+        switch (selectedButton) {
+            case 0:
+                single_player_pressed();
+                break;
+            case 1:
+                multiplayer_pressed();
+                break;
+            case 2:
+                settings_pressed();
+                break;
         }
     }
 }
 
-void handleTouchInput(void)
-{
+void handleTouchInput(void) {
     int keys_Held = keysHeld();
     touchPosition touch;
     touchRead(&touch);
@@ -292,31 +269,24 @@ void handleTouchInput(void)
         return;
 
     // Check which button is touched
-    if (touch.py >= 23 && touch.py <= 61)
-    {
+    if (touch.py >= 23 && touch.py <= 61) {
         // Single Player button
         selectedButton = 0;
         buttons[0].pressed = true;
-    }
-    else if (touch.py >= 77 && touch.py <= 115)
-    {
+    } else if (touch.py >= 77 && touch.py <= 115) {
         // Multiplayer button
         selectedButton = 1;
         buttons[1].pressed = true;
-    }
-    else if (touch.py >= 131 && touch.py <= 169)
-    {
+    } else if (touch.py >= 131 && touch.py <= 169) {
         // Settings button
         selectedButton = 2;
         buttons[2].pressed = true;
     }
 }
 
-void HomePage_handleInput(void)
-{
+void HomePage_handleInput(void) {
     // Reset all pressed states
-    for (int i = 0; i < 3; i++)
-    {
+    for (int i = 0; i < 3; i++) {
         buttons[i].pressed = false;
     }
 
