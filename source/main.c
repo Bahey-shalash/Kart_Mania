@@ -1,30 +1,37 @@
 /*
  * Kart Mania - Main Source File
  */
-
 #include <nds.h>
 #include <stdio.h>
-
 #include "game_types.h"
 #include "home_page.h"
 
-int main(void) {
+int main(void)
+{
     enum GameState currentState = HOME_PAGE;
-    //---sub screen graphics setup---
-    HomePage_initialize();
-    //------------------------------
 
-    while (true) {
-        // Touchscreen status (struct)
+    // Initialize home page
+    HomePage_initialize();
+
+    // Main game loop
+    while (true)
+    {
+        // Read input
         scanKeys();
-        touchPosition touch;
-        touchRead(&touch);
-        if (currentState == HOME_PAGE) {
-            // Handle home page interactions here
-            touchscreen_controls_home_page(&touch);
+        // Handle current game state
+        if (currentState == HOME_PAGE)
+        {
+            HomePage_handleInput();
+            HomePage_updateMenu();
             move_homeKart();
         }
+        // Add other game states here as needed
+        // else if (currentState == IN_GAME) { ... }
+        // else if (currentState == SETTINGS) { ... }
 
+        // Wait for vertical blank
         swiWaitForVBlank();
     }
+
+    return 0;
 }
