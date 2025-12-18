@@ -10,6 +10,7 @@
 #include "settings.h"
 
 static HomeKartSprite homeKart;
+static enum HomeButtonselected buttonSelected = NONE_button; 
 
 //---------------buttom screeen -------------------------
 
@@ -60,6 +61,48 @@ void touchscreen_controls_home_page(touchPosition* touch) {
         settings_pressed();
     }
 }
+
+void button_controls_home_page(u16* keys) {
+    // Navigate down
+    if (*keys & KEY_DOWN) {
+        if (buttonSelected == NONE_button || buttonSelected == SETTINGS_button) {
+            buttonSelected = SINGLE_PLAYER_button;
+        } else if (buttonSelected == SINGLE_PLAYER_button) {
+            buttonSelected = MULTIPLAYER_button;
+        } else if (buttonSelected == MULTIPLAYER_button) {
+            buttonSelected = SETTINGS_button;
+        }
+    }
+    
+    // Navigate up
+    if (*keys & KEY_UP) {
+        if (buttonSelected == NONE_button || buttonSelected == SINGLE_PLAYER_button) {
+            buttonSelected = SETTINGS_button;
+        } else if (buttonSelected == MULTIPLAYER_button) {
+            buttonSelected = SINGLE_PLAYER_button;
+        } else if (buttonSelected == SETTINGS_button) {
+            buttonSelected = MULTIPLAYER_button;
+        }
+    }
+    
+    // Select with A button
+    if (*keys & KEY_A) {
+        switch (buttonSelected) {
+            case SINGLE_PLAYER_button:
+                single_player_pressed();
+                break;
+            case MULTIPLAYER_button:
+                multiplayer_pressed();
+                break;
+            case SETTINGS_button:
+                settings_pressed();
+                break;
+            default:
+                break;
+        }
+    }
+}
+
 //---------------top screeen -------------------------
 
 void configureGraphics_MAIN_home_page() {

@@ -1,5 +1,7 @@
-#ifndef GaME_TYPES_H
-#define GaME_TYPES_H
+#ifndef GAME_TYPES_H
+#define GAME_TYPES_H
+
+#include <stdint.h>
 
 enum GameState { HOME_PAGE, SETTINGS };  // will add more states later
 
@@ -9,5 +11,7 @@ typedef struct {
     int y;
     int id;
 } HomeKartSprite;
+
+enum HomeButtonselected { NONE_button, SINGLE_PLAYER_button, MULTIPLAYER_button, SETTINGS_button };
 
 #endif  // GaME_TYPES_H

@@ -19,10 +19,12 @@ int main(void) {
         scanKeys();
         touchPosition touch;
         touchRead(&touch);
+        u16 keys = keysDown();
         if (currentState == HOME_PAGE) {
             // Handle home page interactions here
             touchscreen_controls_home_page(&touch);
             move_homeKart();
+            button_controls_home_page(&keys);
         }
 
         swiWaitForVBlank();

@@ -19,6 +19,8 @@ void configBG2_Sub_homepage();
  */
 void touchscreen_controls_home_page(touchPosition* touch);
 
+void button_controls_home_page(u16* keys);
+
 void configureGraphics_MAIN_home_page();
 void configBG_Main_homepage();
 
