@@ -27,8 +27,17 @@ It swaps the R and B channels, and this way we can use it normally in `data/ds_m
 Used the template project structure.
 
 **Added:**
-- `source/graphics.c`
-- `source/graphics.h`
+- `source/home_page.h`
+- `source/home_page.c`
+
+which will include all of the related stuff for the homescreen
+
+- `source/settings.h`
+- `source/settings.c`
+
+which will include all of the related controlls for the settings.
+
+
 
 You can see in them there is only a config for the sub engine.
 
