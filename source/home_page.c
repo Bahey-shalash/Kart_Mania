@@ -1,15 +1,19 @@
 #include "home_page.h"
 
-
 #include <stdio.h>
 
 #include "ds_menu.h"
 #include "game.h"
+#include "home_top.h"
 #include "settings.h"
+
+//---------------buttom screeen -------------------------
 
 void HomePage_initialize() {
     configureGraphics_Sub_home_page();
     configBG2_Sub_homepage();
+    configureGraphics_MAIN_home_page();
+    configBG_Main_homepage();
 }
 
 void configureGraphics_Sub_home_page() {
@@ -50,4 +54,27 @@ void touchscreen_controlls_home_page(touchPosition* touch) {
              touch->py <= 169) {
         settings_pressed();
     }
+}
+//---------------top screeen -------------------------
+
+void configureGraphics_MAIN_home_page() {
+    // Configure the MAIN engine in mode 5 and activate background 2
+    REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
+
+    // Configure VRAM memory bank A for MAIN
+    VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
+}
+
+void configBG_Main_homepage() {
+    BGCTRL[2] = BG_BMP_BASE(0) | BgSize_B8_256x256;
+
+    // Transfer image and palette to the corresponding memory locations.
+    dmaCopy(home_topBitmap, BG_BMP_RAM(0), home_topBitmapLen);
+    dmaCopy(home_topPal, BG_PALETTE, home_topPalLen);
+
+    // Set up affine matrix
+    REG_BG2PA = 256;
+    REG_BG2PC = 0;
+    REG_BG2PB = 0;
+    REG_BG2PD = 256;
 }

@@ -1,7 +1,6 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
-
 #include <nds.h>
 void HomePage_initialize();
 void configureGraphics_Sub_home_page();
@@ -17,5 +16,8 @@ void configBG2_Sub_homepage();
  * Bottom-Left: (33, 169); Bottom-Right: (223, 169)
  */
 void touchscreen_controlls_home_page(touchPosition* touch);
+
+void configureGraphics_MAIN_home_page();
+void configBG_Main_homepage();
 
 #endif  // GRAPHICS_H
