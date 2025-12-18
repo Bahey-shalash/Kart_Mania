@@ -41,7 +41,7 @@ void configBG2_Sub_homepage() {
     REG_BG2PD_SUB = 256;
 }
 
-void touchscreen_controlls_home_page(touchPosition* touch) {
+void touchscreen_controls_home_page(touchPosition* touch) {
     // Single Player button (y: 23-61)
     if (touch->px >= 33 && touch->px <= 223 && touch->py >= 23 && touch->py <= 61) {
         single_player_pressed();
@@ -99,7 +99,7 @@ void configurekartSpritehome() {
 void move_homeKart() {
     
 
-    static int x=0;
+    static int x=-64;
     // Update sprite attributes
     oamSet(&oamMain,                    // Main OAM
            0,                           // Sprite number

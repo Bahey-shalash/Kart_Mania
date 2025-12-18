@@ -17,7 +17,7 @@ void configBG2_Sub_homepage();
  * settings button area: Top-Left: Top-Left: (33, 131), Top-Right: (223,131),
  * Bottom-Left: (33, 169); Bottom-Right: (223, 169)
  */
-void touchscreen_controlls_home_page(touchPosition* touch);
+void touchscreen_controls_home_page(touchPosition* touch);
 
 void configureGraphics_MAIN_home_page();
 void configBG_Main_homepage();

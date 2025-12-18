@@ -21,7 +21,7 @@ int main(void) {
         touchRead(&touch);
         if (currentState == HOME_PAGE) {
             // Handle home page interactions here
-            touchscreen_controlls_home_page(&touch);
+            touchscreen_controls_home_page(&touch);
             move_homeKart();
         }
 

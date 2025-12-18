@@ -18,8 +18,8 @@ There is a problem with GRIT on macOS, so I made a Python file to fix it:
 python3 convert.py input.png output.png
 ```
 
-It swaps the R and B channels, and this way we can use it normally in `data/ds_menu.png` and make the `.grit`.
-
+The script swaps the red and blue channels, allowing the image to be used normally in `data/ds_menu.png` and converted with GRIT.
+Transparent areas may appear magenta, which is expected and handled correctly by GRIT when generating the `.grit` assets.
 ---
 
 ## Project Structure
@@ -43,7 +43,7 @@ You can see in them there is only a config for the sub engine.
 
 ---
 
-## Sub Engine Configuration
+## Sub Engine Configuration for homescreen
 
 I used for the home menu:
 
@@ -54,13 +54,20 @@ I used for the home menu:
 
 In the `.grit` I used a config to generate the bitmap and the corresponding palette (8-bit pixels).
 
-## Main Engine Configuration
+## Main Engine Configuration for homescreen
 
 - Main engine in mode 5 with background 2 active
 - VRAM A
 - `BG_BMP_BASE(0)` (VRAM A)
 - `dmaCopy` rather than `swiCopy` because it's faster
 -TODO: make the car using tie mode and have it move from left to right
+
+
+## sprite configuration for homescreen Kart
+-Vram B 
+-Sprite engine uses 1D mapping (32-byte boundaries)
+-Sprite size: 64×64
+-Color format: 256-color (8-bit indexed)
 
 
 ## ----------------------------------------------------------------------------
