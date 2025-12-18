@@ -5,6 +5,7 @@
 #include "ds_menu.h"
 #include "game.h"
 #include "home_top.h"
+#include "kart_home.h"
 #include "settings.h"
 
 //---------------buttom screeen -------------------------
@@ -14,6 +15,7 @@ void HomePage_initialize() {
     configBG2_Sub_homepage();
     configureGraphics_MAIN_home_page();
     configBG_Main_homepage();
+    configurekartSpritehome();
 }
 
 void configureGraphics_Sub_home_page() {
@@ -77,4 +79,49 @@ void configBG_Main_homepage() {
     REG_BG2PC = 0;
     REG_BG2PB = 0;
     REG_BG2PD = 256;
+}
+u16* gfx;
+
+void configurekartSpritehome() {
+    VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
+
+    // Initialize sprite manager and the engine
+    oamInit(&oamMain, SpriteMapping_1D_32, false);
+
+    // Allocate space for the graphic to show in the sprite
+    gfx = oamAllocateGfx(&oamMain, SpriteSize_64x64, SpriteColorFormat_256Color);
+
+    // Copy data for the graphic (palette and bitmap)
+    swiCopy(kart_homePal, SPRITE_PALETTE, kart_homePalLen / 2);
+    swiCopy(kart_homeTiles, gfx, kart_homeTilesLen / 2);
+}
+
+void move_homeKart() {
+    
+
+    static int x=0;
+    // Update sprite attributes
+    oamSet(&oamMain,                    // Main OAM
+           0,                           // Sprite number
+           x,                           // X position
+           120,                         // Y position
+           0,                           // Priority
+           0,                           // Palette to use
+           SpriteSize_64x64,            // Size of the sprite
+           SpriteColorFormat_256Color,  // Color format
+           gfx,                         // Pointer to the graphics
+           -1,                          // Affine rotation/scaling index (-1 = none)
+           false,                       // Double size if rotating
+           false,                       // Hide this sprite
+           false, false,                // Horizontal or vertical flip
+           false                        // Mosaic
+    );
+
+    x += 1;
+    if (x > 256) {
+        x = -64;  // Reset position when it goes off-screen
+    }
+
+    // Update OAM to apply changes
+    oamUpdate(&oamMain);
 }

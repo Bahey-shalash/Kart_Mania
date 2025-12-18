@@ -1,7 +1,9 @@
-#ifndef GRAPHICS_H
-#define GRAPHICS_H
+#ifndef HOME_PAGE_H
+#define HOME_PAGE_H
 
 #include <nds.h>
+
+#include "game_types.h"
 void HomePage_initialize();
 void configureGraphics_Sub_home_page();
 void configBG2_Sub_homepage();
@@ -20,4 +22,7 @@ void touchscreen_controlls_home_page(touchPosition* touch);
 void configureGraphics_MAIN_home_page();
 void configBG_Main_homepage();
 
-#endif  // GRAPHICS_H
+void configurekartSpritehome();
+void move_homeKart();
+
+#endif  // HOME_PAGE_H

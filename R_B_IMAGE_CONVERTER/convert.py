@@ -1,58 +1,60 @@
 #!/usr/bin/env python3
 """
-Swap Red and Blue channels (R<->B) in a PNG while keeping:
-- same dimensions
-- same mode (RGB/RGBA/etc.)
-- alpha unchanged (if present)
-- PNG output
+Swap Red and Blue channels (R<->B) for a PNG.
+
+Produces TWO outputs:
+  1) <base>_swap.png  : swapped, alpha preserved (RGBA)
+  2) <base>_grit.png  : swapped, alpha removed, transparent pixels filled with FF00FF (RGB)
+                        -> intended ONLY as input to grit with -gTFF00FF
 
 Usage:
-  python swap_rb.py input.png output.png
+  python swap_rb.py input.png
 """
 
+import os
 import sys
 from PIL import Image
 
-def swap_rb(img: Image.Image) -> Image.Image:
-    # Ensure we can access channels reliably while preserving alpha if present
-    mode = img.mode
+KEY_RGB = (255, 0, 255)  # FF00FF magenta key
 
-    if mode == "RGB":
-        r, g, b = img.split()
-        return Image.merge("RGB", (b, g, r))
-
-    if mode == "RGBA":
-        r, g, b, a = img.split()
-        return Image.merge("RGBA", (b, g, r, a))
-
-    # Palette or other modes: convert to RGBA, swap, then convert back if possible
-    # (This may not preserve palette indexing, but preserves visual output.)
-    if mode in ("P", "LA", "L", "1", "CMYK", "YCbCr", "I", "F"):
-        tmp = img.convert("RGBA")
-        r, g, b, a = tmp.split()
-        swapped = Image.merge("RGBA", (b, g, r, a))
-        # Try to return to original mode if it makes sense
-        try:
-            return swapped.convert(mode)
-        except Exception:
-            return swapped
-
-    # Fallback: try via RGBA
-    tmp = img.convert("RGBA")
-    r, g, b, a = tmp.split()
+def swap_rb_rgba(img: Image.Image) -> Image.Image:
+    """Return RGBA image with R and B swapped, alpha preserved."""
+    rgba = img.convert("RGBA")
+    r, g, b, a = rgba.split()
     return Image.merge("RGBA", (b, g, r, a))
 
+def make_grit_rgb(swapped_rgba: Image.Image, key_rgb=KEY_RGB) -> Image.Image:
+    """
+    Flatten swapped RGBA onto a solid key color background and drop alpha,
+    yielding an RGB image suitable for DS color-key transparency via grit -gT.
+    """
+    # Solid magenta background (opaque)
+    bg = Image.new("RGBA", swapped_rgba.size, key_rgb + (255,))
+    # Alpha composite places sprite over magenta wherever alpha>0
+    composited = Image.alpha_composite(bg, swapped_rgba)
+    # Drop alpha entirely (DS/grit color-key workflow)
+    return composited.convert("RGB")
+
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python swap_rb.py input.png output.png", file=sys.stderr)
+    if len(sys.argv) != 2:
+        print("Usage: python swap_rb.py input.png", file=sys.stderr)
         sys.exit(2)
 
-    in_path, out_path = sys.argv[1], sys.argv[2]
+    in_path = sys.argv[1]
+    base, _ = os.path.splitext(in_path)
+    out_swap = base + "_swap.png"
+    out_grit = base + "_grit.png"
 
     with Image.open(in_path) as img:
-        swapped = swap_rb(img)
-        # Save as PNG; size/dimensions stay the same. Alpha preserved if present.
-        swapped.save(out_path, format="PNG")
+        swapped = swap_rb_rgba(img)
+        grit_ready = make_grit_rgb(swapped)
+
+        swapped.save(out_swap, format="PNG")
+        grit_ready.save(out_grit, format="PNG")
+
+    print("Wrote:")
+    print(" ", out_swap, "(swapped, alpha preserved)")
+    print(" ", out_grit, "(swapped, alpha removed, magenta key for grit)")
 
 if __name__ == "__main__":
     main()

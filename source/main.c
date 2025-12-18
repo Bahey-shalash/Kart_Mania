@@ -22,6 +22,7 @@ int main(void) {
         if (currentState == HOME_PAGE) {
             // Handle home page interactions here
             touchscreen_controlls_home_page(&touch);
+            move_homeKart();
         }
 
         swiWaitForVBlank();
