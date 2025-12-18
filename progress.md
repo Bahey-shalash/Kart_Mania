@@ -1,6 +1,5 @@
 # Progress
 
-## Bahey
 
 ## Home Menu Image
 
@@ -60,14 +59,16 @@ In the `.grit` I used a config to generate the bitmap and the corresponding pale
 - VRAM A
 - `BG_BMP_BASE(0)` (VRAM A)
 - `dmaCopy` rather than `swiCopy` because it's faster
--TODO: make the car using tie mode and have it move from left to right
 
 
 ## sprite configuration for homescreen Kart
--Vram B 
--Sprite engine uses 1D mapping (32-byte boundaries)
--Sprite size: 64×64
--Color format: 256-color (8-bit indexed)
+
+- Vram B 
+- Sprite engine uses 1D mapping (32-byte boundaries)
+- Sprite size: 64×64
+- Color format: 256-color (8-bit indexed)
+
+sprite logic in `home_page.h/home_page.c` and the new types are in `game_types.h`
 
 
 ## ----------------------------------------------------------------------------
