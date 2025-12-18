@@ -54,5 +54,13 @@ I used for the home menu:
 
 In the `.grit` I used a config to generate the bitmap and the corresponding palette (8-bit pixels).
 
+## Main Engine Configuration
+
+- Main engine in mode 5 with background 2 active
+- VRAM A
+- `BG_BMP_BASE(0)` (VRAM A)
+- `dmaCopy` rather than `swiCopy` because it's faster
+-TODO: make the car using tie mode and have it move from left to right
+
 
 ## ----------------------------------------------------------------------------
