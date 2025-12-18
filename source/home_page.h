@@ -1,6 +1,8 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
+
+#include <nds.h>
 void HomePage_initialize();
 void configureGraphics_Sub_home_page();
 void configBG2_Sub_homepage();

@@ -1,6 +1,7 @@
 #include "home_page.h"
 
-#include <nds.h>
+
+#include <stdio.h>
 
 #include "ds_menu.h"
 #include "game.h"
