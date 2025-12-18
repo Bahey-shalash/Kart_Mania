@@ -4,9 +4,12 @@
 
 #include "ds_menu.h"
 #include "game.h"
+#include "game_types.h"
 #include "home_top.h"
 #include "kart_home.h"
 #include "settings.h"
+
+static HomeKartSprite homeKart;
 
 //---------------buttom screeen -------------------------
 
@@ -80,36 +83,36 @@ void configBG_Main_homepage() {
     REG_BG2PB = 0;
     REG_BG2PD = 256;
 }
-u16* gfx;
 
 void configurekartSpritehome() {
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
 
     // Initialize sprite manager and the engine
     oamInit(&oamMain, SpriteMapping_1D_32, false);
+    homeKart.id = 0;
+    homeKart.x = -64;
+    homeKart.y = 120;
 
     // Allocate space for the graphic to show in the sprite
-    gfx = oamAllocateGfx(&oamMain, SpriteSize_64x64, SpriteColorFormat_256Color);
+    homeKart.gfx =
+        oamAllocateGfx(&oamMain, SpriteSize_64x64, SpriteColorFormat_256Color);
 
     // Copy data for the graphic (palette and bitmap)
     swiCopy(kart_homePal, SPRITE_PALETTE, kart_homePalLen / 2);
-    swiCopy(kart_homeTiles, gfx, kart_homeTilesLen / 2);
+    swiCopy(kart_homeTiles, homeKart.gfx, kart_homeTilesLen / 2);
 }
 
 void move_homeKart() {
-    
-
-    static int x=-64;
     // Update sprite attributes
     oamSet(&oamMain,                    // Main OAM
-           0,                           // Sprite number
-           x,                           // X position
-           120,                         // Y position
+           homeKart.id,                 // Sprite number
+           homeKart.x,                  // X position
+           homeKart.y,                  // Y position
            0,                           // Priority
            0,                           // Palette to use
            SpriteSize_64x64,            // Size of the sprite
            SpriteColorFormat_256Color,  // Color format
-           gfx,                         // Pointer to the graphics
+           homeKart.gfx,                // Pointer to the graphics
            -1,                          // Affine rotation/scaling index (-1 = none)
            false,                       // Double size if rotating
            false,                       // Hide this sprite
@@ -117,9 +120,9 @@ void move_homeKart() {
            false                        // Mosaic
     );
 
-    x += 1;
-    if (x > 256) {
-        x = -64;  // Reset position when it goes off-screen
+    homeKart.x++;  // Move right
+    if (homeKart.x > 256) {
+        homeKart.x = -64;  // Reset position when it goes off-screen
     }
 
     // Update OAM to apply changes
