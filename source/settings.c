@@ -6,15 +6,16 @@
 /* =========================
    Cursor tiles (OBVIOUS)
    ========================= */
+// Arrow cursor tile (right-pointing arrow ">")
 u8 cursorArrowTile[64] = {
-    254, 254, 254, 254, 254, 254, 254, 254,
-    254, 254, 254, 254, 254, 254, 254, 254,
-    254, 254, 254, 254, 254, 254, 254, 254,
-    254, 254, 254, 254, 254, 254, 254, 254,
-    254, 254, 254, 254, 254, 254, 254, 254,
-    254, 254, 254, 254, 254, 254, 254, 254,
-    254, 254, 254, 254, 254, 254, 254, 254,
-    254, 254, 254, 254, 254, 254, 254, 254};
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 254, 254, 0,
+    0, 0, 0, 0, 254, 254, 254, 0,
+    0, 0, 0, 254, 254, 254, 254, 0,
+    0, 0, 0, 0, 254, 254, 254, 0,
+    0, 0, 0, 0, 0, 254, 254, 0,
+    0, 0, 0, 0, 0, 0, 0, 0};
 
 u8 emptyTile[64] = {0};
 
@@ -111,7 +112,7 @@ void Settings_configBackground_Sub(void)
         BG_32x32 |
         BG_MAP_BASE(3) |
         BG_TILE_BASE(1) |
-        BG_COLOR_256: // Higher priority (lower number) = renders on top
+        BG_COLOR_256; // Higher priority (lower number) = renders on top
 
     // Copy cursor tiles
     dmaCopy(emptyTile, BG_TILE_RAM_SUB(1), 64);
@@ -146,20 +147,13 @@ static void setCursorOverlay(int settingIndex, bool show)
     // Only draw if on screen (y >= 0)
     if (screenY >= 0 && screenY < 192)
     {
-        // Draw a 2x2 tile cursor (16x16 pixels)
-        for (int ty = 0; ty < 2; ty++)
+        // Draw cursor arrow (single 8x8 tile, not 2x2)
+        if (mapY >= 0 && mapY < 32 && mapX >= 0 && mapX < 32)  // Bounds check for tile coordinates
         {
-            for (int tx = 0; tx < 2; tx++)
+            int mapIndex = mapY * 32 + mapX;
+            if (mapIndex >= 0 && mapIndex < 32 * 32)  // Additional bounds check
             {
-                int finalY = mapY + ty;
-                if (finalY >= 0 && finalY < 24)  // Screen is 24 tiles tall
-                {
-                    int mapIndex = finalY * 32 + (mapX + tx);
-                    if (mapIndex >= 0 && mapIndex < 32 * 32)  // Bounds check
-                    {
-                        overlayMap[mapIndex] = show ? 1 : 0; // 1 = cursor tile, 0 = empty
-                    }
-                }
+                overlayMap[mapIndex] = show ? 1 : 0; // 1 = cursor tile, 0 = empty
             }
         }
     }
