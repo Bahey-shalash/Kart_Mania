@@ -19,8 +19,9 @@ static enum HomeButtonselected buttonSelected = NONE_button;
 
 // Y positions for each button (tile rows)
 #define SINGLE_PLAYER_Y 3
-#define MULTIPLAYER_Y 10
+#define MULTIPLAYER_Y 9
 #define SETTINGS_Y 16
+
 
 //---------------buttom screeen -------------------------
 
@@ -47,7 +48,6 @@ void configBG2_Sub_homepage() {
     // Configure background BG2 in extended rotoscale mode using 8bit pixels
     // BMP_BASE(2) = offset 0x08000 (32KB offset)
     BGCTRL_SUB[2] = BG_BMP_BASE(2) | BgSize_B8_256x256 | BG_PRIORITY(1);
-    
 
     // Transfer image and palette to the corresponding memory locations.
     dmaCopy(ds_menuBitmap, BG_BMP_RAM_SUB(2), ds_menuBitmapLen);
@@ -201,63 +201,11 @@ void move_homeKart() {
 // Tile 0: Empty (transparent)
 static const u8 tile_empty[64] = {0};
 
-// Tile 1: Top-left corner
-static const u8 tile_corner_tl[64] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
-    1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1,
-    0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
+static const u8 tile_filled[64] = {
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
 };
-
-// Tile 2: Top edge (horizontal)
-static const u8 tile_edge_top[64] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
-
-// Tile 3: Top-right corner
-static const u8 tile_corner_tr[64] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,
-    0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-    1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
-};
-
-// Tile 4: Left edge (vertical)
-static const u8 tile_edge_left[64] = {
-    0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
-    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1,
-    0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
-};
-
-// Tile 5: Right edge (vertical)
-static const u8 tile_edge_right[64] = {
-    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1,
-    0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-    1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
-};
-
-// Tile 6: Bottom-left corner
-static const u8 tile_corner_bl[64] = {
-    0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
-    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1,
-    1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
-
-// Tile 7: Bottom edge (horizontal)
-static const u8 tile_edge_bottom[64] = {
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
-
-// Tile 8: Bottom-right corner
-static const u8 tile_corner_br[64] = {
-    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1,
-    0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1,
-    1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-};
-
-
 
 void configBG0_Sub_contour() {
     // Configure BG0 in tiled mode, 256 color, 32x32 tiles
@@ -268,23 +216,24 @@ void configBG0_Sub_contour() {
     // Copy tiles to VRAM (tile base 0 = 0x06200000 for sub)
     // Each tile is 64 bytes in 256-color mode
     dmaCopy(tile_empty, &BG_TILE_RAM_SUB(0)[0 * 32], 64);
-    dmaCopy(tile_corner_tl, &BG_TILE_RAM_SUB(0)[1 * 32], 64);
-    dmaCopy(tile_edge_top, &BG_TILE_RAM_SUB(0)[2 * 32], 64);
-    dmaCopy(tile_corner_tr, &BG_TILE_RAM_SUB(0)[3 * 32], 64);
-    dmaCopy(tile_edge_left, &BG_TILE_RAM_SUB(0)[4 * 32], 64);
-    dmaCopy(tile_edge_right, &BG_TILE_RAM_SUB(0)[5 * 32], 64);
-    dmaCopy(tile_corner_bl, &BG_TILE_RAM_SUB(0)[6 * 32], 64);
-    dmaCopy(tile_edge_bottom, &BG_TILE_RAM_SUB(0)[7 * 32], 64);
-    dmaCopy(tile_corner_br, &BG_TILE_RAM_SUB(0)[8 * 32], 64);
+    dmaCopy(tile_filled, &BG_TILE_RAM_SUB(0)[1 * 32], 64);
 
     // Set palette index 1 to blue
-    BG_PALETTE_SUB[1] = RGB15(0, 10, 31);
+    BG_PALETTE_SUB[1] = ARGB16(0, 8, 8, 8);  // Dark gray
+
+    // Enable alpha blending: BG0 blends over BG2
+    REG_BLDCNT_SUB = BLEND_ALPHA | BLEND_SRC_BG0 | BLEND_DST_BG2;
+    // Set blend levels: EVA=8 (BG0 contribution), EVB=8 (BG2 contribution)
+    // Values 0-16, where 16 = full intensity
+    REG_BLDALPHA_SUB = (8) | (8 << 8);  // 50% blend
 
     // Clear tilemap to all empty tiles
     for (int i = 0; i < 32 * 32; i++) {
         BG_MAP_RAM_SUB(1)[i] = 0;
     }
 }
+
+
 
 void updateSelectionOverlay(enum HomeButtonselected selection) {
     int y;
@@ -314,29 +263,10 @@ void updateSelectionOverlay(enum HomeButtonselected selection) {
             return;
     }
 
-    // Draw contour rectangle
-    // Top row
-    BG_MAP_RAM_SUB(1)[y * 32 + CONTOUR_X] = 1;  // Top-left corner
-    for (int x = 1; x < CONTOUR_WIDTH - 1; x++) {
-        BG_MAP_RAM_SUB(1)[y * 32 + CONTOUR_X + x] = 2;  // Top edge
+    // Fill entire button area with tile 1
+    for (int row = 0; row < CONTOUR_HEIGHT; row++) {
+        for (int col = 0; col < CONTOUR_WIDTH; col++) {
+            BG_MAP_RAM_SUB(1)[(y + row) * 32 + CONTOUR_X + col] = 1;
+        }
     }
-    BG_MAP_RAM_SUB(1)[y * 32 + CONTOUR_X + CONTOUR_WIDTH - 1] = 3;  // Top-right corner
-
-    // Middle rows (left and right edges)
-    for (int row = 1; row < CONTOUR_HEIGHT - 1; row++) {
-        BG_MAP_RAM_SUB(1)[(y + row) * 32 + CONTOUR_X] = 4;  // Left edge
-        BG_MAP_RAM_SUB(1)
-        [(y + row) * 32 + CONTOUR_X + CONTOUR_WIDTH - 1] = 5;  // Right edge
-    }
-
-    // Bottom row
-    BG_MAP_RAM_SUB(1)
-    [(y + CONTOUR_HEIGHT - 1) * 32 + CONTOUR_X] = 6;  // Bottom-left corner
-    for (int x = 1; x < CONTOUR_WIDTH - 1; x++) {
-        BG_MAP_RAM_SUB(1)
-        [(y + CONTOUR_HEIGHT - 1) * 32 + CONTOUR_X + x] = 7;  // Bottom edge
-    }
-    BG_MAP_RAM_SUB(1)
-    [(y + CONTOUR_HEIGHT - 1) * 32 + CONTOUR_X + CONTOUR_WIDTH - 1] =
-        8;  // Bottom-right corner
 }
