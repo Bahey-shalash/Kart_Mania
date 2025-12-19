@@ -1,7 +1,5 @@
 #include "home_page.h"
-
 #include <stdio.h>
-
 #include "ds_menu.h"
 #include "game.h"
 #include "game_types.h"
@@ -64,7 +62,8 @@ int lastSelectedButton = -1;
 bool pressed = false;
 
 //----------Initialization & Cleanup----------
-void HomePage_initialize() {
+void HomePage_initialize()
+{
     configGraphics_Sub();
     configBackground_Sub();
     configureGraphics_MAIN_home_page();
@@ -72,9 +71,24 @@ void HomePage_initialize() {
     configurekartSpritehome();
 }
 
+void HomePage_cleanup(void)
+{
+    // Disable sub BGs
+    REG_DISPCNT_SUB &= ~(DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
+
+    // Clear BG maps (important!)
+    memset(BG_MAP_RAM_SUB(0), 0, 32 * 32 * sizeof(u16));
+    memset(BG_MAP_RAM_SUB(2), 0, 32 * 32 * sizeof(u16));
+
+    // Optional: reset selection
+    selectedButton = 0;
+    lastSelectedButton = -1;
+}
+
 //----------Configuration Functions (Main Engine)----------
 
-void configureGraphics_MAIN_home_page() {
+void configureGraphics_MAIN_home_page()
+{
     // Configure the MAIN engine in mode 5 and activate background 2
     REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
 
@@ -82,7 +96,8 @@ void configureGraphics_MAIN_home_page() {
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
-void configBG_Main_homepage() {
+void configBG_Main_homepage()
+{
     BGCTRL[2] = BG_BMP_BASE(0) | BgSize_B8_256x256;
 
     // Transfer image and palette to the corresponding memory locations.
@@ -96,7 +111,8 @@ void configBG_Main_homepage() {
     REG_BG2PD = 256;
 }
 
-void configurekartSpritehome() {
+void configurekartSpritehome()
+{
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
 
     // Initialize sprite manager and the engine
@@ -114,27 +130,29 @@ void configurekartSpritehome() {
     swiCopy(kart_homeTiles, homeKart.gfx, kart_homeTilesLen / 2);
 }
 
-void move_homeKart() {
+void move_homeKart()
+{
     // Update sprite attributes
-    oamSet(&oamMain,                    // Main OAM
-           homeKart.id,                 // Sprite number
-           homeKart.x,                  // X position
-           homeKart.y,                  // Y position
-           0,                           // Priority
-           0,                           // Palette to use
-           SpriteSize_64x64,            // Size of the sprite
-           SpriteColorFormat_256Color,  // Color format
-           homeKart.gfx,                // Pointer to the graphics
-           -1,                          // Affine rotation/scaling index (-1 = none)
-           false,                       // Double size if rotating
-           false,                       // Hide this sprite
-           false, false,                // Horizontal or vertical flip
-           false                        // Mosaic
+    oamSet(&oamMain,                   // Main OAM
+           homeKart.id,                // Sprite number
+           homeKart.x,                 // X position
+           homeKart.y,                 // Y position
+           0,                          // Priority
+           0,                          // Palette to use
+           SpriteSize_64x64,           // Size of the sprite
+           SpriteColorFormat_256Color, // Color format
+           homeKart.gfx,               // Pointer to the graphics
+           -1,                         // Affine rotation/scaling index (-1 = none)
+           false,                      // Double size if rotating
+           false,                      // Hide this sprite
+           false, false,               // Horizontal or vertical flip
+           false                       // Mosaic
     );
 
-    homeKart.x++;  // Move right
-    if (homeKart.x > 256) {
-        homeKart.x = -64;  // Reset position when it goes off-screen
+    homeKart.x++; // Move right
+    if (homeKart.x > 256)
+    {
+        homeKart.x = -64; // Reset position when it goes off-screen
     }
 
     // Update OAM to apply changes
@@ -222,24 +240,7 @@ void handleDPadInput(void)
 
     if (keys & KEY_A)
     {
-        pressed = true;
-    }
-
-    if (keysUp() & KEY_A)
-    {
-        pressed = false;
-
-        switch (selectedButton) {
-            case 0:
-                single_player_pressed();
-                break;
-            case 1:
-                multiplayer_pressed();
-                break;
-            case 2:
-                settings_pressed();
-                break;
-        }
+        pressed = true; // visual feedback only
     }
 }
 
@@ -268,24 +269,37 @@ void handleTouchInput(void)
     }
 }
 
-void HomePage_update(void)
+enum GameState HomePage_update(void)
 {
     scanKeys();
     pressed = false;
 
     handleDPadInput();
     handleTouchInput();
-    // Update highlight when selection changes
+
+    // Update highlight
     if (selectedButton != lastSelectedButton)
     {
-        // Clear previous highlight
         if (lastSelectedButton != -1)
-        {
             setButtonOverlay(lastSelectedButton, false);
-        }
 
-        // Show new highlight
         setButtonOverlay(selectedButton, true);
         lastSelectedButton = selectedButton;
     }
+
+    // ACTIVATE on release (A or touch)
+    if (keysUp() & KEY_A || keysUp() & KEY_TOUCH)
+    {
+        switch (selectedButton)
+        {
+        case 0:
+            return SINGLEPLAYER;
+        case 1:
+            return MULTIPLAYER;
+        case 2:
+            return SETTINGS;
+        }
+    }
+
+    return HOME_PAGE;
 }

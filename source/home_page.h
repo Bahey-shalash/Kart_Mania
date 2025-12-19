@@ -21,6 +21,8 @@ void move_homeKart();
 
 void HomePage_initialize(void);
 
+void HomePage_cleanup(void);
+
 //----------Configuration Functions----------
 
 /**
@@ -38,7 +40,7 @@ void configGraphics_Sub(void);
 void configBackground_Sub(void);
 
 //----------Input Handling----------
-void HomePage_update(void);
+enum GameState HomePage_update(void);
 
 /**
  * Handle D-pad input for menu navigation
