@@ -138,14 +138,16 @@ void configGraphics_Sub(void) {
 }
 
 void configBackground_Sub(void) {
-    BGCTRL_SUB[0] = BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256| BG_PRIORITY(1);
+    BGCTRL_SUB[0] =
+        BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(1);
     swiCopy(ds_menuPal, BG_PALETTE_SUB, ds_menuPalLen / 2);
     swiCopy(ds_menuTiles, BG_TILE_RAM_SUB(1), ds_menuTilesLen / 2);
     dmaCopy(ds_menuMap, BG_MAP_RAM_SUB(0), ds_menuMapLen);
 
-    BGCTRL_SUB[1] = BG_32x32 | BG_MAP_BASE(2) | BG_TILE_BASE(4) | BG_COLOR_256| BG_PRIORITY(0);
+    BGCTRL_SUB[1] =
+        BG_32x32 | BG_MAP_BASE(2) | BG_TILE_BASE(4) | BG_COLOR_256 | BG_PRIORITY(0);
     // Set palette color for border
-    //BG_PALETTE_SUB[1] = RGB15(10, 10, 10);
+    // BG_PALETTE_SUB[1] = RGB15(10, 10, 10);
     BG_PALETTE_SUB[1] = RGB15(31, 0, 0);  // Bright red for debugging
 
     // Copy highlight tiles to VRAM (tiles 1, 2, 3)
@@ -189,7 +191,7 @@ void setButtonOverlay(int buttonIndex, bool show) {
 }
 
 void handleDPadInput(void) {
-    int keys = keysDown();
+    const int keys = keysDown();
 
     if (keys & KEY_UP) {
         selectedButton = (selectedButton - 1 + MENU_COUNT) % MENU_COUNT;
@@ -242,11 +244,11 @@ enum GameState HomePage_update(void) {
     // ACTIVATE on release (A or touch)
     if (keysUp() & KEY_A || keysUp() & KEY_TOUCH) {
         switch (selectedButton) {
-            case 0:
+            case SINGLE_PLAYER_button:
                 return SINGLEPLAYER;
-            case 1:
+            case MULTIPLAYER_button:
                 return MULTIPLAYER;
-            case 2:
+            case SETTINGS_button:
                 return SETTINGS;
         }
     }
