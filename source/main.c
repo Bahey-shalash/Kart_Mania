@@ -16,11 +16,10 @@ int main(void) {
     // Main game loop
     while (true) {
         // Read input
-        scanKeys();
         // Handle current game state
-        if (currentState == HOME_PAGE) {
-            HomePage_handleInput();
-            HomePage_updateMenu();
+        if (currentState == HOME_PAGE)
+        {
+            HomePage_update();
             move_homeKart();
         }
 

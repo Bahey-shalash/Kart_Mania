@@ -6,8 +6,6 @@
 
 #include "game_types.h"
 
-
-
 void configureGraphics_MAIN_home_page();
 void configBG_Main_homepage();
 
@@ -22,12 +20,6 @@ void move_homeKart();
  */
 
 void HomePage_initialize(void);
-
-/**
- * Clean up home page resources - frees sprite graphics and clears OAM
- * Call this when transitioning away from home page
- */
-void HomePage_cleanup(void);
 
 //----------Configuration Functions----------
 
@@ -45,21 +37,8 @@ void configGraphics_Sub(void);
  */
 void configBackground_Sub(void);
 
-/**
- * Configure sprites - initialize OAM, allocate graphics, load tiles and palettes
- * Loads all button sprite data (3 frames per button) into VRAM
- * Called internally by HomePage_initialize()
- */
-void configSprites_Sub(void);
-
 //----------Input Handling----------
-
-/**
- * Handle all input (touch and D-pad) for the home page
- * Resets pressed states, then processes D-pad and touch input
- * Call this every frame before HomePage_updateMenu()
- */
-void HomePage_handleInput(void);
+void HomePage_update(void);
 
 /**
  * Handle D-pad input for menu navigation
@@ -77,23 +56,4 @@ void handleDPadInput(void);
  */
 void handleTouchInput(void);
 
-//----------Rendering----------
-
-/**
- * Update and render all button sprites to screen
- * Updates each button sprite based on selection/pressed state and updates OAM
- * Call this every frame in your main loop after HomePage_handleInput()
- */
-void HomePage_updateMenu(void);
-
-/**
- * Update a single button sprite's appearance based on state
- * @param btn - Pointer to MenuButton to update
- * @param isSelected - Whether this button is currently selected (highlighted)
- * @param isPressed - Whether this button is currently pressed
- * Selects the appropriate frame (normal/highlighted/pressed) and updates OAM entry
- * Called internally by HomePage_updateMenu() for each button
- */
-void updateButtonSprite(MenuButton* btn, bool isSelected, bool isPressed);
-
-#endif  // HOME_PAGE_H
+#endif // HOME_PAGE_H
