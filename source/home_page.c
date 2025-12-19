@@ -154,8 +154,6 @@ void configBackground_Sub(void) {
     dmaCopy(highlightLeftTile, (u8*)BG_TILE_RAM_SUB(4) + (1 * 64), 64);
     dmaCopy(highlightMiddleTile, (u8*)BG_TILE_RAM_SUB(4) + (2 * 64), 64);
     dmaCopy(highlightRightTile, (u8*)BG_TILE_RAM_SUB(4) + (3 * 64), 64);
-
-   
 }
 
 void setButtonOverlay(int buttonIndex, bool show) {
@@ -208,14 +206,23 @@ void handleTouchInput(void) {
     if (!(keysHeld() & KEY_TOUCH))
         return;
 
-    for (int i = 0; i < MENU_COUNT; i++) {
-        MenuItemHitBox* m = &menu[i];
-
-        if (touch.px >= m->x && touch.px < m->x + m->width && touch.py >= m->y &&
-            touch.py < m->y + m->height) {
-            selected = i;
-            return;
-        }
+    if (touch.px >= menu[SINGLE_PLAYER_button].x &&
+        touch.px < menu[SINGLE_PLAYER_button].x + menu[SINGLE_PLAYER_button].width &&
+        touch.py >= menu[SINGLE_PLAYER_button].y &&
+        touch.py < menu[SINGLE_PLAYER_button].y + menu[SINGLE_PLAYER_button].height) {
+        selected = SINGLE_PLAYER_button;
+    } else if (touch.px >= menu[MULTIPLAYER_button].x &&
+               touch.px <
+                   menu[MULTIPLAYER_button].x + menu[MULTIPLAYER_button].width &&
+               touch.py >= menu[MULTIPLAYER_button].y &&
+               touch.py <
+                   menu[MULTIPLAYER_button].y + menu[MULTIPLAYER_button].height) {
+        selected = MULTIPLAYER_button;
+    } else if (touch.px >= menu[SETTINGS_button].x &&
+               touch.px < menu[SETTINGS_button].x + menu[SETTINGS_button].width &&
+               touch.py >= menu[SETTINGS_button].y &&
+               touch.py < menu[SETTINGS_button].y + menu[SETTINGS_button].height) {
+        selected = SETTINGS_button;
     }
 }
 
