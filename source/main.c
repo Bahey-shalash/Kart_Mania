@@ -8,52 +8,56 @@
 #include "home_page.h"
 #include "settings.h"
 
-int main(void)
-{
+int main(void) {
     enum GameState currentState = HOME_PAGE;
 
     // Initialize home page
     HomePage_initialize();
 
     // Main game loop
-    while (true)
-    {
+    while (true) {
         enum GameState nextState = currentState;
 
-        switch (currentState)
-        {
-        case HOME_PAGE:
-            nextState = HomePage_update();
-            move_homeKart();
-            break;
+        switch (currentState) {
+            case HOME_PAGE:
+                nextState = HomePage_update();
+                move_homeKart();
+                break;
 
-        case SETTINGS:
-            Settings_update();
-            break;
+            case SETTINGS:
+                Settings_update();
+                break;
         }
 
-        if (nextState != currentState)
-        {
+        if (nextState != currentState) {
             // Cleanup old state
-            switch (currentState)
-            {
-            case HOME_PAGE:
-                HomePage_cleanup();
-                break;
-            case SETTINGS:
-                Settings_cleanup();
-                break;
+            switch (currentState) {
+                case HOME_PAGE:
+                    HomePage_cleanup();
+                    break;
+                case SETTINGS:
+                    Settings_cleanup();
+                    break;
+                case SINGLEPLAYER:
+                    HomePage_cleanup();  // placeholder for noe
+                    break;
+                case MULTIPLAYER:
             }
 
             // Init new state
-            switch (nextState)
-            {
-            case HOME_PAGE:
-                HomePage_initialize();
-                break;
-            case SETTINGS:
-                Settings_initialize();
-                break;
+            switch (nextState) {
+                case HOME_PAGE:
+                    HomePage_initialize();
+                    break;
+                case SETTINGS:
+                    Settings_initialize();
+                    break;
+                case SINGLEPLAYER:
+                    HomePage_initialize();  // placeholder for noe
+                    break;
+                case MULTIPLAYER:
+                    HomePage_initialize();  // placeholder for noe
+                    break;
             }
 
             currentState = nextState;
