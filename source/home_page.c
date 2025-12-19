@@ -28,9 +28,7 @@ u8 highlightRightTile[64] = {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
                              0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0};
 static HomeKartSprite homeKart;
 u16* highlightGfx;
-typedef struct {
-    int x, y, w, h;
-} MenuItem;
+
 
 #define MENU_COUNT 3
 
