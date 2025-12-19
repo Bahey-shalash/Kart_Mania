@@ -27,6 +27,7 @@ u8 highlightRightTile[64] = {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
                              0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1,
                              0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0};
 static HomeKartSprite homeKart;
+
 u16* highlightGfx;
 
 static const MenuItemHitBox menu[MENU_COUNT] = {
@@ -35,9 +36,8 @@ static const MenuItemHitBox menu[MENU_COUNT] = {
     [SETTINGS_button] = MENU_ITEM_ROW(2),
 };
 
-int selectedButton = 0;
-int lastSelectedButton = -1;
-bool pressed = false;
+static enum HomeButtonselected selected = NONE_button;
+static enum HomeButtonselected lastSelected = NONE_button;
 
 //----------Initialization & Cleanup----------
 void HomePage_initialize() {
@@ -57,8 +57,8 @@ void HomePage_cleanup(void) {
     memset(BG_MAP_RAM_SUB(2), 0, 32 * 32 * sizeof(u16));
 
     // Optional: reset selection
-    selectedButton = 0;
-    lastSelectedButton = -1;
+    selected = NONE_button;
+    lastSelected = NONE_button;
 }
 
 //----------Configuration Functions (Main Engine)----------
@@ -155,8 +155,7 @@ void configBackground_Sub(void) {
     dmaCopy(highlightMiddleTile, (u8*)BG_TILE_RAM_SUB(4) + (2 * 64), 64);
     dmaCopy(highlightRightTile, (u8*)BG_TILE_RAM_SUB(4) + (3 * 64), 64);
 
-    // Show initial highlight on button 0
-    setButtonOverlay(0, true);
+   
 }
 
 void setButtonOverlay(int buttonIndex, bool show) {
@@ -194,15 +193,11 @@ void handleDPadInput(void) {
     const int keys = keysDown();
 
     if (keys & KEY_UP) {
-        selectedButton = (selectedButton - 1 + MENU_COUNT) % MENU_COUNT;
+        selected = (selected - 1 + MENU_COUNT) % MENU_COUNT;
     }
 
     if (keys & KEY_DOWN) {
-        selectedButton = (selectedButton + 1) % MENU_COUNT;
-    }
-
-    if (keys & KEY_A) {
-        pressed = true;  // visual feedback only
+        selected = (selected + 1) % MENU_COUNT;
     }
 }
 
@@ -218,8 +213,7 @@ void handleTouchInput(void) {
 
         if (touch.px >= m->x && touch.px < m->x + m->width && touch.py >= m->y &&
             touch.py < m->y + m->height) {
-            selectedButton = i;
-            pressed = true;
+            selected = i;
             return;
         }
     }
@@ -227,29 +221,28 @@ void handleTouchInput(void) {
 
 enum GameState HomePage_update(void) {
     scanKeys();
-    pressed = false;
 
     handleDPadInput();
     handleTouchInput();
 
-    // Update highlight
-    if (selectedButton != lastSelectedButton) {
-        if (lastSelectedButton != -1)
-            setButtonOverlay(lastSelectedButton, false);
+    if (selected != lastSelected) {
+        if (lastSelected != NONE_button)
+            setButtonOverlay(lastSelected, false);
 
-        setButtonOverlay(selectedButton, true);
-        lastSelectedButton = selectedButton;
+        setButtonOverlay(selected, true);
+        lastSelected = selected;
     }
 
-    // ACTIVATE on release (A or touch)
     if (keysUp() & KEY_A || keysUp() & KEY_TOUCH) {
-        switch (selectedButton) {
+        switch (selected) {
             case SINGLE_PLAYER_button:
                 return SINGLEPLAYER;
             case MULTIPLAYER_button:
                 return MULTIPLAYER;
             case SETTINGS_button:
                 return SETTINGS;
+            default:
+                break;
         }
     }
 
