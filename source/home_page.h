@@ -56,4 +56,6 @@ void handleDPadInput(void);
  */
 void handleTouchInput(void);
 
+void setButtonOverlay(int buttonIndex, bool show);
+
 #endif // HOME_PAGE_H
