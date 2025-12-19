@@ -24,6 +24,9 @@ void button_controls_home_page(u16* keys);
 void configureGraphics_MAIN_home_page();
 void configBG_Main_homepage();
 
+void configBG0_Sub_contour();
+void updateSelectionOverlay(enum HomeButtonselected selection);
+
 void configurekartSpritehome();
 void move_homeKart();
 
