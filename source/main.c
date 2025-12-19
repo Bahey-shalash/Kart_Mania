@@ -27,6 +27,14 @@ int main(void) {
             case SETTINGS:
                 Settings_update();
                 break;
+            case SINGLEPLAYER:
+                nextState = HomePage_update();  // placeholder
+                move_homeKart();
+                break;
+            case MULTIPLAYER:
+                nextState = HomePage_update();  // placeholder
+                move_homeKart();
+                break;
         }
 
         if (nextState != currentState) {
@@ -39,9 +47,11 @@ int main(void) {
                     Settings_cleanup();
                     break;
                 case SINGLEPLAYER:
-                    HomePage_cleanup();  // placeholder for noe
+                    HomePage_cleanup();  // placeholder for now
                     break;
                 case MULTIPLAYER:
+                    HomePage_cleanup();  // placeholder for now
+                    break;
             }
 
             // Init new state
@@ -53,10 +63,10 @@ int main(void) {
                     Settings_initialize();
                     break;
                 case SINGLEPLAYER:
-                    HomePage_initialize();  // placeholder for noe
+                    HomePage_initialize();  // placeholder for now
                     break;
                 case MULTIPLAYER:
-                    HomePage_initialize();  // placeholder for noe
+                    HomePage_initialize();  // placeholder for now
                     break;
             }
 
