@@ -3,9 +3,6 @@
 #include <string.h>
 #include "nds_settings.h"
 
-/* =========================
-   Cursor tiles (OBVIOUS)
-   ========================= */
 // Arrow cursor tile (right-pointing arrow ">")
 u8 cursorArrowTile[64] = {
     0, 0, 0, 0, 0, 0, 0, 0,
@@ -31,7 +28,7 @@ typedef struct
 
 #define SETTING_COUNT 9
 
-static SettingItem settings[SETTING_COUNT] = {
+SettingItem settings[SETTING_COUNT] = {
     {8, 22, 0},
     {8, 62, 0},
     {8, 102, 0},
@@ -43,13 +40,13 @@ static SettingItem settings[SETTING_COUNT] = {
     {8, 342, 193},
 };
 
-static int selectedSetting = 0;
-static int lastSelectedSetting = -1;
+int selectedSetting = 0;
+int lastSelectedSetting = -1;
 
 /* =========================
    Forward declarations
    ========================= */
-static void setCursorOverlay(int settingIndex, bool show);
+void setCursorOverlay(int settingIndex, bool show);
 
 /* =========================
    Init / Config
@@ -90,7 +87,7 @@ void Settings_configBackground_Sub(void)
         BG_32x64 |
         BG_MAP_BASE(0) |
         BG_TILE_BASE(2) |
-        BG_COLOR_256;  // Lower priority than BG1 so cursor shows on top
+        BG_COLOR_256; // Lower priority than BG1 so cursor shows on top
 
     swiCopy(nds_settingsPal, BG_PALETTE_SUB, nds_settingsPalLen / 2);
     swiCopy(nds_settingsTiles, BG_TILE_RAM_SUB(2), nds_settingsTilesLen / 2);
@@ -129,7 +126,7 @@ void Settings_configBackground_Sub(void)
 /* =========================
    Cursor drawing helper
    ========================= */
-static void setCursorOverlay(int settingIndex, bool show)
+void setCursorOverlay(int settingIndex, bool show)
 {
     u16 *overlayMap = (u16 *)BG_MAP_RAM_SUB(3);
     SettingItem *s = &settings[settingIndex];
@@ -138,7 +135,7 @@ static void setCursorOverlay(int settingIndex, bool show)
     // So we need to account for the scroll offset
     int scrollOffset = s->scrollTarget;
     int screenX = s->x;
-    int screenY = s->y - scrollOffset;  // Convert to screen coordinates
+    int screenY = s->y - scrollOffset; // Convert to screen coordinates
 
     // Convert pixel coordinates to tile coordinates
     int mapX = screenX / 8;
@@ -148,10 +145,10 @@ static void setCursorOverlay(int settingIndex, bool show)
     if (screenY >= 0 && screenY < 192)
     {
         // Draw cursor arrow (single 8x8 tile, not 2x2)
-        if (mapY >= 0 && mapY < 32 && mapX >= 0 && mapX < 32)  // Bounds check for tile coordinates
+        if (mapY >= 0 && mapY < 32 && mapX >= 0 && mapX < 32) // Bounds check for tile coordinates
         {
             int mapIndex = mapY * 32 + mapX;
-            if (mapIndex >= 0 && mapIndex < 32 * 32)  // Additional bounds check
+            if (mapIndex >= 0 && mapIndex < 32 * 32) // Additional bounds check
             {
                 overlayMap[mapIndex] = show ? 1 : 0; // 1 = cursor tile, 0 = empty
             }
