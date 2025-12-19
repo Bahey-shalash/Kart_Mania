@@ -6,6 +6,27 @@
 
 #include "game_types.h"
 
+//----------Layout constants (SUB screen)----------
+
+#define HOME_MENU_X 32
+#define HOME_MENU_WIDTH 192
+#define HOME_MENU_HEIGHT 40
+#define HOME_MENU_SPACING 54
+#define HOME_MENU_Y_START 24
+
+// Macro to define menu item hit boxes
+#define MENU_COUNT 3
+
+/**
+ * Generate a MenuItemHitBox for a vertically stacked menu item.
+ * Uses fixed X/width/height; Y position is derived from the item index.
+ *
+ * @param i Zero-based menu item index (top item = 0)
+ */
+#define MENU_ITEM_ROW(i)                                                        \
+    {HOME_MENU_X, HOME_MENU_Y_START + (i) * HOME_MENU_SPACING, HOME_MENU_WIDTH, \
+     HOME_MENU_HEIGHT}
+
 void configureGraphics_MAIN_home_page();
 void configBG_Main_homepage();
 
@@ -60,4 +81,4 @@ void handleTouchInput(void);
 
 void setButtonOverlay(int buttonIndex, bool show);
 
-#endif // HOME_PAGE_H
+#endif  // HOME_PAGE_H

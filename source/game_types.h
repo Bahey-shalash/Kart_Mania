@@ -24,7 +24,14 @@ typedef struct {
 // MenuButton struct - represents a single button sprite on screen
 
 typedef struct {
-    int x, y, w, h;
-} MenuItem;
+    int x, y, width, height;
+} MenuItemHitBox;
+
+enum HomeButtonselected {
+    NONE_button = -1,
+    SINGLE_PLAYER_button = 0,
+    MULTIPLAYER_button = 1,
+    SETTINGS_button = 2
+};
 
 #endif  // GaME_TYPES_H

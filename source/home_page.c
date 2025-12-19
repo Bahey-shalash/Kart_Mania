@@ -29,13 +29,10 @@ u8 highlightRightTile[64] = {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
 static HomeKartSprite homeKart;
 u16* highlightGfx;
 
-
-#define MENU_COUNT 3
-
-MenuItem menu[MENU_COUNT] = {
-    {32, 24, 192, 40},   // Single Player
-    {32, 78, 192, 40},   // Multiplayer
-    {32, 132, 192, 40},  // Settings
+static const MenuItemHitBox menu[MENU_COUNT] = {
+    [SINGLE_PLAYER_button] = MENU_ITEM_ROW(0),
+    [MULTIPLAYER_button] = MENU_ITEM_ROW(1),
+    [SETTINGS_button] = MENU_ITEM_ROW(2),
 };
 
 int selectedButton = 0;
@@ -141,19 +138,20 @@ void configGraphics_Sub(void) {
 }
 
 void configBackground_Sub(void) {
-    BGCTRL_SUB[0] = BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256;
+    BGCTRL_SUB[0] = BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256| BG_PRIORITY(1);
     swiCopy(ds_menuPal, BG_PALETTE_SUB, ds_menuPalLen / 2);
     swiCopy(ds_menuTiles, BG_TILE_RAM_SUB(1), ds_menuTilesLen / 2);
     dmaCopy(ds_menuMap, BG_MAP_RAM_SUB(0), ds_menuMapLen);
 
-    BGCTRL_SUB[1] = BG_32x32 | BG_MAP_BASE(2) | BG_TILE_BASE(2) | BG_COLOR_256;
+    BGCTRL_SUB[1] = BG_32x32 | BG_MAP_BASE(2) | BG_TILE_BASE(4) | BG_COLOR_256| BG_PRIORITY(0);
     // Set palette color for border
-    BG_PALETTE_SUB[1] = RGB15(10, 10, 10);
+    //BG_PALETTE_SUB[1] = RGB15(10, 10, 10);
+    BG_PALETTE_SUB[1] = RGB15(31, 0, 0);  // Bright red for debugging
 
     // Copy highlight tiles to VRAM (tiles 1, 2, 3)
-    dmaCopy(highlightLeftTile, BG_TILE_RAM_SUB(2) + (1 * 64), 64);
-    dmaCopy(highlightMiddleTile, BG_TILE_RAM_SUB(2) + (2 * 64), 64);
-    dmaCopy(highlightRightTile, BG_TILE_RAM_SUB(2) + (3 * 64), 64);
+    dmaCopy(highlightLeftTile, (u8*)BG_TILE_RAM_SUB(4) + (1 * 64), 64);
+    dmaCopy(highlightMiddleTile, (u8*)BG_TILE_RAM_SUB(4) + (2 * 64), 64);
+    dmaCopy(highlightRightTile, (u8*)BG_TILE_RAM_SUB(4) + (3 * 64), 64);
 
     // Show initial highlight on button 0
     setButtonOverlay(0, true);
@@ -161,11 +159,11 @@ void configBackground_Sub(void) {
 
 void setButtonOverlay(int buttonIndex, bool show) {
     u16* overlayMap = (u16*)BG_MAP_RAM_SUB(2);
-    MenuItem* m = &menu[buttonIndex];
+    MenuItemHitBox* m = &menu[buttonIndex];
 
-    int tilesWide = m->w / 8;  // 192/8 = 24 tiles
-    int tilesHigh = m->h / 8;  // 40/8 = 5 tiles
-    int mapX = m->x / 8;       // 32/8 = 4
+    int tilesWide = m->width / 8;   // 192/8 = 24 tiles
+    int tilesHigh = m->height / 8;  // 40/8 = 5 tiles
+    int mapX = m->x / 8;            // 32/8 = 4
     int mapY = m->y / 8;
 
     for (int ty = 0; ty < tilesHigh; ty++) {
@@ -214,10 +212,10 @@ void handleTouchInput(void) {
         return;
 
     for (int i = 0; i < MENU_COUNT; i++) {
-        MenuItem* m = &menu[i];
+        MenuItemHitBox* m = &menu[i];
 
-        if (touch.px >= m->x && touch.px < m->x + m->w && touch.py >= m->y &&
-            touch.py < m->y + m->h) {
+        if (touch.px >= m->x && touch.px < m->x + m->width && touch.py >= m->y &&
+            touch.py < m->y + m->height) {
             selectedButton = i;
             pressed = true;
             return;
