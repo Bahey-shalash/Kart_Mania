@@ -3,6 +3,7 @@
 #include <nds.h>
 
 #include "nds_settings.h"
+#include "settings_top.h"
 
 //=============================================================================
 // CONSTANTS
@@ -16,6 +17,24 @@
 //=============================================================================
 
 static int scroll_y;
+
+//=============================================================================
+// MAIN ENGINE (Top Screen)
+//=============================================================================
+void configureGraphics_MAIN_Settings(void) {
+    REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
+    VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
+}
+
+void configBG_Main_Settings(void) {
+    BGCTRL[2] = BG_BMP_BASE(0) | BgSize_B8_256x256;
+    dmaCopy(settings_topBitmap, BG_BMP_RAM(0), settings_topBitmapLen);
+    dmaCopy(settings_topPal, BG_PALETTE, settings_topPalLen);
+    REG_BG2PA = 256;
+    REG_BG2PC = 0;
+    REG_BG2PB = 0;
+    REG_BG2PD = 256;
+}
 
 //=============================================================================
 // SUB ENGINE (Bottom Screen)
@@ -68,7 +87,8 @@ static void handleInput(void) {
 
 void Settings_initialize(void) {
     scroll_y = 0;
-
+    configBG_Main_Settings();
+    configureGraphics_MAIN_Settings();
     configGraphics_Sub();
     configBackground_Sub();
 }

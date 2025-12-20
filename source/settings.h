@@ -15,4 +15,8 @@ void Settings_cleanup(void);
 void Settings_configGraphics_Sub(void);
 void Settings_configBackground_Sub(void);
 
+
+void configBG_Main_Settings(void);
+void configureGraphics_MAIN_Settings(void);
+
 #endif
