@@ -62,4 +62,17 @@ typedef enum
     TOGGLE_ON = 1
 } ToggleState;
 
-#endif // GAME_TYPES_H
+
+typedef enum {
+    TILE_RED = 3,
+    TILE_GREEN = 4,
+    TILE_SEL_WIFI = 5,
+    TILE_SEL_MUSIC = 6,
+    TILE_SEL_SOUNDFX = 7,
+    TILE_SEL_SAVE = 8,
+    TILE_SEL_BACK = 9,
+    TILE_SEL_HOME = 10
+} SettingsTileIndex;
+
+#endif  // GAME_TYPES_H
+>>>>>>> d72f3db (added selection for settings)
