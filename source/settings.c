@@ -260,25 +260,17 @@ void handleDPadInputSettings(void) {
     int keys = keysDown();
 
     if (keys & KEY_UP) {
-        if (selected >= SETTINGS_BTN_SAVE) {
-            // From bottom row, go to Sound FX
-            selected = SETTINGS_BTN_SOUND_FX;
-        } else {
-            selected = (selected - 1 + SETTINGS_BTN_COUNT) % SETTINGS_BTN_COUNT;
-        }
+        selected = (selected - 1 + SETTINGS_BTN_COUNT) % SETTINGS_BTN_COUNT;
     }
 
     if (keys & KEY_DOWN) {
-        if (selected == SETTINGS_BTN_SOUND_FX) {
-            // From Sound FX, go to middle bottom button (Back)
-            selected = SETTINGS_BTN_BACK;
-        } else if (selected < SETTINGS_BTN_SAVE) {
-            selected = (selected + 1) % SETTINGS_BTN_COUNT;
-        }
+        selected = (selected + 1) % SETTINGS_BTN_COUNT;
     }
 
     if (keys & KEY_LEFT) {
-        if (selected == SETTINGS_BTN_BACK) {
+        if (selected == SETTINGS_BTN_SAVE) {
+            selected = SETTINGS_BTN_HOME;  // wrap to right
+        } else if (selected == SETTINGS_BTN_BACK) {
             selected = SETTINGS_BTN_SAVE;
         } else if (selected == SETTINGS_BTN_HOME) {
             selected = SETTINGS_BTN_BACK;
@@ -290,6 +282,8 @@ void handleDPadInputSettings(void) {
             selected = SETTINGS_BTN_BACK;
         } else if (selected == SETTINGS_BTN_BACK) {
             selected = SETTINGS_BTN_HOME;
+        } else if (selected == SETTINGS_BTN_HOME) {
+            selected = SETTINGS_BTN_SAVE;  // wrap to left
         }
     }
 }
