@@ -3,6 +3,8 @@
 #include <nds.h>
 #include <string.h>
 
+
+
 void video_nuke(void) {
     // 1) Turn off both displays (prevents seeing garbage during transition)
     REG_DISPCNT = 0;
@@ -45,7 +47,7 @@ void video_nuke(void) {
     REG_BG2HOFS_SUB = REG_BG2VOFS_SUB = 0;
     REG_BG3HOFS_SUB = REG_BG3VOFS_SUB = 0;
 
-    //7) Affine identity (main)
+    // 7) Affine identity (main)
     REG_BG2PA = REG_BG2PD = 256;
     REG_BG2PB = REG_BG2PC = 0;
     REG_BG3PA = REG_BG3PD = 256;

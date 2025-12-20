@@ -11,30 +11,41 @@
 // DUMMY FUNCTIONS - implement these later
 //=============================================================================
 
-void onWifiToggle(ToggleState state) {
+void onWifiToggle(ToggleState wifiEnabled) {
     // TODO: enable/disable wifi based on state
-    (void)state;
+    if(wifiEnabled == TOGGLE_ON) {
+        // Enable wifi
+    } else {
+        // Disable wifi
+    }
 }
 
-void onMusicToggle(ToggleState state) {
+void onMusicToggle(ToggleState musicEnabled) {
     // TODO: enable/disable music based on state
-    (void)state;
+    if(musicEnabled == TOGGLE_ON) {
+        // Enable music
+    } else {
+        // Disable music
+    }
 }
 
-void onSoundFxToggle(ToggleState state) {
+void onSoundFxToggle(ToggleState soundFxEnabled) {
     // TODO: enable/disable sound effects based on state
-    (void)state;
+    if(soundFxEnabled == TOGGLE_ON) {
+        // Enable sound effects
+    } else {
+        // Disable sound effects
+    }
 }
 
 void onSavePressed(void) {
-    // TODO: save settings to SRAM/file
+    // TODO: save settings to extrenal storage
 }
 
 //=============================================================================
 // CONSTANTS - Hitbox coordinates from the PNG
 //=============================================================================
-
-
+#define SETTINGS_MENU_COUNT SETTINGS_BTN_COUNT
 
 //=============================================================================
 // GLOBAL STATE
@@ -51,7 +62,6 @@ static ToggleState soundFxEnabled = TOGGLE_ON;
 //=============================================================================
 // HITBOXES
 //=============================================================================
-
 
 //=============================================================================
 // MAIN ENGINE (Top Screen)
@@ -90,7 +100,78 @@ void configBackground_Sub_SETTINGS(void) {
     dmaCopy(nds_settingsTiles, BG_TILE_RAM_SUB(1), nds_settingsTilesLen);
     dmaCopy(nds_settingsMap, BG_MAP_RAM_SUB(0), nds_settingsMapLen);
 
-     //todo: highlight layer (behind)
+    // todo: highlight layer (behind)
+}
+
+//=============================================================================
+// INPUT HANDLING
+//=============================================================================
+
+
+void handleDPadInputSettings(void) {
+    int keys = keysDown();
+    if (keys & KEY_UP)
+        selected = (selected - 1 + SETTINGS_MENU_COUNT) % SETTINGS_MENU_COUNT;
+    if (keys & KEY_DOWN)
+        selected = (selected + 1) % SETTINGS_MENU_COUNT;
+}
+
+void handleTouchInputSettings(void) {
+    if (!(keysHeld() & KEY_TOUCH))
+        return;
+
+    touchPosition touch;
+    touchRead(&touch);
+
+    if (touch.px < 0 || touch.px > 256 || touch.py < 0 || touch.py > 192) {
+        return;//sanity check
+    }
+    // wifi text
+    if (touch.px > 24 && touch.px < 53 && touch.py > 10 && touch.py < 28) {
+        selected = SETTINGS_BTN_WIFI;
+        return;
+    }
+    // wifi pill
+    if (touch.px > 174 && touch.px < 238 && touch.py > 10 && touch.py < 38) {
+        selected = SETTINGS_BTN_WIFI;
+        return;
+    }
+    // music text
+    if (touch.px > 24 && touch.px < 69 && touch.py > 42 && touch.py < 54) {
+        selected = SETTINGS_BTN_MUSIC;
+        return;
+    }
+    // music pill
+    if (touch.px > 174 && touch.px < 238 && touch.py > 42 && touch.py < 65) {
+        selected = SETTINGS_BTN_MUSIC;
+        return;
+    }
+    // sound fx text
+    if (touch.px > 24 && touch.px < 98 && touch.py > 70 && touch.py < 82) {
+        selected = SETTINGS_BTN_SOUND_FX;
+        return;
+    }
+    // sound fx pill
+    if (touch.px > 174 && touch.px < 238 && touch.py > 71 && touch.py < 94) {
+        selected = SETTINGS_BTN_SOUND_FX;
+        return;
+    }
+    // save button
+    if (touch.px > 37 && touch.px < 90 && touch.py > 126 && touch.py < 178) {
+        selected = SETTINGS_BTN_SAVE;
+        return;
+    }
+    // back button
+    if (touch.px > 101 && touch.px < 153 && touch.py > 126 && touch.py < 178) {
+        selected = SETTINGS_BTN_BACK;
+        return;
+    }
+    // home button
+    if (touch.px > 165 && touch.px < 217 && touch.py > 126 && touch.py < 178) {
+        selected = SETTINGS_BTN_HOME;
+        return;
+    }
+
 }
 
 //=============================================================================
@@ -98,15 +179,49 @@ void configBackground_Sub_SETTINGS(void) {
 //=============================================================================
 
 void Settings_initialize(void) {
+    selected = SETTINGS_BTN_NONE;
+    lastSelected = SETTINGS_BTN_NONE;
+
+    // Main Screen
     configBG_Main_Settings();
     configureGraphics_MAIN_Settings();
+
+    // Sub Screen
     configGraphics_Sub_SETTINGS();
     configBackground_Sub_SETTINGS();
 }
 
 GameState Settings_update(void) {
-    // scanKeys();
-    // handleInput();
+    scanKeys();
+    handleDPadInputSettings();
+    handleTouchInputSettings();
+
+    // Handle button activation on release
+    if (keysUp() & (KEY_A | KEY_TOUCH)) {
+        switch (selected) {
+            case SETTINGS_BTN_WIFI:
+                wifiEnabled = !wifiEnabled;
+                onWifiToggle(wifiEnabled);
+                break;
+            case SETTINGS_BTN_MUSIC:
+                musicEnabled = !musicEnabled;
+                onMusicToggle(musicEnabled);
+                break;
+            case SETTINGS_BTN_SOUND_FX:
+                soundFxEnabled = !soundFxEnabled;
+                onSoundFxToggle(soundFxEnabled);
+                break;
+            case SETTINGS_BTN_SAVE:
+                onSavePressed();
+                break;
+            case SETTINGS_BTN_BACK:
+                return HOME_PAGE;
+            case SETTINGS_BTN_HOME:
+                return HOME_PAGE;
+            default:
+                break;
+        }
+    }
 
     return SETTINGS;
 }
