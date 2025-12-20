@@ -6,7 +6,6 @@
 #include "color.h"
 #include "nds_settings.h"
 #include "settings_top.h"
-#include "color.h"
 
 //=============================================================================
 // DUMMY FUNCTIONS - implement these later
@@ -214,7 +213,6 @@ void configBackground_Sub_SETTINGS(void) {
     dmaCopy(nds_settingsTiles, BG_TILE_RAM_SUB(1), nds_settingsTilesLen);
     dmaCopy(nds_settingsMap, BG_MAP_RAM_SUB(0), nds_settingsMapLen);
 
-
     BGCTRL_SUB[1] =
         BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(2) | BG_PRIORITY(1);
 
@@ -222,7 +220,7 @@ void configBackground_Sub_SETTINGS(void) {
     dmaCopy(GreenTile, (u8*)BG_TILE_RAM_SUB(2) + (4 * 64), 64);
 
     BG_PALETTE_SUB[254] = TOGGLE_OFF_COLOR;  // Red
-    BG_PALETTE_SUB[255] = TOGGLE_ON_COLOR;  // Green
+    BG_PALETTE_SUB[255] = TOGGLE_ON_COLOR;   // Green
 
     /* for (int row = 0; row < 24; row++)
         for (int col = 0; col < 32; col++)
@@ -260,10 +258,40 @@ void configBackground_Sub_SETTINGS(void) {
 
 void handleDPadInputSettings(void) {
     int keys = keysDown();
-    if (keys & KEY_UP)
-        selected = (selected - 1 + SETTINGS_MENU_COUNT) % SETTINGS_MENU_COUNT;
-    if (keys & KEY_DOWN)
-        selected = (selected + 1) % SETTINGS_MENU_COUNT;
+
+    if (keys & KEY_UP) {
+        if (selected >= SETTINGS_BTN_SAVE) {
+            // From bottom row, go to Sound FX
+            selected = SETTINGS_BTN_SOUND_FX;
+        } else {
+            selected = (selected - 1 + SETTINGS_BTN_COUNT) % SETTINGS_BTN_COUNT;
+        }
+    }
+
+    if (keys & KEY_DOWN) {
+        if (selected == SETTINGS_BTN_SOUND_FX) {
+            // From Sound FX, go to middle bottom button (Back)
+            selected = SETTINGS_BTN_BACK;
+        } else if (selected < SETTINGS_BTN_SAVE) {
+            selected = (selected + 1) % SETTINGS_BTN_COUNT;
+        }
+    }
+
+    if (keys & KEY_LEFT) {
+        if (selected == SETTINGS_BTN_BACK) {
+            selected = SETTINGS_BTN_SAVE;
+        } else if (selected == SETTINGS_BTN_HOME) {
+            selected = SETTINGS_BTN_BACK;
+        }
+    }
+
+    if (keys & KEY_RIGHT) {
+        if (selected == SETTINGS_BTN_SAVE) {
+            selected = SETTINGS_BTN_BACK;
+        } else if (selected == SETTINGS_BTN_BACK) {
+            selected = SETTINGS_BTN_HOME;
+        }
+    }
 }
 
 void handleTouchInputSettings(void) {
