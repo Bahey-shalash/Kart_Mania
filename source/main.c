@@ -2,74 +2,34 @@
  * Kart Mania - Main Source File
  */
 #include <nds.h>
-#include <stdio.h>
 
 #include "game_types.h"
+#include "graphics.h"
 #include "home_page.h"
 #include "settings.h"
 
+//=============================================================================
+// PROTOTYPES
+//=============================================================================
+
+GameState update_state(GameState state);
+void init_state(GameState state);
+
+//=============================================================================
+// MAIN
+//=============================================================================
+
 int main(void) {
-    enum GameState currentState = HOME_PAGE;
+    GameState currentState = HOME_PAGE;
 
-    // Initialize home page
-    HomePage_initialize();
+    init_state(currentState);
 
-    // Main game loop
     while (true) {
-        enum GameState nextState = currentState;
-
-        switch (currentState) {
-            case HOME_PAGE:
-                nextState = HomePage_update();
-                move_homeKart();
-                break;
-
-            case SETTINGS:
-                Settings_update();
-                break;
-            case SINGLEPLAYER:
-                nextState = HomePage_update();  // placeholder
-                move_homeKart();
-                break;
-            case MULTIPLAYER:
-                nextState = HomePage_update();  // placeholder
-                move_homeKart();
-                break;
-        }
+        GameState nextState = update_state(currentState);
 
         if (nextState != currentState) {
-            // Cleanup old state
-            switch (currentState) {
-                case HOME_PAGE:
-                    HomePage_cleanup();
-                    break;
-                case SETTINGS:
-                    Settings_cleanup();
-                    break;
-                case SINGLEPLAYER:
-                    HomePage_cleanup();  // placeholder for now
-                    break;
-                case MULTIPLAYER:
-                    HomePage_cleanup();  // placeholder for now
-                    break;
-            }
-
-            // Init new state
-            switch (nextState) {
-                case HOME_PAGE:
-                    HomePage_initialize();
-                    break;
-                case SETTINGS:
-                    Settings_initialize();
-                    break;
-                case SINGLEPLAYER:
-                    HomePage_initialize();  // placeholder for now
-                    break;
-                case MULTIPLAYER:
-                    HomePage_initialize();  // placeholder for now
-                    break;
-            }
-
+            video_nuke();
+            init_state(nextState);
             currentState = nextState;
         }
 
@@ -77,4 +37,38 @@ int main(void) {
     }
 
     return 0;
+}
+
+//=============================================================================
+// IMPLEMENTATION
+//=============================================================================
+
+GameState update_state(GameState state) {
+    switch (state) {
+        case HOME_PAGE:
+            move_homeKart();
+            return HomePage_update();
+        case SETTINGS:
+            return Settings_update();
+        case SINGLEPLAYER:
+            move_homeKart();
+            return HomePage_update();  // placeholder
+        case MULTIPLAYER:
+            move_homeKart();
+            return HomePage_update();  // placeholder
+    }
+    return state;
+}
+
+void init_state(GameState state) {
+    switch (state) {
+        case HOME_PAGE:
+        case SINGLEPLAYER:
+        case MULTIPLAYER:
+            HomePage_initialize();
+            break;
+        case SETTINGS:
+            Settings_initialize();
+            break;
+    }
 }

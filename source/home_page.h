@@ -4,9 +4,7 @@
 #include <nds.h>
 
 #include "color.h"
-
 #include "game_types.h"
-
 
 //----------Layout constants (SUB screen)----------
 
@@ -48,8 +46,6 @@ void move_homeKart();
 
 void HomePage_initialize(void);
 
-void HomePage_cleanup(void);
-
 //----------Configuration Functions----------
 
 /**
@@ -67,7 +63,7 @@ void configGraphics_Sub(void);
 void configBackground_Sub(void);
 
 //----------Input Handling----------
-enum GameState HomePage_update(void);
+GameState HomePage_update(void);
 
 /**
  * Handle D-pad input for menu navigation

@@ -4,12 +4,12 @@
 #include <nds.h>
 #include <stdbool.h>
 
-enum GameState {
+typedef enum{
     HOME_PAGE,
     SETTINGS,
     SINGLEPLAYER,
     MULTIPLAYER
-};  // will add more states later
+}GameState ;  // will add more states later
 
 typedef struct {
     u16* gfx;

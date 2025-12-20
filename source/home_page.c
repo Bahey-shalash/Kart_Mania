@@ -59,19 +59,19 @@ void move_homeKart(void) {
 //=============================================================================
 
 // Highlight layer tiles (8bpp, indices 251-253)
-static u8 selectionMaskTile0[64] = {
+static const u8 selectionMaskTile0[64] = {
     251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
     251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
     251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
     251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
 };
-static u8 selectionMaskTile1[64] = {
+static const u8 selectionMaskTile1[64] = {
     252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252,
     252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252,
     252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252,
     252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252,
 };
-static u8 selectionMaskTile2[64] = {
+static const u8 selectionMaskTile2[64] = {
     253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253,
     253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253,
     253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253,
@@ -127,7 +127,7 @@ void configBackground_Sub(void) {
     BG_PALETTE_SUB[252] = BLACK;
     BG_PALETTE_SUB[253] = BLACK;
 
-    memset(BG_MAP_RAM_SUB(1), 0, 32 * 32 * sizeof(u16));
+    memset((u8*)BG_TILE_RAM_SUB(2) + 0 * 64, 0, 64);
 
     // Load highlight tiles
     dmaCopy(selectionMaskTile0, (u8*)BG_TILE_RAM_SUB(2) + (1 * 64), 64);
@@ -173,25 +173,21 @@ void handleTouchInputHOME(void) {
 //=============================================================================
 
 void HomePage_initialize(void) {
+    selected = HOME_BTN_NONE;
+    lastSelected = HOME_BTN_NONE;
+
     // Main engine (top screen)
     configureGraphics_MAIN_home_page();
     configBG_Main_homepage();
     configurekartSpritehome();
+    move_homeKart();
 
     // Sub engine (bottom screen)
     configGraphics_Sub();
     configBackground_Sub();
 }
 
-void HomePage_cleanup(void) {
-    REG_DISPCNT_SUB &= ~(DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
-    memset(BG_MAP_RAM_SUB(0), 0, 32 * 32 * sizeof(u16));
-    memset(BG_MAP_RAM_SUB(1), 0, 32 * 32 * sizeof(u16));
-    selected = HOME_BTN_NONE;
-    lastSelected = HOME_BTN_NONE;
-}
-
-enum GameState HomePage_update(void) {
+GameState HomePage_update(void) {
     scanKeys();
     handleDPadInputHOME();
     handleTouchInputHOME();
