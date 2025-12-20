@@ -3,7 +3,7 @@
 #include "ds_menu.h"
 #include "home_top.h"
 #include "kart_home.h"
-
+#include "timer.h"
 //=============================================================================
 // GLOBAL STATE
 //=============================================================================
@@ -180,7 +180,8 @@ void HomePage_initialize(void) {
     configureGraphics_MAIN_home_page();
     configBG_Main_homepage();
     configurekartSpritehome();
-    move_homeKart();
+    initTimer();
+    //move_homeKart();
 
     // Sub engine (bottom screen)
     configGraphics_Sub_HOME();

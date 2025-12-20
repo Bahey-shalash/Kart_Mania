@@ -6,17 +6,17 @@
 
 #include "game_types.h"
 
-#define BG_SCROLL_MAX 320
-#define BG_SCROLL_STEP 8
-
 void Settings_initialize(void);
 GameState Settings_update(void);
-void Settings_cleanup(void);
-void Settings_configGraphics_Sub(void);
-void Settings_configBackground_Sub(void);
 
+//=============================================================================
+// INTERNAL (exposed for testing if needed)
+//=============================================================================
 
 void configBG_Main_Settings(void);
 void configureGraphics_MAIN_Settings(void);
+void configGraphics_Sub_SETTINGS(void);
+void configBackground_Sub_SETTINGS(void);
+
 
 #endif

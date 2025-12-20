@@ -39,6 +39,12 @@ typedef enum {
     SETTINGS_BTN_BACK = 4,
     SETTINGS_BTN_HOME = 5,
     SETTINGS_BTN_COUNT
-} SeiingsButtonSelected;
+} SettingsButtonSelected;
+
+
+typedef enum {
+    TOGGLE_OFF = 0,
+    TOGGLE_ON = 1
+} ToggleState;
 
 #endif  // GAME_TYPES_H

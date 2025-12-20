@@ -1,23 +1,62 @@
 #include "settings.h"
 
 #include <nds.h>
+#include <string.h>
 
+#include "color.h"
 #include "nds_settings.h"
 #include "settings_top.h"
 
 //=============================================================================
-// CONSTANTS
+// DUMMY FUNCTIONS - implement these later
 //=============================================================================
 
+void onWifiToggle(ToggleState state) {
+    // TODO: enable/disable wifi based on state
+    (void)state;
+}
+
+void onMusicToggle(ToggleState state) {
+    // TODO: enable/disable music based on state
+    (void)state;
+}
+
+void onSoundFxToggle(ToggleState state) {
+    // TODO: enable/disable sound effects based on state
+    (void)state;
+}
+
+void onSavePressed(void) {
+    // TODO: save settings to SRAM/file
+}
+
 //=============================================================================
-// Global STATE
+// CONSTANTS - Hitbox coordinates from the PNG
 //=============================================================================
-static SeiingsButtonSelected selected = SETTINGS_BTN_NONE;
-static SeiingsButtonSelected lastSelected = SETTINGS_BTN_NONE;
+
+
+
+//=============================================================================
+// GLOBAL STATE
+//=============================================================================
+
+static SettingsButtonSelected selected = SETTINGS_BTN_NONE;
+static SettingsButtonSelected lastSelected = SETTINGS_BTN_NONE;
+
+// Toggle states (persisted)
+static ToggleState wifiEnabled = TOGGLE_ON;
+static ToggleState musicEnabled = TOGGLE_ON;
+static ToggleState soundFxEnabled = TOGGLE_ON;
+
+//=============================================================================
+// HITBOXES
+//=============================================================================
+
 
 //=============================================================================
 // MAIN ENGINE (Top Screen)
 //=============================================================================
+
 void configureGraphics_MAIN_Settings(void) {
     REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
@@ -38,22 +77,22 @@ void configBG_Main_Settings(void) {
 //=============================================================================
 // todo: tiles to show slection
 // todo: tiles to show if option is enabled/disabled for music/soundfx/wifi
-
 void configGraphics_Sub_SETTINGS(void) {
     REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 }
 
 void configBackground_Sub_SETTINGS(void) {
-    //  BG0: Menu layer (front)
+    // BG0: Menu layer (front)
     BGCTRL_SUB[0] =
         BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(0);
     dmaCopy(nds_settingsPal, BG_PALETTE_SUB, nds_settingsPalLen);
     dmaCopy(nds_settingsTiles, BG_TILE_RAM_SUB(1), nds_settingsTilesLen);
     dmaCopy(nds_settingsMap, BG_MAP_RAM_SUB(0), nds_settingsMapLen);
 
-    //todo: highlight layer (behind)
+     //todo: highlight layer (behind)
 }
+
 //=============================================================================
 // PUBLIC API
 //=============================================================================

@@ -18,19 +18,18 @@ void init_state(GameState state);
 //=============================================================================
 // MAIN
 //=============================================================================
+GameState currentState_GLOBAL = HOME_PAGE;
 
 int main(void) {
-    GameState currentState = HOME_PAGE;
-
-    init_state(currentState);
+    init_state(currentState_GLOBAL);
 
     while (true) {
-        GameState nextState = update_state(currentState);
+        GameState nextState = update_state(currentState_GLOBAL);
 
-        if (nextState != currentState) {
+        if (nextState != currentState_GLOBAL) {
             video_nuke();
             init_state(nextState);
-            currentState = nextState;
+            currentState_GLOBAL = nextState;
         }
 
         swiWaitForVBlank();
@@ -46,15 +45,12 @@ int main(void) {
 GameState update_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
-            move_homeKart();
             return HomePage_update();
         case SETTINGS:
             return Settings_update();
         case SINGLEPLAYER:
-            move_homeKart();
             return HomePage_update();  // placeholder
         case MULTIPLAYER:
-            move_homeKart();
             return HomePage_update();  // placeholder
     }
     return state;
