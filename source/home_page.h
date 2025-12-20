@@ -53,14 +53,14 @@ void HomePage_initialize(void);
  * Sets up MODE_5_2D for bitmap background and allocates VRAM for sprites
  * Called internally by HomePage_initialize()
  */
-void configGraphics_Sub(void);
+void configGraphics_Sub_HOME(void);
 
 /**
  * Configure and load the background bitmap image
  * Sets up BG2 in extended rotoscale mode and copies bitmap data to VRAM
  * Called internally by HomePage_initialize()
  */
-void configBackground_Sub(void);
+void configBackground_Sub_HOME(void);
 
 //----------Input Handling----------
 GameState HomePage_update(void);

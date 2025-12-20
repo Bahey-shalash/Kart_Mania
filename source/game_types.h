@@ -30,4 +30,15 @@ typedef enum {
     HOME_BTN_COUNT
 } HomeButtonSelected;
 
+typedef enum {
+    SETTINGS_BTN_NONE = -1,
+    SETTINGS_BTN_WIFI = 0,
+    SETTINGS_BTN_MUSIC = 1,
+    SETTINGS_BTN_SOUND_FX = 2,
+    SETTINGS_BTN_SAVE = 3,
+    SETTINGS_BTN_BACK = 4,
+    SETTINGS_BTN_HOME = 5,
+    SETTINGS_BTN_COUNT
+} SeiingsButtonSelected;
+
 #endif  // GAME_TYPES_H

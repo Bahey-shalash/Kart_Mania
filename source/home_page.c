@@ -105,12 +105,12 @@ void HomePage_setSelectionTint(int buttonIndex, bool show) {
         show ? MENU_BUTTON_HIGHLIGHT_COLOR : MENU_HIGHLIGHT_OFF_COLOR;
 }
 
-void configGraphics_Sub(void) {
+void configGraphics_Sub_HOME(void) {
     REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 }
 
-void configBackground_Sub(void) {
+void configBackground_Sub_HOME(void) {
     // BG0: Menu layer (front)
     BGCTRL_SUB[0] =
         BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(0);
@@ -183,8 +183,8 @@ void HomePage_initialize(void) {
     move_homeKart();
 
     // Sub engine (bottom screen)
-    configGraphics_Sub();
-    configBackground_Sub();
+    configGraphics_Sub_HOME();
+    configBackground_Sub_HOME();
 }
 
 GameState HomePage_update(void) {
