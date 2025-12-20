@@ -46,14 +46,13 @@ static void drawSelectionUnderlayRect(int buttonIndex, u16 tileIndex) {
     }
 }
 
-void HomePage_setSelectionTint(HomeButtonSelected button, bool show) {
-    if (button < 0 || button >= HOME_BTN_COUNT) {
+void HomePage_setSelectionTint(int buttonIndex, bool show) {
+    if (buttonIndex < 0 || buttonIndex >= MENU_COUNT) {
         return;
     }
-
-    const int paletteIndex = HOME_SELECTION_PAL_BASE + (int)button;
-    BG_PALETTE_SUB[paletteIndex] = show ? MENU_BUTTON_HIGHLIGHT_COLOR
-                                        : MENU_HIGHLIGHT_OFF_COLOR;
+    int paletteIndex = 251 + buttonIndex;
+    BG_PALETTE_SUB[paletteIndex] =
+        show ? MENU_BUTTON_HIGHLIGHT_COLOR : MENU_HIGHLIGHT_OFF_COLOR;
 }
 
 //----------Initialization & Cleanup----------
