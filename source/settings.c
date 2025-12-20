@@ -13,7 +13,7 @@
 
 void onWifiToggle(ToggleState wifiEnabled) {
     // TODO: enable/disable wifi based on state
-    if(wifiEnabled == TOGGLE_ON) {
+    if (wifiEnabled == TOGGLE_ON) {
         // Enable wifi
     } else {
         // Disable wifi
@@ -22,7 +22,7 @@ void onWifiToggle(ToggleState wifiEnabled) {
 
 void onMusicToggle(ToggleState musicEnabled) {
     // TODO: enable/disable music based on state
-    if(musicEnabled == TOGGLE_ON) {
+    if (musicEnabled == TOGGLE_ON) {
         // Enable music
     } else {
         // Disable music
@@ -31,7 +31,7 @@ void onMusicToggle(ToggleState musicEnabled) {
 
 void onSoundFxToggle(ToggleState soundFxEnabled) {
     // TODO: enable/disable sound effects based on state
-    if(soundFxEnabled == TOGGLE_ON) {
+    if (soundFxEnabled == TOGGLE_ON) {
         // Enable sound effects
     } else {
         // Disable sound effects
@@ -83,12 +83,41 @@ void configBG_Main_Settings(void) {
 }
 
 //=============================================================================
+// TOGGLE STATE LAYER (pills - bitmap mode)
+//=============================================================================
+
+// Pill pixel coordinates with ~2px margin inward
+static const int pillCoords[3][4] = {
+    // { x1, y1, x2, y2 }
+    {176, 12, 236, 36},  // wifi
+    {176, 44, 236, 63},  // music
+    {176, 73, 236, 92},  // soundfx
+};
+
+static void drawRectBitmap(u16* fb, int x1, int y1, int x2, int y2, u16 color) {
+    for (int y = y1; y < y2; y++) {
+        for (int x = x1; x < x2; x++) {
+            fb[y * 256 + x] = color;
+        }
+    }
+}
+
+void Settings_setToggleVisual(SettingsButtonSelected btn, ToggleState state) {
+    if (btn < SETTINGS_BTN_WIFI || btn > SETTINGS_BTN_SOUND_FX)
+        return;
+    u16* fb = (u16*)BG_BMP_RAM_SUB(2);
+    u16 color = (state == TOGGLE_ON) ? GREEN : RED;
+    drawRectBitmap(fb, pillCoords[btn][0], pillCoords[btn][1], pillCoords[btn][2],
+                   pillCoords[btn][3], color);
+}
+
+//=============================================================================
 // SUB ENGINE (Bottom Screen)
 //=============================================================================
 // todo: tiles to show slection
 // todo: tiles to show if option is enabled/disabled for music/soundfx/wifi
 void configGraphics_Sub_SETTINGS(void) {
-    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
+    REG_DISPCNT_SUB = MODE_5_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG2_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 }
 
@@ -101,12 +130,27 @@ void configBackground_Sub_SETTINGS(void) {
     dmaCopy(nds_settingsMap, BG_MAP_RAM_SUB(0), nds_settingsMapLen);
 
     // todo: highlight layer (behind)
+
+    // BG2: 16bpp bitmap for toggle colors (behind)
+    BGCTRL_SUB[2] = BG_BMP_BASE(2) | BgSize_B16_256x256 | BG_PRIORITY(1);
+    // Clear bitmap to black
+    
+
+    // Affine identity
+    REG_BG2PA_SUB = 256;
+    REG_BG2PB_SUB = 0;
+    REG_BG2PC_SUB = 0;
+    REG_BG2PD_SUB = 256;
+
+    // Draw initial toggle states
+    Settings_setToggleVisual(SETTINGS_BTN_WIFI, wifiEnabled);
+    Settings_setToggleVisual(SETTINGS_BTN_MUSIC, musicEnabled);
+    Settings_setToggleVisual(SETTINGS_BTN_SOUND_FX, soundFxEnabled);
 }
 
 //=============================================================================
 // INPUT HANDLING
 //=============================================================================
-
 
 void handleDPadInputSettings(void) {
     int keys = keysDown();
@@ -124,7 +168,7 @@ void handleTouchInputSettings(void) {
     touchRead(&touch);
 
     if (touch.px < 0 || touch.px > 256 || touch.py < 0 || touch.py > 192) {
-        return;//sanity check
+        return;  // sanity check
     }
     // wifi text
     if (touch.px > 24 && touch.px < 53 && touch.py > 10 && touch.py < 28) {
@@ -171,7 +215,6 @@ void handleTouchInputSettings(void) {
         selected = SETTINGS_BTN_HOME;
         return;
     }
-
 }
 
 //=============================================================================
@@ -201,14 +244,17 @@ GameState Settings_update(void) {
         switch (selected) {
             case SETTINGS_BTN_WIFI:
                 wifiEnabled = !wifiEnabled;
+                Settings_setToggleVisual(SETTINGS_BTN_WIFI, wifiEnabled);
                 onWifiToggle(wifiEnabled);
                 break;
             case SETTINGS_BTN_MUSIC:
                 musicEnabled = !musicEnabled;
+                Settings_setToggleVisual(SETTINGS_BTN_MUSIC, musicEnabled);
                 onMusicToggle(musicEnabled);
                 break;
             case SETTINGS_BTN_SOUND_FX:
                 soundFxEnabled = !soundFxEnabled;
+                Settings_setToggleVisual(SETTINGS_BTN_SOUND_FX, soundFxEnabled);
                 onSoundFxToggle(soundFxEnabled);
                 break;
             case SETTINGS_BTN_SAVE:
