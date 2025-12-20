@@ -1,4 +1,7 @@
 #include "home_page.h"
+#include "home_top.h"
+#include "kart_home.h"
+#include "ds_menu.h"
 
 // Solid tiles - each uses its own palette index (251, 252, 253)
 static u8 selectionMaskTile0[64] = {
@@ -24,7 +27,7 @@ static const int highlightTileY[MENU_COUNT] = {4, 10, 17};
 
 static HomeKartSprite homeKart;
 
-static const MenuItemHitBox menu[MENU_COUNT] = {
+static const MenuItemHitBox homeBtnHitbox[MENU_COUNT] = {
     [HOME_BTN_SINGLEPLAYER] = MENU_ITEM_ROW(0),
     [HOME_BTN_MULTIPLAYER] = MENU_ITEM_ROW(1),
     [HOME_BTN_SETTINGS] = MENU_ITEM_ROW(2),
@@ -43,13 +46,14 @@ static void drawSelectionUnderlayRect(int buttonIndex, u16 tileIndex) {
     }
 }
 
-void HomePage_setSelectionTint(int buttonIndex, bool show) {
-    if (buttonIndex < 0 || buttonIndex >= MENU_COUNT) {
+void HomePage_setSelectionTint(HomeButtonSelected button, bool show) {
+    if (button < 0 || button >= HOME_BTN_COUNT) {
         return;
     }
-    int paletteIndex = 251 + buttonIndex;
-    BG_PALETTE_SUB[paletteIndex] =
-        show ? MENU_BUTTON_HIGHLIGHT_COLOR : MENU_HIGHLIGHT_OFF_COLOR;
+
+    const int paletteIndex = HOME_SELECTION_PAL_BASE + (int)button;
+    BG_PALETTE_SUB[paletteIndex] = show ? MENU_BUTTON_HIGHLIGHT_COLOR
+                                        : MENU_HIGHLIGHT_OFF_COLOR;
 }
 
 //----------Initialization & Cleanup----------
@@ -162,8 +166,8 @@ void handleTouchInputHOME(void) {
     touchPosition touch;
     touchRead(&touch);
     for (int i = 0; i < MENU_COUNT; i++) {
-        if (touch.px >= menu[i].x && touch.px < menu[i].x + menu[i].width &&
-            touch.py >= menu[i].y && touch.py < menu[i].y + menu[i].height) {
+        if (touch.px >= homeBtnHitbox[i].x && touch.px < homeBtnHitbox[i].x + homeBtnHitbox[i].width &&
+            touch.py >= homeBtnHitbox[i].y && touch.py < homeBtnHitbox[i].y + homeBtnHitbox[i].height) {
             selected = i;
             return;
         }

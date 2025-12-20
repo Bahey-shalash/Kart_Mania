@@ -4,10 +4,9 @@
 #include <nds.h>
 
 #include "color.h"
-#include "ds_menu.h"
+
 #include "game_types.h"
-#include "home_top.h"
-#include "kart_home.h"
+
 
 //----------Layout constants (SUB screen)----------
 
@@ -19,6 +18,7 @@
 #define HIGHLIGHT_TILE_X 6
 #define HIGHLIGHT_TILE_WIDTH 20
 #define HIGHLIGHT_TILE_HEIGHT 3
+#define HOME_SELECTION_PAL_BASE 251
 
 // Macro to define menu item hit boxes
 #define MENU_COUNT HOME_BTN_COUNT
