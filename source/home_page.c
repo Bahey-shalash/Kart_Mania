@@ -1,7 +1,8 @@
 #include "home_page.h"
+
+#include "ds_menu.h"
 #include "home_top.h"
 #include "kart_home.h"
-#include "ds_menu.h"
 
 // Solid tiles - each uses its own palette index (251, 252, 253)
 static u8 selectionMaskTile0[64] = {
@@ -37,7 +38,7 @@ static HomeButtonSelected selected = HOME_BTN_NONE;
 static HomeButtonSelected lastSelected = HOME_BTN_NONE;
 
 static void drawSelectionUnderlayRect(int buttonIndex, u16 tileIndex) {
-    u16* map = BG_MAP_RAM_SUB(2);
+    u16* map = BG_MAP_RAM_SUB(1);  // was 2 changed to 1 for testing
     int startY = highlightTileY[buttonIndex];
     for (int row = 0; row < HIGHLIGHT_TILE_HEIGHT; row++) {
         for (int col = 0; col < HIGHLIGHT_TILE_WIDTH; col++) {
@@ -68,7 +69,8 @@ void HomePage_initialize(void) {
 void HomePage_cleanup(void) {
     REG_DISPCNT_SUB &= ~(DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
     memset(BG_MAP_RAM_SUB(0), 0, 32 * 32 * sizeof(u16));
-    memset(BG_MAP_RAM_SUB(2), 0, 32 * 32 * sizeof(u16));
+    memset(BG_MAP_RAM_SUB(1), 0,
+           32 * 32 * sizeof(u16));  // was 2 changed to 1 for testing
     selected = HOME_BTN_NONE;
     lastSelected = HOME_BTN_NONE;
 }
@@ -129,19 +131,21 @@ void configBackground_Sub(void) {
 
     // BG1: Highlight layer (behind)
     BGCTRL_SUB[1] =
-        BG_32x32 | BG_MAP_BASE(2) | BG_TILE_BASE(4) | BG_COLOR_256 | BG_PRIORITY(1);
+        BG_32x32 | BG_MAP_BASE(1) | BG_TILE_BASE(2) | BG_COLOR_256 | BG_PRIORITY(1);
+    // test to change tile base from 4 to 2
+    // test to change Map base from 2 to 1
 
     // Initial colors: all black
     BG_PALETTE_SUB[251] = BLACK;
     BG_PALETTE_SUB[252] = BLACK;
     BG_PALETTE_SUB[253] = BLACK;
 
-    memset(BG_MAP_RAM_SUB(2), 0, 32 * 32 * sizeof(u16));
+    memset(BG_MAP_RAM_SUB(1), 0, 32 * 32 * sizeof(u16));
 
     // Load tiles
-    dmaCopy(selectionMaskTile0, (u8*)BG_TILE_RAM_SUB(4) + (1 * 64), 64);
-    dmaCopy(selectionMaskTile1, (u8*)BG_TILE_RAM_SUB(4) + (2 * 64), 64);
-    dmaCopy(selectionMaskTile2, (u8*)BG_TILE_RAM_SUB(4) + (3 * 64), 64);
+    dmaCopy(selectionMaskTile0, (u8*)BG_TILE_RAM_SUB(2) + (1 * 64), 64);
+    dmaCopy(selectionMaskTile1, (u8*)BG_TILE_RAM_SUB(2) + (2 * 64), 64);
+    dmaCopy(selectionMaskTile2, (u8*)BG_TILE_RAM_SUB(2) + (3 * 64), 64);
 
     // Draw all button backgrounds
     drawSelectionUnderlayRect(0, 1);
@@ -165,8 +169,10 @@ void handleTouchInputHOME(void) {
     touchPosition touch;
     touchRead(&touch);
     for (int i = 0; i < MENU_COUNT; i++) {
-        if (touch.px >= homeBtnHitbox[i].x && touch.px < homeBtnHitbox[i].x + homeBtnHitbox[i].width &&
-            touch.py >= homeBtnHitbox[i].y && touch.py < homeBtnHitbox[i].y + homeBtnHitbox[i].height) {
+        if (touch.px >= homeBtnHitbox[i].x &&
+            touch.px < homeBtnHitbox[i].x + homeBtnHitbox[i].width &&
+            touch.py >= homeBtnHitbox[i].y &&
+            touch.py < homeBtnHitbox[i].y + homeBtnHitbox[i].height) {
             selected = i;
             return;
         }
