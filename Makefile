@@ -181,6 +181,9 @@ soundbank.bin : $(AUDIOFILES)
 %.s %.h : %.png %.grit
 #---------------------------------------------------------------------------------
 	grit $< -fts -o$*
+	@if [ "$*" = "ds_menu" ]; then \
+		sed -i '' 's/\.hword 0x7C1F/.hword 0x7BBD/' $*.s; \
+	fi
 
 -include $(DEPENDS)
 

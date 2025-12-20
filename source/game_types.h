@@ -1,5 +1,8 @@
-#ifndef GaME_TYPES_H
-#define GaME_TYPES_H
+#ifndef GAME_TYPES_H
+#define GAME_TYPES_H
+
+#include <nds.h>
+#include <stdbool.h>
 
 enum GameState {
     HOME_PAGE,
@@ -16,22 +19,15 @@ typedef struct {
 } HomeKartSprite;
 
 typedef struct {
-    int id;        // Sprite OAM index (0, 1, 2, etc.)
-    int x;         // X position on screen
-    int y;         // Y position on screen
-    bool pressed;  // Whether button is currently pressed
-} MenuButton;
-// MenuButton struct - represents a single button sprite on screen
-
-typedef struct {
     int x, y, width, height;
 } MenuItemHitBox;
 
-enum HomeButtonselected {
-    NONE_button = -1,
-    SINGLE_PLAYER_button = 0,
-    MULTIPLAYER_button = 1,
-    SETTINGS_button = 2
-};
+typedef enum {
+    HOME_BTN_NONE = -1,
+    HOME_BTN_SINGLEPLAYER = 0,
+    HOME_BTN_MULTIPLAYER = 1,
+    HOME_BTN_SETTINGS = 2,
+    HOME_BTN_COUNT
+} HomeButtonSelected;
 
-#endif  // GaME_TYPES_H
+#endif  // GAME_TYPES_H

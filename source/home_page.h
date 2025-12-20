@@ -2,9 +2,12 @@
 #define HOME_PAGE_H
 
 #include <nds.h>
-#include <stdbool.h>
 
+#include "color.h"
+#include "ds_menu.h"
 #include "game_types.h"
+#include "home_top.h"
+#include "kart_home.h"
 
 //----------Layout constants (SUB screen)----------
 
@@ -13,9 +16,12 @@
 #define HOME_MENU_HEIGHT 40
 #define HOME_MENU_SPACING 54
 #define HOME_MENU_Y_START 24
+#define HIGHLIGHT_TILE_X 6
+#define HIGHLIGHT_TILE_WIDTH 20
+#define HIGHLIGHT_TILE_HEIGHT 3
 
 // Macro to define menu item hit boxes
-#define MENU_COUNT 3
+#define MENU_COUNT HOME_BTN_COUNT
 
 /**
  * Generate a MenuItemHitBox for a vertically stacked menu item.
@@ -69,7 +75,7 @@ enum GameState HomePage_update(void);
  * Updates selectedButton index and triggers button actions
  * Called internally by HomePage_handleInput()
  */
-void handleDPadInput(void);
+void handleDPadInputHOME(void);
 
 /**
  * Handle touchscreen input for button presses
@@ -77,8 +83,8 @@ void handleDPadInput(void);
  * Updates selectedButton and sets pressed state
  * Called internally by HomePage_handleInput()
  */
-void handleTouchInput(void);
+void handleTouchInputHOME(void);
 
-void setButtonOverlay(int buttonIndex, bool show);
+void HomePage_setSelectionTint(int buttonIndex, bool show);
 
 #endif  // HOME_PAGE_H

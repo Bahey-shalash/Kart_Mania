@@ -1,46 +1,60 @@
 #include "home_page.h"
 
-#include <stdio.h>
-
-#include "ds_menu.h"
-#include "game.h"
-#include "game_types.h"
-#include "home_top.h"
-#include "kart_home.h"
-#include "settings.h"
-
-// Left edge of button highlight (rounded left side with dark border)
-u8 highlightLeftTile[64] = {0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0,
-                            1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0,
-                            1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-                            0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1};
-
-// Middle section (repeatable, just top and bottom borders)
-u8 highlightMiddleTile[64] = {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0,
-                              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                              0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                              0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1};
-
-// Right edge of button highlight (rounded right side with dark border)
-u8 highlightRightTile[64] = {1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0,
-                             0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1,
-                             0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1,
-                             0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0};
-static HomeKartSprite homeKart;
-
-u16* highlightGfx;
-
-static const MenuItemHitBox menu[MENU_COUNT] = {
-    [SINGLE_PLAYER_button] = MENU_ITEM_ROW(0),
-    [MULTIPLAYER_button] = MENU_ITEM_ROW(1),
-    [SETTINGS_button] = MENU_ITEM_ROW(2),
+// Solid tiles - each uses its own palette index (251, 252, 253)
+static u8 selectionMaskTile0[64] = {
+    251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
+    251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
+    251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
+    251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251, 251,
+};
+static u8 selectionMaskTile1[64] = {
+    252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252,
+    252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252,
+    252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252,
+    252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252, 252,
+};
+static u8 selectionMaskTile2[64] = {
+    253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253,
+    253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253,
+    253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253,
+    253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253, 253,
 };
 
-static enum HomeButtonselected selected = NONE_button;
-static enum HomeButtonselected lastSelected = NONE_button;
+static const int highlightTileY[MENU_COUNT] = {4, 10, 17};
+
+static HomeKartSprite homeKart;
+
+static const MenuItemHitBox menu[MENU_COUNT] = {
+    [HOME_BTN_SINGLEPLAYER] = MENU_ITEM_ROW(0),
+    [HOME_BTN_MULTIPLAYER] = MENU_ITEM_ROW(1),
+    [HOME_BTN_SETTINGS] = MENU_ITEM_ROW(2),
+};
+
+static HomeButtonSelected selected = HOME_BTN_NONE;
+static HomeButtonSelected lastSelected = HOME_BTN_NONE;
+
+static void drawSelectionUnderlayRect(int buttonIndex, u16 tileIndex) {
+    u16* map = BG_MAP_RAM_SUB(2);
+    int startY = highlightTileY[buttonIndex];
+    for (int row = 0; row < HIGHLIGHT_TILE_HEIGHT; row++) {
+        for (int col = 0; col < HIGHLIGHT_TILE_WIDTH; col++) {
+            map[(startY + row) * 32 + (HIGHLIGHT_TILE_X + col)] = tileIndex;
+        }
+    }
+}
+
+void HomePage_setSelectionTint(int buttonIndex, bool show) {
+    if (buttonIndex < 0 || buttonIndex >= MENU_COUNT) {
+        return;
+    }
+    int paletteIndex = 251 + buttonIndex;
+    BG_PALETTE_SUB[paletteIndex] =
+        show ? MENU_BUTTON_HIGHLIGHT_COLOR : MENU_HIGHLIGHT_OFF_COLOR;
+}
 
 //----------Initialization & Cleanup----------
-void HomePage_initialize() {
+
+void HomePage_initialize(void) {
     configGraphics_Sub();
     configBackground_Sub();
     configureGraphics_MAIN_home_page();
@@ -49,204 +63,133 @@ void HomePage_initialize() {
 }
 
 void HomePage_cleanup(void) {
-    // Disable sub BGs
     REG_DISPCNT_SUB &= ~(DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE);
-
-    // Clear BG maps (important!)
     memset(BG_MAP_RAM_SUB(0), 0, 32 * 32 * sizeof(u16));
     memset(BG_MAP_RAM_SUB(2), 0, 32 * 32 * sizeof(u16));
-
-    // Optional: reset selection
-    selected = NONE_button;
-    lastSelected = NONE_button;
+    selected = HOME_BTN_NONE;
+    lastSelected = HOME_BTN_NONE;
 }
 
 //----------Configuration Functions (Main Engine)----------
 
-void configureGraphics_MAIN_home_page() {
-    // Configure the MAIN engine in mode 5 and activate background 2
+void configureGraphics_MAIN_home_page(void) {
     REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
-
-    // Configure VRAM memory bank A for MAIN
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
-void configBG_Main_homepage() {
+void configBG_Main_homepage(void) {
     BGCTRL[2] = BG_BMP_BASE(0) | BgSize_B8_256x256;
-
-    // Transfer image and palette to the corresponding memory locations.
     dmaCopy(home_topBitmap, BG_BMP_RAM(0), home_topBitmapLen);
     dmaCopy(home_topPal, BG_PALETTE, home_topPalLen);
-
-    // Set up affine matrix
     REG_BG2PA = 256;
     REG_BG2PC = 0;
     REG_BG2PB = 0;
     REG_BG2PD = 256;
 }
 
-void configurekartSpritehome() {
+void configurekartSpritehome(void) {
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
-
-    // Initialize sprite manager and the engine
     oamInit(&oamMain, SpriteMapping_1D_32, false);
     homeKart.id = 0;
     homeKart.x = -64;
     homeKart.y = 120;
-
-    // Allocate space for the graphic to show in the sprite
     homeKart.gfx =
         oamAllocateGfx(&oamMain, SpriteSize_64x64, SpriteColorFormat_256Color);
-
-    // Copy data for the graphic (palette and bitmap)
     swiCopy(kart_homePal, SPRITE_PALETTE, kart_homePalLen / 2);
     swiCopy(kart_homeTiles, homeKart.gfx, kart_homeTilesLen / 2);
 }
 
-void move_homeKart() {
-    // Update sprite attributes
-    oamSet(&oamMain,                    // Main OAM
-           homeKart.id,                 // Sprite number
-           homeKart.x,                  // X position
-           homeKart.y,                  // Y position
-           0,                           // Priority
-           0,                           // Palette to use
-           SpriteSize_64x64,            // Size of the sprite
-           SpriteColorFormat_256Color,  // Color format
-           homeKart.gfx,                // Pointer to the graphics
-           -1,                          // Affine rotation/scaling index (-1 = none)
-           false,                       // Double size if rotating
-           false,                       // Hide this sprite
-           false, false,                // Horizontal or vertical flip
-           false                        // Mosaic
-    );
-
-    homeKart.x++;  // Move right
-    if (homeKart.x > 256) {
-        homeKart.x = -64;  // Reset position when it goes off-screen
-    }
-
-    // Update OAM to apply changes
+void move_homeKart(void) {
+    oamSet(&oamMain, homeKart.id, homeKart.x, homeKart.y, 0, 0, SpriteSize_64x64,
+           SpriteColorFormat_256Color, homeKart.gfx, -1, false, false, false, false,
+           false);
+    homeKart.x++;
+    if (homeKart.x > 256)
+        homeKart.x = -64;
     oamUpdate(&oamMain);
 }
 
 //----------Configuration Functions (Sub Engine)----------
 
 void configGraphics_Sub(void) {
-    REG_DISPCNT_SUB = MODE_5_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
+    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 }
 
 void configBackground_Sub(void) {
+    // BG0: Menu (in front)
     BGCTRL_SUB[0] =
-        BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(1);
-    swiCopy(ds_menuPal, BG_PALETTE_SUB, ds_menuPalLen / 2);
-    swiCopy(ds_menuTiles, BG_TILE_RAM_SUB(1), ds_menuTilesLen / 2);
+        BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(0);
+    dmaCopy(ds_menuPal, BG_PALETTE_SUB, ds_menuPalLen);
+    dmaCopy(ds_menuTiles, BG_TILE_RAM_SUB(1), ds_menuTilesLen);
     dmaCopy(ds_menuMap, BG_MAP_RAM_SUB(0), ds_menuMapLen);
 
+    // BG1: Highlight layer (behind)
     BGCTRL_SUB[1] =
-        BG_32x32 | BG_MAP_BASE(2) | BG_TILE_BASE(4) | BG_COLOR_256 | BG_PRIORITY(0);
-    // Set palette color for border
-    // BG_PALETTE_SUB[1] = RGB15(10, 10, 10);
-    BG_PALETTE_SUB[1] = RGB15(31, 0, 0);  // Bright red for debugging
+        BG_32x32 | BG_MAP_BASE(2) | BG_TILE_BASE(4) | BG_COLOR_256 | BG_PRIORITY(1);
 
-    // Copy highlight tiles to VRAM (tiles 1, 2, 3)
-    dmaCopy(highlightLeftTile, (u8*)BG_TILE_RAM_SUB(4) + (1 * 64), 64);
-    dmaCopy(highlightMiddleTile, (u8*)BG_TILE_RAM_SUB(4) + (2 * 64), 64);
-    dmaCopy(highlightRightTile, (u8*)BG_TILE_RAM_SUB(4) + (3 * 64), 64);
+    // Initial colors: all black
+    BG_PALETTE_SUB[251] = BLACK;
+    BG_PALETTE_SUB[252] = BLACK;
+    BG_PALETTE_SUB[253] = BLACK;
+
+    memset(BG_MAP_RAM_SUB(2), 0, 32 * 32 * sizeof(u16));
+
+    // Load tiles
+    dmaCopy(selectionMaskTile0, (u8*)BG_TILE_RAM_SUB(4) + (1 * 64), 64);
+    dmaCopy(selectionMaskTile1, (u8*)BG_TILE_RAM_SUB(4) + (2 * 64), 64);
+    dmaCopy(selectionMaskTile2, (u8*)BG_TILE_RAM_SUB(4) + (3 * 64), 64);
+
+    // Draw all button backgrounds
+    drawSelectionUnderlayRect(0, 1);
+    drawSelectionUnderlayRect(1, 2);
+    drawSelectionUnderlayRect(2, 3);
 }
 
-void setButtonOverlay(int buttonIndex, bool show) {
-    u16* overlayMap = (u16*)BG_MAP_RAM_SUB(2);
-    MenuItemHitBox* m = &menu[buttonIndex];
+//----------Input Handling----------
 
-    int tilesWide = m->width / 8;   // 192/8 = 24 tiles
-    int tilesHigh = m->height / 8;  // 40/8 = 5 tiles
-    int mapX = m->x / 8;            // 32/8 = 4
-    int mapY = m->y / 8;
-
-    for (int ty = 0; ty < tilesHigh; ty++) {
-        for (int tx = 0; tx < tilesWide; tx++) {
-            int mapIndex = (mapY + ty) * 32 + (mapX + tx);
-            u16 tileValue = 0;
-
-            if (show) {
-                // Left edge
-                if (tx == 0)
-                    tileValue = 1;
-                // Right edge
-                else if (tx == tilesWide - 1)
-                    tileValue = 3;
-                // Middle
-                else
-                    tileValue = 2;
-            }
-
-            overlayMap[mapIndex] = tileValue;
-        }
-    }
-}
-
-void handleDPadInput(void) {
-    const int keys = keysDown();
-
-    if (keys & KEY_UP) {
+void handleDPadInputHOME(void) {
+    int keys = keysDown();
+    if (keys & KEY_UP)
         selected = (selected - 1 + MENU_COUNT) % MENU_COUNT;
-    }
-
-    if (keys & KEY_DOWN) {
+    if (keys & KEY_DOWN)
         selected = (selected + 1) % MENU_COUNT;
-    }
 }
 
-void handleTouchInput(void) {
-    touchPosition touch;
-    touchRead(&touch);
-
+void handleTouchInputHOME(void) {
     if (!(keysHeld() & KEY_TOUCH))
         return;
-
-    if (touch.px >= menu[SINGLE_PLAYER_button].x &&
-        touch.px < menu[SINGLE_PLAYER_button].x + menu[SINGLE_PLAYER_button].width &&
-        touch.py >= menu[SINGLE_PLAYER_button].y &&
-        touch.py < menu[SINGLE_PLAYER_button].y + menu[SINGLE_PLAYER_button].height) {
-        selected = SINGLE_PLAYER_button;
-    } else if (touch.px >= menu[MULTIPLAYER_button].x &&
-               touch.px <
-                   menu[MULTIPLAYER_button].x + menu[MULTIPLAYER_button].width &&
-               touch.py >= menu[MULTIPLAYER_button].y &&
-               touch.py <
-                   menu[MULTIPLAYER_button].y + menu[MULTIPLAYER_button].height) {
-        selected = MULTIPLAYER_button;
-    } else if (touch.px >= menu[SETTINGS_button].x &&
-               touch.px < menu[SETTINGS_button].x + menu[SETTINGS_button].width &&
-               touch.py >= menu[SETTINGS_button].y &&
-               touch.py < menu[SETTINGS_button].y + menu[SETTINGS_button].height) {
-        selected = SETTINGS_button;
+    touchPosition touch;
+    touchRead(&touch);
+    for (int i = 0; i < MENU_COUNT; i++) {
+        if (touch.px >= menu[i].x && touch.px < menu[i].x + menu[i].width &&
+            touch.py >= menu[i].y && touch.py < menu[i].y + menu[i].height) {
+            selected = i;
+            return;
+        }
     }
 }
 
 enum GameState HomePage_update(void) {
     scanKeys();
-
-    handleDPadInput();
-    handleTouchInput();
+    handleDPadInputHOME();
+    handleTouchInputHOME();
 
     if (selected != lastSelected) {
-        if (lastSelected != NONE_button)
-            setButtonOverlay(lastSelected, false);
-
-        setButtonOverlay(selected, true);
+        if (lastSelected != HOME_BTN_NONE)
+            HomePage_setSelectionTint(lastSelected, false);
+        if (selected != HOME_BTN_NONE)
+            HomePage_setSelectionTint(selected, true);
         lastSelected = selected;
     }
 
-    if (keysUp() & KEY_A || keysUp() & KEY_TOUCH) {
+    if (keysUp() & (KEY_A | KEY_TOUCH)) {
         switch (selected) {
-            case SINGLE_PLAYER_button:
+            case HOME_BTN_SINGLEPLAYER:
                 return SINGLEPLAYER;
-            case MULTIPLAYER_button:
+            case HOME_BTN_MULTIPLAYER:
                 return MULTIPLAYER;
-            case SETTINGS_button:
+            case HOME_BTN_SETTINGS:
                 return SETTINGS;
             default:
                 break;
