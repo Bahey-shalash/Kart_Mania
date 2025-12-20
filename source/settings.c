@@ -6,6 +6,7 @@
 #include "color.h"
 #include "nds_settings.h"
 #include "settings_top.h"
+#include "color.h"
 
 //=============================================================================
 // DUMMY FUNCTIONS - implement these later
@@ -128,10 +129,78 @@ static void drawToggleRect(int toggleIndex, ToggleState state) {
 }
 
 //=============================================================================
+// SELECTION HIGHLIGHT TILES (BG2)
+//=============================================================================
+
+#define SETTINGS_SELECTION_PAL_BASE 244
+
+static const u8 selectionTile0[64] = {[0 ... 63] = 244};
+static const u8 selectionTile1[64] = {[0 ... 63] = 245};
+static const u8 selectionTile2[64] = {[0 ... 63] = 246};
+static const u8 selectionTile3[64] = {[0 ... 63] = 247};
+static const u8 selectionTile4[64] = {[0 ... 63] = 248};
+static const u8 selectionTile5[64] = {[0 ... 63] = 249};
+
+static void drawSelectionRect(SettingsButtonSelected btn, u16 tileIndex) {
+    u16* map = BG_MAP_RAM_SUB(1);
+    int startX, startY, endX, endY;
+
+    switch (btn) {
+        case SETTINGS_BTN_WIFI:
+            startX = 2;
+            startY = 1;
+            endX = 7;
+            endY = 4;
+            break;
+        case SETTINGS_BTN_MUSIC:
+            startX = 2;
+            startY = 5;
+            endX = 9;
+            endY = 8;
+            break;
+        case SETTINGS_BTN_SOUND_FX:
+            startX = 2;
+            startY = 9;
+            endX = 13;
+            endY = 12;
+            break;
+        case SETTINGS_BTN_SAVE:
+            startX = 4;
+            startY = 15;
+            endX = 14;
+            endY = 23;
+            break;
+        case SETTINGS_BTN_BACK:
+            startX = 12;
+            startY = 15;
+            endX = 20;
+            endY = 23;
+            break;
+        case SETTINGS_BTN_HOME:
+            startX = 20;
+            startY = 15;
+            endX = 28;
+            endY = 23;
+            break;
+        default:
+            return;  // includes SETTINGS_BTN_NONE
+    }
+
+    for (int row = startY; row < endY; row++)
+        for (int col = startX; col < endX; col++)
+            map[row * 32 + col] = tileIndex;
+}
+
+static void Settings_setSelectionTint(SettingsButtonSelected btn, bool show) {
+    if (btn < 0 || btn >= SETTINGS_BTN_COUNT)
+        return;
+    int paletteIndex = SETTINGS_SELECTION_PAL_BASE + btn;
+    BG_PALETTE_SUB[paletteIndex] = show ? SETTINGS_SELECT_COLOR : BLACK;
+}
+
+//=============================================================================
 // SUB ENGINE (Bottom Screen)
 //=============================================================================
-// todo: tiles to show slection
-// todo: tiles to show if option is enabled/disabled for music/soundfx/wifi
 void configGraphics_Sub_SETTINGS(void) {
     REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
@@ -145,15 +214,15 @@ void configBackground_Sub_SETTINGS(void) {
     dmaCopy(nds_settingsTiles, BG_TILE_RAM_SUB(1), nds_settingsTilesLen);
     dmaCopy(nds_settingsMap, BG_MAP_RAM_SUB(0), nds_settingsMapLen);
 
-    // todo: highlight layer (behind)
 
     BGCTRL_SUB[1] =
         BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(2) | BG_PRIORITY(1);
+
     dmaCopy(RedTile, (u8*)BG_TILE_RAM_SUB(2) + (3 * 64), 64);
     dmaCopy(GreenTile, (u8*)BG_TILE_RAM_SUB(2) + (4 * 64), 64);
 
-    BG_PALETTE_SUB[254] = RGB15(31, 0, 0);  // Red
-    BG_PALETTE_SUB[255] = RGB15(0, 31, 0);  // Green
+    BG_PALETTE_SUB[254] = TOGGLE_OFF_COLOR;  // Red
+    BG_PALETTE_SUB[255] = TOGGLE_ON_COLOR;  // Green
 
     /* for (int row = 0; row < 24; row++)
         for (int col = 0; col < 32; col++)
@@ -161,12 +230,28 @@ void configBackground_Sub_SETTINGS(void) {
      */
     // for testing only
 
+    // Load selection tiles
+    dmaCopy(selectionTile0, (u8*)BG_TILE_RAM_SUB(2) + (5 * 64), 64);
+    dmaCopy(selectionTile1, (u8*)BG_TILE_RAM_SUB(2) + (6 * 64), 64);
+    dmaCopy(selectionTile2, (u8*)BG_TILE_RAM_SUB(2) + (7 * 64), 64);
+    dmaCopy(selectionTile3, (u8*)BG_TILE_RAM_SUB(2) + (8 * 64), 64);
+    dmaCopy(selectionTile4, (u8*)BG_TILE_RAM_SUB(2) + (9 * 64), 64);
+    dmaCopy(selectionTile5, (u8*)BG_TILE_RAM_SUB(2) + (10 * 64), 64);
+
     // Clear BG1 map
     memset(BG_MAP_RAM_SUB(1), 0, 32 * 24 * 2);
     // Draw initial toggle states
     drawToggleRect(SETTINGS_BTN_WIFI, wifiEnabled);
     drawToggleRect(SETTINGS_BTN_MUSIC, musicEnabled);
     drawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxEnabled);
+
+    // Draw selection areas
+    drawSelectionRect(SETTINGS_BTN_WIFI, TILE_SEL_WIFI);
+    drawSelectionRect(SETTINGS_BTN_MUSIC, TILE_SEL_MUSIC);
+    drawSelectionRect(SETTINGS_BTN_SOUND_FX, TILE_SEL_SOUNDFX);
+    drawSelectionRect(SETTINGS_BTN_SAVE, TILE_SEL_SAVE);
+    drawSelectionRect(SETTINGS_BTN_BACK, TILE_SEL_BACK);
+    drawSelectionRect(SETTINGS_BTN_HOME, TILE_SEL_HOME);
 }
 
 //=============================================================================
@@ -259,6 +344,15 @@ GameState Settings_update(void) {
     scanKeys();
     handleDPadInputSettings();
     handleTouchInputSettings();
+
+    // Update highlight when selection changes
+    if (selected != lastSelected) {
+        if (lastSelected != SETTINGS_BTN_NONE)
+            Settings_setSelectionTint(lastSelected, false);
+        if (selected != SETTINGS_BTN_NONE)
+            Settings_setSelectionTint(selected, true);
+        lastSelected = selected;
+    }
 
     // Handle button activation on release
     if (keysUp() & (KEY_A | KEY_TOUCH)) {
