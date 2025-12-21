@@ -10,6 +10,8 @@
 - **WavSource – Sound effects archive**
   https://www.wavsource.com
 
+  https://uppbeat.io/sfx/category/correct
+
 ## Development Resources
 - **Homebrew VRAM BG Allocation Conflict Viewer**
   https://mtheall.com/vram.html#SUB=1&T0=1&NT0=256&MB0=0&TB0=1&S0=0

@@ -59,10 +59,32 @@ static bool soundFxEnabled = true;
 
 void SOUNDFX_ON(void) {
     soundFxEnabled = true;
-    mmSetEffectsVolume(1024);   // 100%
+    mmSetEffectsVolume(1024);  // 100%
 }
 
 void SOUNDFX_OFF(void) {
     soundFxEnabled = false;
-    mmSetEffectsVolume(0);      // mute
+    mmSetEffectsVolume(0);  // mute
+}
+//=============================================================================
+// MUSIC
+//=============================================================================
+static bool musicEnabled_engine = true;
+
+void loadMUSIC(void) {
+    mmLoad(MOD_TROPICAL);
+}
+
+bool MusicIsEnabled(void) {
+    return musicEnabled_engine;
+}
+
+void MusicSetEnabled(bool enabled) {
+    musicEnabled_engine = enabled;
+    if (enabled) {
+        mmStart(MOD_TROPICAL, MM_PLAY_LOOP);
+        mmSetModuleVolume(MUSIC_VOLUME);
+    } else {
+        mmStop();
+    }
 }

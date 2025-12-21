@@ -22,12 +22,7 @@ void onWifiToggle(ToggleState wifiEnabled) {
 }
 
 void onMusicToggle(ToggleState musicEnabled) {
-    // TODO: enable/disable music based on state
-    if (musicEnabled == TOGGLE_ON) {
-        // Enable music
-    } else {
-        // Disable music
-    }
+    MusicSetEnabled(musicEnabled == TOGGLE_ON);
 }
 
 void onSoundFxToggle(ToggleState soundFxEnabled) {
@@ -359,8 +354,8 @@ void Settings_initialize(void) {
     configBackground_Sub_SETTINGS();
 
     // sound effects
-   /*  LoadClickSoundFX();
-    LoadDingSoundFX(); */
+    /*  LoadClickSoundFX();
+     LoadDingSoundFX(); */
 }
 
 GameState Settings_update(void) {
@@ -394,10 +389,10 @@ GameState Settings_update(void) {
                 break;
             case SETTINGS_BTN_SOUND_FX:
                 soundFxEnabled = !soundFxEnabled;
-                PlayDingSFX(); //played beffore possible muting  
+                PlayDingSFX();  // played beffore possible muting
                 drawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxEnabled);
                 onSoundFxToggle(soundFxEnabled);
-                
+
                 break;
             case SETTINGS_BTN_SAVE:
                 onSavePressed();
