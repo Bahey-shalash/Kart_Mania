@@ -4,6 +4,7 @@
 #include "home_top.h"
 #include "kart_home.h"
 #include "sound.h"
+#include "timer.h"
 //=============================================================================
 // GLOBAL STATE
 //=============================================================================
@@ -182,6 +183,7 @@ void HomePage_initialize(void) {
     configurekartSpritehome();
   
     // move_homeKart();
+    initTimer();
 
     // Sub engine (bottom screen)
     configGraphics_Sub_HOME();

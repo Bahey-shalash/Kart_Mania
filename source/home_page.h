@@ -22,8 +22,6 @@
 // Macro to define menu item hit boxes
 #define MENU_COUNT HOME_BTN_COUNT
 
-
-
 void configureGraphics_MAIN_home_page();
 void configBG_Main_homepage();
 
