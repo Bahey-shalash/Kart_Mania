@@ -31,11 +31,10 @@ void onMusicToggle(ToggleState musicEnabled) {
 }
 
 void onSoundFxToggle(ToggleState soundFxEnabled) {
-    // TODO: enable/disable sound effects based on state
     if (soundFxEnabled == TOGGLE_ON) {
-        // Enable sound effects
+        SOUNDFX_ON();
     } else {
-        // Disable sound effects
+        SOUNDFX_OFF();
     }
 }
 
@@ -395,10 +394,10 @@ GameState Settings_update(void) {
                 break;
             case SETTINGS_BTN_SOUND_FX:
                 soundFxEnabled = !soundFxEnabled;
+                PlayDingSFX(); //played beffore possible muting  
                 drawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxEnabled);
                 onSoundFxToggle(soundFxEnabled);
-                PlayDingSFX();  // potential bug if we dont diable it globaly in the
-                                // function above but it is a problem for latter
+                
                 break;
             case SETTINGS_BTN_SAVE:
                 onSavePressed();

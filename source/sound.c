@@ -54,3 +54,15 @@ void UnloadALLSoundFX(void) {
     UnloadClickSoundFX();
     UnloadDingSoundFX();
 }
+
+static bool soundFxEnabled = true;
+
+void SOUNDFX_ON(void) {
+    soundFxEnabled = true;
+    mmSetEffectsVolume(1024);   // 100%
+}
+
+void SOUNDFX_OFF(void) {
+    soundFxEnabled = false;
+    mmSetEffectsVolume(0);      // mute
+}
