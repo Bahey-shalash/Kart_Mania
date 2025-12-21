@@ -23,6 +23,7 @@ GameState currentState_GLOBAL = HOME_PAGE;
 
 int main(void) {
     initSoundLibrary();
+    SOUNDFX_ON();
     LoadALLSoundFX();
     loadMUSIC();
     // the load settings from memory part should be above this //will not feed true
