@@ -1,25 +1,24 @@
 // timer.c
 #include "timer.h"
 
+#include "context.h"
 #include "game_types.h"
-#include "home_page.h"  // for move_homeKart()
-
-extern GameState currentState_GLOBAL;
-
-
+#include "home_page.h"
 
 void initTimer(void) {
     // only start timer on HOME
-    if (currentState_GLOBAL == HOME_PAGE) {
+    GameContext* ctx = GameContext_Get();
+    if (ctx->currentGameState == HOME_PAGE) {
         irqSet(IRQ_VBLANK, &timerISRVblank);
         irqEnable(IRQ_VBLANK);
     } else {
-        return;
+        return; // for future dev just return for
     }
 }
 
 void timerISRVblank(void) {
-    if (currentState_GLOBAL == HOME_PAGE) {
+    GameContext* ctx = GameContext_Get();
+    if (ctx->currentGameState == HOME_PAGE) {
         move_homeKart();
     }
 }

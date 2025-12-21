@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "color.h"
+#include "context.h"
 #include "nds_settings.h"
 #include "settings_top.h"
 #include "sound.h"
@@ -12,28 +13,23 @@
 // DUMMY FUNCTIONS - implement these later
 //=============================================================================
 
-void onWifiToggle(ToggleState wifiEnabled) {
+static void onWifiToggle(bool enabled) {
     // TODO: enable/disable wifi based on state
-    if (wifiEnabled == TOGGLE_ON) {
+    if (enabled) {
         // Enable wifi
     } else {
         // Disable wifi
     }
 }
 
-void onMusicToggle(ToggleState musicEnabled) {
-    MusicSetEnabled(musicEnabled == TOGGLE_ON);
+static void onMusicToggle(bool enabled) {
+    GameContext_SetMusicEnabled(enabled);
+}
+static void onSoundFxToggle(bool enabled) {
+    GameContext_SetSoundFxEnabled(enabled);
 }
 
-void onSoundFxToggle(ToggleState soundFxEnabled) {
-    if (soundFxEnabled == TOGGLE_ON) {
-        SOUNDFX_ON();
-    } else {
-        SOUNDFX_OFF();
-    }
-}
-
-void onSavePressed(void) {
+static void onSavePressed(void) {
     // TODO: save settings to extrenal storage
 }
 
@@ -48,11 +44,6 @@ void onSavePressed(void) {
 
 static SettingsButtonSelected selected = SETTINGS_BTN_NONE;
 static SettingsButtonSelected lastSelected = SETTINGS_BTN_NONE;
-
-// Toggle states (persisted)
-static ToggleState wifiEnabled = TOGGLE_ON;
-static ToggleState musicEnabled = TOGGLE_ON;
-static ToggleState soundFxEnabled = TOGGLE_ON;
 
 //=============================================================================
 // HITBOXES
@@ -81,21 +72,21 @@ void configBG_Main_Settings(void) {
 // TOGGLE STATE LAYER (pills - bitmap mode)
 //=============================================================================
 
-u8 RedTile[64] = {254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254,
-                  254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254,
-                  254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254,
-                  254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254,
-                  254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254};
+static const u8 RedTile[64] = {
+    254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254,
+    254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254,
+    254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254,
+    254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254, 254};
 
-u8 GreenTile[64] = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-                    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-                    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-                    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-                    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
+static const u8 GreenTile[64] = {
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
 
-static void drawToggleRect(int toggleIndex, ToggleState state) {
+static void drawToggleRect(int toggleIndex, bool enabled) {
     u16* map = BG_MAP_RAM_SUB(1);
-    u16 tile = (state == TOGGLE_ON) ? TILE_GREEN : TILE_RED;
+    u16 tile = enabled ? TILE_GREEN : TILE_RED;
 
     int startX = 21;
     int width = 9;
@@ -230,10 +221,13 @@ void configBackground_Sub_SETTINGS(void) {
 
     // Clear BG1 map
     memset(BG_MAP_RAM_SUB(1), 0, 32 * 24 * 2);
+
+    GameContext* ctx = GameContext_Get();
+
     // Draw initial toggle states
-    drawToggleRect(SETTINGS_BTN_WIFI, wifiEnabled);
-    drawToggleRect(SETTINGS_BTN_MUSIC, musicEnabled);
-    drawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxEnabled);
+    drawToggleRect(SETTINGS_BTN_WIFI, ctx->userSettings.wifiEnabled);
+    drawToggleRect(SETTINGS_BTN_MUSIC, ctx->userSettings.musicEnabled);
+    drawToggleRect(SETTINGS_BTN_SOUND_FX, ctx->userSettings.soundFxEnabled);
 
     // Draw selection areas
     drawSelectionRect(SETTINGS_BTN_WIFI, TILE_SEL_WIFI);
@@ -363,6 +357,8 @@ GameState Settings_update(void) {
     handleDPadInputSettings();
     handleTouchInputSettings();
 
+    GameContext* ctx = GameContext_Get();
+
     // Update highlight when selection changes
     if (selected != lastSelected) {
         if (lastSelected != SETTINGS_BTN_NONE)
@@ -375,35 +371,43 @@ GameState Settings_update(void) {
     // Handle button activation on release
     if (keysUp() & (KEY_A | KEY_TOUCH)) {
         switch (selected) {
-            case SETTINGS_BTN_WIFI:
-                wifiEnabled = !wifiEnabled;
-                drawToggleRect(SETTINGS_BTN_WIFI, wifiEnabled);
-                onWifiToggle(wifiEnabled);
+            case SETTINGS_BTN_WIFI: {
+                bool wifiShouldBeEnabled = !ctx->userSettings.wifiEnabled;
+                GameContext_SetWifiEnabled(wifiShouldBeEnabled);
+                drawToggleRect(SETTINGS_BTN_WIFI, wifiShouldBeEnabled);
                 PlayDingSFX();
                 break;
-            case SETTINGS_BTN_MUSIC:
-                musicEnabled = !musicEnabled;
-                drawToggleRect(SETTINGS_BTN_MUSIC, musicEnabled);
-                onMusicToggle(musicEnabled);
-                PlayDingSFX();
-                break;
-            case SETTINGS_BTN_SOUND_FX:
-                soundFxEnabled = !soundFxEnabled;
-                PlayDingSFX();  // played beffore possible muting
-                drawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxEnabled);
-                onSoundFxToggle(soundFxEnabled);
+            }
 
+            case SETTINGS_BTN_MUSIC: {
+                bool musicShouldBeEnabled = !ctx->userSettings.musicEnabled;
+                GameContext_SetMusicEnabled(musicShouldBeEnabled);
+                drawToggleRect(SETTINGS_BTN_MUSIC, musicShouldBeEnabled);
+                PlayDingSFX();
                 break;
+            }
+
+            case SETTINGS_BTN_SOUND_FX: {
+                bool soundFxShouldBeEnabled = !ctx->userSettings.soundFxEnabled;
+                PlayDingSFX();  // play before potentially muting
+                GameContext_SetSoundFxEnabled(soundFxShouldBeEnabled);
+                drawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxShouldBeEnabled);
+                break;
+            }
+
             case SETTINGS_BTN_SAVE:
                 onSavePressed();
                 PlayDingSFX();
                 break;
+
             case SETTINGS_BTN_BACK:
                 PlayCLICKSFX();
                 return HOME_PAGE;
+
             case SETTINGS_BTN_HOME:
                 PlayCLICKSFX();
                 return HOME_PAGE;
+
             default:
                 break;
         }

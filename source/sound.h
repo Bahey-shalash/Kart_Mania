@@ -36,7 +36,6 @@ void SOUNDFX_OFF(void);
 //=============================================================================
 #define MUSIC_VOLUME 256  //(range 0...1024)
 void loadMUSIC(void);
-bool MusicIsEnabled(void);
 void MusicSetEnabled(bool enabled);
 
 #endif  // SOUND_HH

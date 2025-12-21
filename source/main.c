@@ -3,6 +3,7 @@
  */
 #include <nds.h>
 
+#include "context.h"
 #include "game.h"
 #include "game_types.h"
 #include "graphics.h"
@@ -19,23 +20,28 @@ void init_state(GameState state);
 //=============================================================================
 // MAIN
 //=============================================================================
-GameState currentState_GLOBAL = HOME_PAGE;
 
 int main(void) {
+    GameContext_InitDefaults();
+    GameContext* ctx = GameContext_Get();
+
     initSoundLibrary();
-    SOUNDFX_ON();
+
+    // enables sound effects because default sound effect is true
+    GameContext_SetSoundFxEnabled(ctx->userSettings.soundFxEnabled);
+
     LoadALLSoundFX();
     loadMUSIC();
-    // the load settings from memory part should be above this //will not feed true
-    //  constatly in the future
-    MusicSetEnabled(true);
-    init_state(currentState_GLOBAL);
+
+    // enables Music because default sound effect is true
+    GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
+    init_state(ctx->currentGameState);
 
     while (true) {
-        GameState nextState = update_state(currentState_GLOBAL);
+        GameState nextState = update_state(ctx->currentGameState);
 
-        if (nextState != currentState_GLOBAL) {
-            currentState_GLOBAL = nextState;
+        if (nextState != ctx->currentGameState) {
+            ctx->currentGameState = nextState;
             video_nuke();
             init_state(nextState);
         }
