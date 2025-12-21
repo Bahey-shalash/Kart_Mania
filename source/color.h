@@ -14,5 +14,6 @@
 #define TOGGLE_ON_COLOR RGB15(6, 26, 6)
 #define TOGGLE_OFF_COLOR RGB15(28, 4, 4)
 #define SETTINGS_SELECT_COLOR RGB15(20, 20, 20)
+#define SP_SELECT_COLOR RGB15(20, 20, 20)
 
-#endif  // COLOR_H
+#endif // COLOR_H
