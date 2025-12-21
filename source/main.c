@@ -10,6 +10,7 @@
 #include "home_page.h"
 #include "settings.h"
 #include "sound.h"
+#include "storage.h"
 
 //=============================================================================
 // PROTOTYPES
@@ -22,15 +23,24 @@ void init_state(GameState state);
 //=============================================================================
 
 int main(void) {
+    // Initialize storage first (includes fatInitDefault)
+    bool storageAvailable = Storage_Init();
+
+    // Initialize context with hardcoded defaults
     GameContext_InitDefaults();
     GameContext* ctx = GameContext_Get();
+
+    // If storage available, load saved settings (overwrites defaults)
+    if (storageAvailable) {
+        Storage_LoadSettings();
+    }
 
     initSoundLibrary();
     LoadALLSoundFX();
     loadMUSIC();
 
-    // enables sound effects because default sound effect is true
-    
+
+
     // enables Music because default sound effect is true
     GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
     init_state(ctx->currentGameState);

@@ -8,6 +8,7 @@
 #include "nds_settings.h"
 #include "settings_top.h"
 #include "sound.h"
+#include "storage.h"
 
 //=============================================================================
 // DUMMY FUNCTIONS - implement these later
@@ -30,7 +31,7 @@ static void onSoundFxToggle(bool enabled) {
 }
 
 static void onSavePressed(void) {
-    // TODO: save settings to extrenal storage
+    Storage_SaveSettings();
 }
 
 //=============================================================================
