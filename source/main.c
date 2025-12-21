@@ -3,11 +3,11 @@
  */
 #include <nds.h>
 
+#include "game.h"
 #include "game_types.h"
 #include "graphics.h"
 #include "home_page.h"
 #include "settings.h"
-#include "game.h"
 
 //=============================================================================
 // PROTOTYPES
@@ -21,19 +21,16 @@ void init_state(GameState state);
 //=============================================================================
 GameState currentState_GLOBAL = HOME_PAGE;
 
-int main(void)
-{
+int main(void) {
     init_state(currentState_GLOBAL);
 
-    while (true)
-    {
+    while (true) {
         GameState nextState = update_state(currentState_GLOBAL);
 
-        if (nextState != currentState_GLOBAL)
-        {
+        if (nextState != currentState_GLOBAL) {
+            currentState_GLOBAL = nextState;
             video_nuke();
             init_state(nextState);
-            currentState_GLOBAL = nextState;
         }
 
         swiWaitForVBlank();
@@ -46,37 +43,33 @@ int main(void)
 // IMPLEMENTATION
 //=============================================================================
 
-GameState update_state(GameState state)
-{
-    switch (state)
-    {
-    case HOME_PAGE:
-        return HomePage_update();
-    case SETTINGS:
-        return Settings_update();
-    case SINGLEPLAYER:
-        return Singleplayer_update();
-    case MULTIPLAYER:
-        return HomePage_update(); // placeholder
+GameState update_state(GameState state) {
+    switch (state) {
+        case HOME_PAGE:
+            return HomePage_update();
+        case SETTINGS:
+            return Settings_update();
+        case SINGLEPLAYER:
+            return Singleplayer_update();
+        case MULTIPLAYER:
+            return HomePage_update();  // placeholder
     }
     return state;
 }
 
-void init_state(GameState state)
-{
-    switch (state)
-    {
-    case HOME_PAGE:
-        HomePage_initialize();
-        break;
-    case SINGLEPLAYER:
-        Singleplayer_initialize();
-        break;
-    case MULTIPLAYER:
-        HomePage_initialize();
-        break;
-    case SETTINGS:
-        Settings_initialize();
-        break;
+void init_state(GameState state) {
+    switch (state) {
+        case HOME_PAGE:
+            HomePage_initialize();
+            break;
+        case SINGLEPLAYER:
+            Singleplayer_initialize();
+            break;
+        case MULTIPLAYER:
+            HomePage_initialize();
+            break;
+        case SETTINGS:
+            Settings_initialize();
+            break;
     }
 }

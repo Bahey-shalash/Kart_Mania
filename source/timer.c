@@ -6,9 +6,7 @@
 
 extern GameState currentState_GLOBAL;
 
-/* void stopTimer0(void) {
-    irqDisable(IRQ_TIMER0);  // stop its IRQ line
-} */
+
 
 void initTimer(void) {
     // only start timer on HOME

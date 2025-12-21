@@ -98,8 +98,7 @@ u8 GreenTile[64] = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
                     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
                     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
 
-#define TILE_RED 3
-#define TILE_GREEN 4
+
 
 static void drawToggleRect(int toggleIndex, ToggleState state) {
     u16* map = BG_MAP_RAM_SUB(1);
