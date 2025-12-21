@@ -26,13 +26,12 @@ int main(void) {
     GameContext* ctx = GameContext_Get();
 
     initSoundLibrary();
-
-    // enables sound effects because default sound effect is true
-    GameContext_SetSoundFxEnabled(ctx->userSettings.soundFxEnabled);
-
     LoadALLSoundFX();
     loadMUSIC();
 
+
+    // enables sound effects because default sound effect is true
+    GameContext_SetSoundFxEnabled(ctx->userSettings.soundFxEnabled);
     // enables Music because default sound effect is true
     GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
     init_state(ctx->currentGameState);
