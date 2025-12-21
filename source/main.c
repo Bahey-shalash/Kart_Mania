@@ -8,6 +8,7 @@
 #include "graphics.h"
 #include "home_page.h"
 #include "settings.h"
+#include "sound.h"
 
 //=============================================================================
 // PROTOTYPES
@@ -15,13 +16,14 @@
 
 GameState update_state(GameState state);
 void init_state(GameState state);
-
 //=============================================================================
 // MAIN
 //=============================================================================
 GameState currentState_GLOBAL = HOME_PAGE;
 
 int main(void) {
+    initSoundLibrary();
+    LoadALLSoundFX();
     init_state(currentState_GLOBAL);
 
     while (true) {
@@ -35,6 +37,8 @@ int main(void) {
 
         swiWaitForVBlank();
     }
+
+    UnloadALLSoundFX();
 
     return 0;
 }

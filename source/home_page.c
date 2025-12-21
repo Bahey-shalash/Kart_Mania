@@ -4,6 +4,7 @@
 #include "home_top.h"
 #include "kart_home.h"
 #include "timer.h"
+#include "sound.h"
 //=============================================================================
 // GLOBAL STATE
 //=============================================================================
@@ -188,6 +189,9 @@ void HomePage_initialize(void) {
     // Sub engine (bottom screen)
     configGraphics_Sub_HOME();
     configBackground_Sub_HOME();
+
+    //sound effects
+   /*  LoadClickSoundFX(); */
 }
 
 GameState HomePage_update(void) {
@@ -204,6 +208,9 @@ GameState HomePage_update(void) {
     }
 
     if (keysUp() & (KEY_A | KEY_TOUCH)) {
+        if (selected != HOME_BTN_NONE) {
+        PlayCLICKSFX();   // CLICK sound effect
+    }
         switch (selected) {
             case HOME_BTN_SINGLEPLAYER:
                 return SINGLEPLAYER;

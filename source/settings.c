@@ -6,6 +6,7 @@
 #include "color.h"
 #include "nds_settings.h"
 #include "settings_top.h"
+#include "sound.h"
 
 //=============================================================================
 // DUMMY FUNCTIONS - implement these later
@@ -97,8 +98,6 @@ u8 GreenTile[64] = {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 
                     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
                     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
                     255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255};
-
-
 
 static void drawToggleRect(int toggleIndex, ToggleState state) {
     u16* map = BG_MAP_RAM_SUB(1);
@@ -359,6 +358,10 @@ void Settings_initialize(void) {
     // Sub Screen
     configGraphics_Sub_SETTINGS();
     configBackground_Sub_SETTINGS();
+
+    // sound effects
+   /*  LoadClickSoundFX();
+    LoadDingSoundFX(); */
 }
 
 GameState Settings_update(void) {
@@ -382,23 +385,30 @@ GameState Settings_update(void) {
                 wifiEnabled = !wifiEnabled;
                 drawToggleRect(SETTINGS_BTN_WIFI, wifiEnabled);
                 onWifiToggle(wifiEnabled);
+                PlayDingSFX();
                 break;
             case SETTINGS_BTN_MUSIC:
                 musicEnabled = !musicEnabled;
                 drawToggleRect(SETTINGS_BTN_MUSIC, musicEnabled);
                 onMusicToggle(musicEnabled);
+                PlayDingSFX();
                 break;
             case SETTINGS_BTN_SOUND_FX:
                 soundFxEnabled = !soundFxEnabled;
                 drawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxEnabled);
                 onSoundFxToggle(soundFxEnabled);
+                PlayDingSFX();  // potential bug if we dont diable it globaly in the
+                                // function above but it is a problem for latter
                 break;
             case SETTINGS_BTN_SAVE:
                 onSavePressed();
+                PlayDingSFX();
                 break;
             case SETTINGS_BTN_BACK:
+                PlayCLICKSFX();
                 return HOME_PAGE;
             case SETTINGS_BTN_HOME:
+                PlayCLICKSFX();
                 return HOME_PAGE;
             default:
                 break;
