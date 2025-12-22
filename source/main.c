@@ -4,7 +4,7 @@
 #include <nds.h>
 
 #include "context.h"
-#include "game.h"
+#include "singleplayer.h"
 #include "game_types.h"
 #include "graphics.h"
 #include "home_page.h"
