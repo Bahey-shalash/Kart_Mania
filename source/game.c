@@ -7,7 +7,7 @@
 #include "game_types.h"
 #include "map_bottom.h"
 #include "map_top.h"
-//#include "map_top_clouds.h"
+#include "map_top_clouds.h"
 #include "sound.h"
 
 //=============================================================================
@@ -21,24 +21,24 @@
 //=============================================================================
 static SingleplayerButton selected = SP_BTN_NONE;
 static SingleplayerButton lastSelected = SP_BTN_NONE;
+static int cloudOffset = 0;  // Track cloud scrolling
 
 //=============================================================================
 // GRAPHICS SETUP
 //=============================================================================
 void configureGraphics_MAIN_Singleplayer(void) {
-    REG_DISPCNT = MODE_0_2D | DISPLAY_BG2_ACTIVE;
+    REG_DISPCNT = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
 void configBG_Main_Singleplayer(void) {
-    BGCTRL[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) |BG_TILE_BASE(1);
-    BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) |BG_TILE_BASE(1);
-    dmaCopy(map_topBitmap, BG__RAM(0), map_topBitmapLen);
+    BGCTRL[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) |BG_TILE_BASE(1) | BG_PRIORITY(1);
+    BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) |BG_TILE_BASE(3) | BG_PRIORITY(0);
+    dmaCopy(map_topMap, BG_MAP_RAM(0), map_topMapLen);
+    dmaCopy(map_topTiles, BG_TILE_RAM(1), map_topTilesLen);
     dmaCopy(map_topPal, BG_PALETTE, map_topPalLen);
-    REG_BG2PA = 256;
-    REG_BG2PC = 0;
-    REG_BG2PB = 0;
-    REG_BG2PD = 256;
+    dmaCopy(map_top_cloudsMap, BG_MAP_RAM(1), map_top_cloudsMapLen);
+    dmaCopy(map_top_cloudsTiles, BG_TILE_RAM(3), map_top_cloudsTilesLen);
 }
 
 void configureGraphics_Sub_Singleplayer(void) {
@@ -230,6 +230,18 @@ GameState Singleplayer_update(void) {
             Singleplayer_setSelectionTint(selected, true);
         lastSelected = selected;
     }
+
+    static int cloudSubPixel = 0;  // Track sub-pixel movement
+    
+    cloudSubPixel++;
+    if (cloudSubPixel >= 2) {  // Move 1 pixel every 4 frames (adjust this number)
+        cloudSubPixel = 0;
+        cloudOffset++;
+        if (cloudOffset > 255) {
+            cloudOffset = 0;
+        }
+    }
+    REG_BG1HOFS = cloudOffset;
 
     // Handle button activation on release
     if (keysUp() & (KEY_A | KEY_TOUCH)) {
