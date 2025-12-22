@@ -114,7 +114,7 @@ bool Storage_SaveSettings(void) {
 
 bool Storage_ResetToDefaults(void) {
     // For now, just write hardcoded defaults to settings.txt
-    // Later you could copy from default_settings.txt
+    // Later could copy from default_settings.txt
     if (!writeDefaultsToFile(SETTINGS_FILE))
         return false;
 

@@ -29,9 +29,29 @@ static void onMusicToggle(bool enabled) {
 static void onSoundFxToggle(bool enabled) {
     GameContext_SetSoundFxEnabled(enabled);
 }
+static void drawToggleRect(int toggleIndex, bool enabled);
+
+static void refreshSettingsUI(void) {
+    GameContext* ctx = GameContext_Get();
+
+    // Update toggle visuals
+    drawToggleRect(SETTINGS_BTN_WIFI, ctx->userSettings.wifiEnabled);
+    drawToggleRect(SETTINGS_BTN_MUSIC, ctx->userSettings.musicEnabled);
+    drawToggleRect(SETTINGS_BTN_SOUND_FX, ctx->userSettings.soundFxEnabled);
+
+    // Apply settings (triggers side effects)
+    GameContext_SetWifiEnabled(ctx->userSettings.wifiEnabled);
+    GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
+    GameContext_SetSoundFxEnabled(ctx->userSettings.soundFxEnabled);
+}
 
 static void onSavePressed(void) {
-    Storage_SaveSettings();
+    if ((keysHeld() & KEY_START) && (keysHeld() & KEY_SELECT)) {
+        Storage_ResetToDefaults();
+        refreshSettingsUI();
+    } else {
+        Storage_SaveSettings();
+    }
 }
 
 //=============================================================================
