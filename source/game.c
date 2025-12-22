@@ -7,6 +7,7 @@
 #include "game_types.h"
 #include "map_bottom.h"
 #include "map_top.h"
+//#include "map_top_clouds.h"
 #include "sound.h"
 
 //=============================================================================
@@ -25,13 +26,14 @@ static SingleplayerButton lastSelected = SP_BTN_NONE;
 // GRAPHICS SETUP
 //=============================================================================
 void configureGraphics_MAIN_Singleplayer(void) {
-    REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
+    REG_DISPCNT = MODE_0_2D | DISPLAY_BG2_ACTIVE;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
 void configBG_Main_Singleplayer(void) {
-    BGCTRL[2] = BG_BMP_BASE(0) | BgSize_B8_256x256;
-    dmaCopy(map_topBitmap, BG_BMP_RAM(0), map_topBitmapLen);
+    BGCTRL[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) |BG_TILE_BASE(1);
+    BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) |BG_TILE_BASE(1);
+    dmaCopy(map_topBitmap, BG__RAM(0), map_topBitmapLen);
     dmaCopy(map_topPal, BG_PALETTE, map_topPalLen);
     REG_BG2PA = 256;
     REG_BG2PC = 0;
@@ -106,8 +108,7 @@ void configBG_Sub_Singleplayer(void) {
     dmaCopy(map_bottomMap, BG_MAP_RAM_SUB(0), map_bottomMapLen);
 
     // BG1: Selection highlight layer (behind)
-    BGCTRL_SUB[1] =
-        BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(3) | BG_PRIORITY(1);
+    BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(3) | BG_PRIORITY(1);
 
     // Load selection tiles
     dmaCopy(selectionTile0, (u8*)BG_TILE_RAM_SUB(3) + (0 * 64), 64);
