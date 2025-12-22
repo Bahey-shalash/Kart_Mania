@@ -6,8 +6,7 @@
 #include "color.h"
 #include "game_types.h"
 #include "map_bottom.h"
-#include "map_top.h"
-#include "map_top_clouds.h"
+#include "combined.h"
 #include "sound.h"
 
 //=============================================================================
@@ -33,12 +32,11 @@ void configureGraphics_MAIN_Singleplayer(void) {
 
 void configBG_Main_Singleplayer(void) {
     BGCTRL[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) |BG_TILE_BASE(1) | BG_PRIORITY(1);
-    BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) |BG_TILE_BASE(3) | BG_PRIORITY(0);
-    dmaCopy(map_topMap, BG_MAP_RAM(0), map_topMapLen);
-    dmaCopy(map_topTiles, BG_TILE_RAM(1), map_topTilesLen);
-    dmaCopy(map_topPal, BG_PALETTE, map_topPalLen);
-    dmaCopy(map_top_cloudsMap, BG_MAP_RAM(1), map_top_cloudsMapLen);
-    dmaCopy(map_top_cloudsTiles, BG_TILE_RAM(3), map_top_cloudsTilesLen);
+    BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) |BG_TILE_BASE(1) | BG_PRIORITY(0);
+    dmaCopy(combinedPal, BG_PALETTE, combinedPalLen);
+    dmaCopy(combinedTiles, BG_TILE_RAM(1), combinedTilesLen);
+    dmaCopy(&combinedMap[0], BG_MAP_RAM(0), 64*24);
+    dmaCopy(&combinedMap[32*24], BG_MAP_RAM(1), 64*24);
 }
 
 void configureGraphics_Sub_Singleplayer(void) {
