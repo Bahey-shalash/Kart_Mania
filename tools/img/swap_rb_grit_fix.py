@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#swap_rb_grit_fix
 import os, sys
 from PIL import Image
 

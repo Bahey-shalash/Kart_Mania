@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#pick_pixel_xy.py
 from pathlib import Path
 from PIL import Image
 import matplotlib.pyplot as plt
