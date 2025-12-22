@@ -3,8 +3,7 @@
 
 #include <nds.h>
 
-
 void initTimer(void);
 void timerISRVblank(void);
-void stopTimer(void);
+
 #endif  // TIMER_H

@@ -1,6 +1,10 @@
 #ifndef STORAGE_H
 #define STORAGE_H
 
+/*
+ *Storage never triggers side effects. It only mutates GameContext data.
+ */
+
 #include <stdbool.h>
 
 #define STORAGE_DIR "/kart-mania"
@@ -23,4 +27,4 @@ bool Storage_SaveSettings(void);
 // Returns true on success
 bool Storage_ResetToDefaults(void);
 
-#endif // STORAGE_H
+#endif  // STORAGE_H

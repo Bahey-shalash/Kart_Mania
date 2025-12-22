@@ -4,11 +4,11 @@
 #include <nds.h>
 
 #include "context.h"
-#include "game.h"
 #include "game_types.h"
 #include "graphics.h"
 #include "home_page.h"
 #include "settings.h"
+#include "singleplayer.h"
 #include "sound.h"
 #include "storage.h"
 
@@ -16,8 +16,8 @@
 // PROTOTYPES
 //=============================================================================
 
-GameState update_state(GameState state);
-void init_state(GameState state);
+static GameState update_state(GameState state);
+static void init_state(GameState state);
 //=============================================================================
 // MAIN
 //=============================================================================
@@ -38,8 +38,6 @@ int main(void) {
     initSoundLibrary();
     LoadALLSoundFX();
     loadMUSIC();
-
-
 
     // enables Music because default sound effect is true
     GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
@@ -66,7 +64,7 @@ int main(void) {
 // IMPLEMENTATION
 //=============================================================================
 
-GameState update_state(GameState state) {
+static GameState update_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
             return HomePage_update();
@@ -80,7 +78,7 @@ GameState update_state(GameState state) {
     return state;
 }
 
-void init_state(GameState state) {
+static void init_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
             HomePage_initialize();
