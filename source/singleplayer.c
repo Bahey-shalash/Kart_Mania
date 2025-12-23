@@ -4,9 +4,10 @@
 #include <string.h>
 
 #include "color.h"
-#include "combined.h"
 #include "game_types.h"
 #include "map_bottom.h"
+#include "map_top.h"
+#include "map_top_clouds.h"
 #include "sound.h"
 
 //=============================================================================
@@ -56,7 +57,6 @@ void Singleplayer_initialize(void) {
     configBG_Main_Singleplayer();
     configureGraphics_Sub_Singleplayer();
     configBG_Sub_Singleplayer();
-    
 }
 
 GameState Singleplayer_update(void) {
@@ -73,7 +73,7 @@ GameState Singleplayer_update(void) {
         lastSelected = selected;
     }
 
-        // Handle button activation on release
+    // Handle button activation on release
     if (keysUp() & (KEY_A | KEY_TOUCH)) {
         switch (selected) {
             case SP_BTN_MAP1:
@@ -116,19 +116,26 @@ void Singleplayer_OnVBlank(void) {
 // GRAPHICS SETUP
 //=============================================================================
 static void configureGraphics_MAIN_Singleplayer(void) {
-    REG_DISPCNT = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
+    REG_DISPCNT = MODE_3_2D | DISPLAY_BG3_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
 static void configBG_Main_Singleplayer(void) {
-    BGCTRL[0] =
-        BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
-    BGCTRL[1] =
-        BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(1) | BG_PRIORITY(0);
-    dmaCopy(combinedPal, BG_PALETTE, combinedPalLen);
-    dmaCopy(combinedTiles, BG_TILE_RAM(1), combinedTilesLen);
-    dmaCopy(&combinedMap[0], BG_MAP_RAM(0), 64 * 24);
-    dmaCopy(&combinedMap[32 * 24], BG_MAP_RAM(1), 64 * 24);
+    BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) |
+                BG_PRIORITY(0);  // tiled*/
+
+    BGCTRL[3] = BG_BMP_BASE(2) | BgSize_B8_256x256 | BG_PRIORITY(0);
+
+    dmaCopy(map_topBitmap, BG_BMP_RAM(2), map_topBitmapLen);
+    dmaCopy(map_topPal, BG_PALETTE, map_topPalLen);
+
+    dmaCopy(map_top_cloudsTiles, BG_TILE_RAM(1), map_top_cloudsTilesLen);
+    dmaCopy(map_top_cloudsMap, BG_MAP_RAM(0), map_top_cloudsMapLen);
+
+    REG_BG3PA = 256;
+    REG_BG3PC = 0;
+    REG_BG3PB = 0;
+    REG_BG3PD = 256;
 }
 
 static void configureGraphics_Sub_Singleplayer(void) {
