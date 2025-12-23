@@ -26,10 +26,10 @@ static int cloudOffset = 0;  // Track cloud scrolling
 //=============================================================================
 // Private assets / tables (tiles, hitboxes, coordinates)
 //=============================================================================
-static const u8 selectionTile0[64] = {[0 ... 63] = 240};  // MAP1
-static const u8 selectionTile1[64] = {[0 ... 63] = 241};  // MAP2
-static const u8 selectionTile2[64] = {[0 ... 63] = 242};  // MAP3
-static const u8 selectionTile3[64] = {[0 ... 63] = 243};  // HOME
+static const u8 selectionTile0[64] = {[0 ... 63] = SP_SELECTION_PAL_BASE};      // MAP1
+static const u8 selectionTile1[64] = {[0 ... 63] = SP_SELECTION_PAL_BASE + 1};  // MAP2
+static const u8 selectionTile2[64] = {[0 ... 63] = SP_SELECTION_PAL_BASE + 2};  // MAP3
+static const u8 selectionTile3[64] = {[0 ... 63] = SP_SELECTION_PAL_BASE + 3};  // HOME
 
 //=============================================================================
 // Private function prototypes
@@ -165,10 +165,10 @@ static void configBG_Sub_Singleplayer(void) {
     memset(BG_MAP_RAM_SUB(1), 0, 32 * 24 * 2);
 
     // color selection
-    BG_PALETTE_SUB[240] = BLACK;
-    BG_PALETTE_SUB[241] = BLACK;
-    BG_PALETTE_SUB[242] = BLACK;
-    BG_PALETTE_SUB[243] = BLACK;
+    BG_PALETTE_SUB[SP_SELECTION_PAL_BASE] = BLACK;
+    BG_PALETTE_SUB[SP_SELECTION_PAL_BASE + 1] = BLACK;
+    BG_PALETTE_SUB[SP_SELECTION_PAL_BASE + 2] = BLACK;
+    BG_PALETTE_SUB[SP_SELECTION_PAL_BASE + 3] = BLACK;
 
     // Draw selection areas
     drawSelectionRect(SP_BTN_MAP1, TILE_SEL_MAP1);
