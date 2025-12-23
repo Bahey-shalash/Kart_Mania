@@ -3,7 +3,7 @@
 #include <nds.h>
 #include <stdbool.h>
 
-typedef enum { HOME_PAGE, SETTINGS, SINGLEPLAYER, MULTIPLAYER } GameState;
+typedef enum { HOME_PAGE, SETTINGS, MAPSELECTION, GAMEPLAY } GameState;
 
 typedef struct {
     u16* gfx;
@@ -42,9 +42,7 @@ typedef enum {
     SP_BTN_MAP3 = 2,  // Neon Circuit
     SP_BTN_HOME = 3,  // Home button
     SP_BTN_COUNT
-} SingleplayerButton;
-
-
+} MapSelectionButton;
 
 typedef enum {
     TILE_RED = 3,
@@ -62,6 +60,6 @@ typedef enum {
     TILE_SEL_MAP2 = 1,
     TILE_SEL_MAP3 = 2,
     TILE_SEL_SP_HOME = 3
-} SingleplayerTileIndex;
+} Map_sel_TileIndex;
 
 #endif  // GAME_TYPES_H

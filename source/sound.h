@@ -24,7 +24,7 @@ void PlayDingSFX(void);
 
 void cleanSound_home_page(void);
 void cleanSound_settings(void);
-void cleanSound_singleplayer(void);
+void cleanSound_MapSelection(void);
 
 void LoadALLSoundFX(void);
 void UnloadALLSoundFX(void);

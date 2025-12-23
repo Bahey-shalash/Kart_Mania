@@ -107,9 +107,9 @@ GameState HomePage_update(void) {
         }
         switch (selected) {
             case HOME_BTN_SINGLEPLAYER:
-                return SINGLEPLAYER;
+                return MAPSELECTION;
             case HOME_BTN_MULTIPLAYER:
-                return MULTIPLAYER;
+                return GAMEPLAY;
             case HOME_BTN_SETTINGS:
                 return SETTINGS;
             default:

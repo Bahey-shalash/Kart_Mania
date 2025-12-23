@@ -41,7 +41,7 @@ void cleanSound_settings(void) {
     UnloadDingSoundFX();
 }
 
-void cleanSound_singleplayer(void) {
+void cleanSound_MapSelection(void) {
     UnloadClickSoundFX();
 }
 

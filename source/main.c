@@ -7,8 +7,8 @@
 #include "game_types.h"
 #include "graphics.h"
 #include "home_page.h"
+#include "map_selection.h"
 #include "settings.h"
-#include "singleplayer.h"
 #include "sound.h"
 #include "storage.h"
 
@@ -70,9 +70,9 @@ static GameState update_state(GameState state) {
             return HomePage_update();
         case SETTINGS:
             return Settings_update();
-        case SINGLEPLAYER:
-            return Singleplayer_update();
-        case MULTIPLAYER:
+        case MAPSELECTION:
+            return Map_selection_update();
+        case GAMEPLAY:
             return HomePage_update();  // placeholder
     }
     return state;
@@ -83,10 +83,10 @@ static void init_state(GameState state) {
         case HOME_PAGE:
             HomePage_initialize();
             break;
-        case SINGLEPLAYER:
-            Singleplayer_initialize();
+        case MAPSELECTION:
+            Map_Selection_initialize();
             break;
-        case MULTIPLAYER:
+        case GAMEPLAY:
             HomePage_initialize();
             break;
         case SETTINGS:
