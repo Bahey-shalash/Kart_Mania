@@ -124,7 +124,7 @@ static void configBG_Main_Singleplayer(void) {
     BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) |
                 BG_PRIORITY(0);  // tiled*/
 
-    BGCTRL[3] = BG_BMP_BASE(2) | BgSize_B8_256x256 | BG_PRIORITY(0);
+    BGCTRL[3] = BG_BMP_BASE(2) | BgSize_B8_256x256 | BG_PRIORITY(1);
 
     dmaCopy(map_topBitmap, BG_BMP_RAM(2), map_topBitmapLen);
     dmaCopy(map_topPal, BG_PALETTE, map_topPalLen);
