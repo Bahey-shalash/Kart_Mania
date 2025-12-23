@@ -16,6 +16,7 @@ void GameContext_InitDefaults(void) {
     gGameContext.userSettings.soundFxEnabled = true;
 
     gGameContext.currentGameState = HOME_PAGE;
+    gGameContext.SelectedMap = NONEMAP;
 }
 
 void GameContext_SetMusicEnabled(bool enabled) {
@@ -34,4 +35,11 @@ void GameContext_SetSoundFxEnabled(bool enabled) {
 void GameContext_SetWifiEnabled(bool enabled) {
     gGameContext.userSettings.wifiEnabled = enabled;
     // later: actually enable/disable wifi here
+}
+
+void GameContext_SetMap(Map SelectedMap){
+    gGameContext.SelectedMap = SelectedMap;
+}
+Map GameContext_GetMap(void){
+    return gGameContext.SelectedMap;
 }

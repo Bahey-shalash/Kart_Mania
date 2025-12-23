@@ -1,7 +1,7 @@
 #include "home_page.h"
 
 #include <string.h>
-
+#include "context.h"
 #include "color.h"
 #include "ds_menu.h"
 #include "home_top.h"
@@ -109,7 +109,7 @@ GameState HomePage_update(void) {
             case HOME_BTN_SINGLEPLAYER:
                 return MAPSELECTION;
             case HOME_BTN_MULTIPLAYER:
-                return GAMEPLAY;
+                return MAPSELECTION;
             case HOME_BTN_SETTINGS:
                 return SETTINGS;
             default:

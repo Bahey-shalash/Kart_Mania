@@ -73,7 +73,7 @@ static GameState update_state(GameState state) {
         case MAPSELECTION:
             return Map_selection_update();
         case GAMEPLAY:
-            return HomePage_update();  // placeholder
+            return Gameplay_update();  // placeholder
     }
     return state;
 }
@@ -87,7 +87,7 @@ static void init_state(GameState state) {
             Map_Selection_initialize();
             break;
         case GAMEPLAY:
-            HomePage_initialize();
+            Gameplay_initialize();
             break;
         case SETTINGS:
             Settings_initialize();

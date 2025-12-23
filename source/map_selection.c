@@ -10,7 +10,7 @@
 #include "map_top.h"
 #include "map_top_clouds.h"
 #include "sound.h"
-
+#include "context.h"
 //=============================================================================
 // Private constants / config
 //=============================================================================
@@ -82,19 +82,19 @@ GameState Map_selection_update(void) {
     if (keysUp() & (KEY_A | KEY_TOUCH)) {
         switch (selected) {
             case SP_BTN_MAP1:
-                // TODO: Load Scorching Sands map
-                // return GAMEPLAY; // when ready
+                GameContext_SetMap(ScorchingSands);
                 PlayCLICKSFX();
+                return GAMEPLAY;
                 break;
             case SP_BTN_MAP2:
-                // TODO: Load Alpine Rush map
-                // return GAMEPLAY; // when ready
+                GameContext_SetMap(AlpinRush);
                 PlayCLICKSFX();
+                return GAMEPLAY;
                 break;
             case SP_BTN_MAP3:
-                // TODO: Load Neon Circuit map
-                // return GAMEPLAY; // when ready
+                GameContext_SetMap(NeonCircuit);
                 PlayCLICKSFX();
+                return GAMEPLAY;
                 break;
             case SP_BTN_HOME:
                 PlayCLICKSFX();

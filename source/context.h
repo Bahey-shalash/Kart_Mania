@@ -14,6 +14,7 @@ typedef struct {
     } userSettings;
 
     GameState currentGameState;
+    Map SelectedMap;
 } GameContext;
 
 // Single source of truth access
@@ -23,5 +24,7 @@ void GameContext_InitDefaults(void);
 void GameContext_SetMusicEnabled(bool enabled);
 void GameContext_SetSoundFxEnabled(bool enabled);
 void GameContext_SetWifiEnabled(bool enabled);
+void GameContext_SetMap(Map SelectedMap);
+Map GameContext_GetMap(void);
 
 #endif

@@ -55,7 +55,7 @@ typedef enum {
     TILE_SEL_HOME = 10
 } SettingsTileIndex;
 
-typedef enum { ScorchingSands, AlpinRush, NeonCircuit } Map;
+typedef enum {NONEMAP, ScorchingSands, AlpinRush, NeonCircuit } Map;
 
 typedef enum {
     TILE_SEL_MAP1 = 0,
