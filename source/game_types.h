@@ -2,6 +2,7 @@
 #define GAME_TYPES_H
 #include <nds.h>
 #include <stdbool.h>
+#include "vect2.h"
 
 typedef enum { HOME_PAGE, SETTINGS, MAPSELECTION, GAMEPLAY } GameState;
 
@@ -55,7 +56,7 @@ typedef enum {
     TILE_SEL_HOME = 10
 } SettingsTileIndex;
 
-typedef enum { ScorchingSands, AlpinRush, NeonCircuit } Map;
+typedef enum { NONEMAP, ScorchingSands, AlpinRush, NeonCircuit } Map;
 
 typedef enum {
     TILE_SEL_MAP1 = 0,
@@ -64,21 +65,9 @@ typedef enum {
     TILE_SEL_SP_HOME = 3
 } Map_sel_TileIndex;
 
-/* use integers because it can be easily mapped to pixels */
-typedef struct {
-    int x;
-    int y;
-} position;
 
-typedef enum { ITEM_NONE = 0, ITEM_OIL, ITEM_BOMB } Item;
 
-typedef struct {
-    position carposition;
-    int angle;  // consider fixed-point later
-    int speed;
-    int acceleration;
-    Item item;         // ITEM_NONE means no item
-    char carname[32];  // or const char* if you prefer
-} Car;
+
+
 
 #endif  // GAME_TYPES_H
