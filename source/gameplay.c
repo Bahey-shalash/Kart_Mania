@@ -4,8 +4,13 @@
 #include "context.h"
 #include "game_types.h"
 #include "scorching_sands_TL.h"
+#include "scorching_sands_TC.h"
 #include "scorching_sands_TR.h"
+#include "scorching_sands_ML.h"
+#include "scorching_sands_MC.h"
+#include "scorching_sands_MR.h"
 #include "scorching_sands_BL.h"
+#include "scorching_sands_BC.h"
 #include "scorching_sands_BR.h"
 
 //=============================================================================
@@ -15,21 +20,25 @@ static int scrollX = 0;
 static int scrollY = 0;
 static const int SCROLL_SPEED = 2;
 
-// Map bounds for 768x768 with overlapping quadrants
-// With 256px overlap, effective range is 768-256 = 512 in each direction
-static const int MAX_SCROLL_X = 512;
-static const int MAX_SCROLL_Y = 512;
+// Map bounds for 1024x1024 with overlapping quadrants
+// With 256px offset between quadrants, effective range is 512 in each direction
+static const int MAX_SCROLL_X = 768;
+static const int MAX_SCROLL_Y = 832;
 
-// Overlap boundaries (256 pixels from each edge of 512)
-static const int OVERLAP_START = 256;  // When to start transition
-static const int OVERLAP_END = 512;    // End of current quadrant
+// Quadrant boundaries (256 pixels between each quadrant start)
+static const int QUAD_OFFSET = 256;  // Distance between quadrant starting positions
 
-// Track which quadrants are currently loaded
+// Track which quadrant is currently loaded
 typedef enum {
-    QUAD_TL = 0,
-    QUAD_TR = 1,
-    QUAD_BL = 2,
-    QUAD_BR = 3
+    QUAD_TL = 0,  // Top-Left
+    QUAD_TC = 1,  // Top-Center
+    QUAD_TR = 2,  // Top-Right
+    QUAD_ML = 3,  // Middle-Left
+    QUAD_MC = 4,  // Middle-Center
+    QUAD_MR = 5,  // Middle-Right
+    QUAD_BL = 6,  // Bottom-Left
+    QUAD_BC = 7,  // Bottom-Center
+    QUAD_BR = 8   // Bottom-Right
 } QuadrantID;
 
 static QuadrantID currentQuadrant = QUAD_TL;
@@ -124,15 +133,40 @@ static void loadQuadrant(QuadrantID quad) {
             map = scorching_sands_TLMap;
             tilesLen = scorching_sands_TLTilesLen;
             break;
+        case QUAD_TC:
+            tiles = scorching_sands_TCTiles;
+            map = scorching_sands_TCMap;
+            tilesLen = scorching_sands_TCTilesLen;
+            break;
         case QUAD_TR:
             tiles = scorching_sands_TRTiles;
             map = scorching_sands_TRMap;
             tilesLen = scorching_sands_TRTilesLen;
             break;
+        case QUAD_ML:
+            tiles = scorching_sands_MLTiles;
+            map = scorching_sands_MLMap;
+            tilesLen = scorching_sands_MLTilesLen;
+            break;
+        case QUAD_MC:
+            tiles = scorching_sands_MCTiles;
+            map = scorching_sands_MCMap;
+            tilesLen = scorching_sands_MCTilesLen;
+            break;
+        case QUAD_MR:
+            tiles = scorching_sands_MRTiles;
+            map = scorching_sands_MRMap;
+            tilesLen = scorching_sands_MRTilesLen;
+            break;
         case QUAD_BL:
             tiles = scorching_sands_BLTiles;
             map = scorching_sands_BLMap;
             tilesLen = scorching_sands_BLTilesLen;
+            break;
+        case QUAD_BC:
+            tiles = scorching_sands_BCTiles;
+            map = scorching_sands_BCMap;
+            tilesLen = scorching_sands_BCTilesLen;
             break;
         case QUAD_BR:
             tiles = scorching_sands_BRTiles;
@@ -154,28 +188,33 @@ static void loadQuadrant(QuadrantID quad) {
 }
 
 static QuadrantID determineQuadrant(int x, int y) {
-    // Check if we're in overlap regions and should transition
-    // Overlap starts at 256px (middle of each quadrant)
+    // Quadrants transition at 256px intervals
+    // At x=0-255: use left column (TL/ML/BL)
+    // At x=256-511: use center column (TC/MC/BC)  
+    // At x=512+: use right column (TR/MR/BR)
     
-    // Horizontal position determines left vs right quadrants
-    bool inRightOverlap = (x >= OVERLAP_START);
+    int quadX = 0;
+    int quadY = 0;
     
-    // Vertical position determines top vs bottom quadrants
-    bool inBottomOverlap = (y >= OVERLAP_START);
+    // Determine horizontal quadrant (transitions at x=256 and x=512)
+    if (x < 256) {
+        quadX = 0;  // Left column
+    } else if (x < 512) {
+        quadX = 1;  // Center column (starts at overlap point)
+    } else {
+        quadX = 2;  // Right column (starts at second overlap point)
+    }
     
-    // Determine which quadrant to load based on position
-    if (!inRightOverlap && !inBottomOverlap) {
-        return QUAD_TL;  // Top-left region (0-255, 0-255)
+    // Determine vertical quadrant (transitions at y=256 and y=512)
+    if (y < 256) {
+        quadY = 0;  // Top row
+    } else if (y < 512) {
+        quadY = 1;  // Middle row (starts at overlap point)
+    } else {
+        quadY = 2;  // Bottom row (starts at second overlap point)
     }
-    else if (inRightOverlap && !inBottomOverlap) {
-        return QUAD_TR;  // Top-right region (256-512, 0-255)
-    }
-    else if (!inRightOverlap && inBottomOverlap) {
-        return QUAD_BL;  // Bottom-left region (0-255, 256-512)
-    }
-    else {
-        return QUAD_BR;  // Bottom-right region (256-512, 256-512)
-    }
+    
+    return (QuadrantID)(quadY * 3 + quadX);
 }
 
 static void updateScroll(void) {
@@ -189,32 +228,21 @@ static void updateScroll(void) {
     }
     
     // Calculate local scroll offset within current quadrant
-    // The offset into the currently loaded 512x512 quadrant
+    // Each quadrant starts at a different position in the 1024x1024 map:
+    // TL:(0,0), TC:(256,0), TR:(512,0)
+    // ML:(0,256), MC:(256,256), MR:(512,256)  
+    // BL:(0,512), BC:(256,512), BR:(512,512)
+    
     int localX = scrollX;
     int localY = scrollY;
     
-    // Adjust scroll position based on which quadrant we're in
-    // Since quadrants overlap by 256px, we need to offset appropriately
-    switch(currentQuadrant) {
-        case QUAD_TL:
-            // TL starts at (0,0) in the 768x768 map
-            // No adjustment needed
-            break;
-        case QUAD_TR:
-            // TR starts at (256,0) in the 768x768 map
-            // When scrollX >= 256, we want to show from the beginning of TR
-            localX = scrollX - OVERLAP_START;
-            break;
-        case QUAD_BL:
-            // BL starts at (0,256) in the 768x768 map
-            localY = scrollY - OVERLAP_START;
-            break;
-        case QUAD_BR:
-            // BR starts at (256,256) in the 768x768 map
-            localX = scrollX - OVERLAP_START;
-            localY = scrollY - OVERLAP_START;
-            break;
-    }
+    // Determine which column (0, 1, or 2) and row (0, 1, or 2)
+    int col = currentQuadrant % 3;
+    int row = currentQuadrant / 3;
+    
+    // Subtract the quadrant's starting position in the original 1024x1024 image
+    localX = scrollX - (col * QUAD_OFFSET);
+    localY = scrollY - (row * QUAD_OFFSET);
     
     BG_OFFSET[0].x = localX;
     BG_OFFSET[0].y = localY;
