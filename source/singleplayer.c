@@ -8,6 +8,7 @@
 #include "map_bottom.h"
 #include "map_top.h"
 #include "map_top_clouds.h"
+#include "combined.h"
 #include "sound.h"
 
 //=============================================================================
@@ -116,15 +117,22 @@ void Singleplayer_OnVBlank(void) {
 // GRAPHICS SETUP
 //=============================================================================
 static void configureGraphics_MAIN_Singleplayer(void) {
-    REG_DISPCNT = MODE_3_2D | DISPLAY_BG3_ACTIVE | DISPLAY_BG1_ACTIVE;
+    REG_DISPCNT = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
+    //REG_DISPCNT = MODE_3_2D | DISPLAY_BG3_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
 static void configBG_Main_Singleplayer(void) {
-    BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) |
-                BG_PRIORITY(0);  // tiled*/
-
-    BGCTRL[3] = BG_BMP_BASE(2) | BgSize_B8_256x256 | BG_PRIORITY(1);
+    BGCTRL[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
+    
+    BGCTRL[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(1) | BG_PRIORITY(0);
+    dmaCopy(combinedTiles, BG_TILE_RAM(1), combinedTilesLen);
+    dmaCopy(combinedPal, BG_PALETTE, combinedPalLen);
+    dmaCopy(&combinedMap[0], BG_MAP_RAM(0),64*24);
+    dmaCopy(&combinedMap[32*24], BG_MAP_RAM(1), 64*24);
+    
+    /*
+    BGCTRL[3] = BG_BMP_BASE(2) | BgSize_B8_256x256 | BG_PRIORITY(0);
 
     dmaCopy(map_topBitmap, BG_BMP_RAM(2), map_topBitmapLen);
     dmaCopy(map_topPal, BG_PALETTE, map_topPalLen);
@@ -136,6 +144,8 @@ static void configBG_Main_Singleplayer(void) {
     REG_BG3PC = 0;
     REG_BG3PB = 0;
     REG_BG3PD = 256;
+    */
+    
 }
 
 static void configureGraphics_Sub_Singleplayer(void) {
@@ -145,15 +155,13 @@ static void configureGraphics_Sub_Singleplayer(void) {
 
 static void configBG_Sub_Singleplayer(void) {
     // BG0: Menu layer (front)
-    BGCTRL_SUB[0] =
-        BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(0);
+    BGCTRL_SUB[0] = BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(0);
     dmaCopy(map_bottomPal, BG_PALETTE_SUB, map_bottomPalLen);
     dmaCopy(map_bottomTiles, BG_TILE_RAM_SUB(1), map_bottomTilesLen);
     dmaCopy(map_bottomMap, BG_MAP_RAM_SUB(0), map_bottomMapLen);
 
     // BG1: Selection highlight layer (behind)
-    BGCTRL_SUB[1] =
-        BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(3) | BG_PRIORITY(1);
+    BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(3) | BG_PRIORITY(1);
 
     // Load selection tiles
     dmaCopy(selectionTile0, (u8*)BG_TILE_RAM_SUB(3) + (0 * 64), 64);
