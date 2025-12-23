@@ -10,12 +10,12 @@
 typedef enum { ITEM_NONE = 0, ITEM_OIL, ITEM_BOMB } Item;
 
 typedef struct {
-    Vec2 position;  // Q8.8 world coords
-    Vec2 velocity;  // Q8.8 pixels/frame
+    Vec2 position;
+    Vec2 velocity;
 
-    Q16_8 maxSpeed;   // Q8.8 - cap on v2_len(velocity)
-    Q16_8 accelRate;  // Q8.8 - acceleration magnitude
-    Q16_8 friction;   // Q8.8 - velocity multiplier (e.g., 250)
+    Q16_8 maxSpeed;
+    Q16_8 accelRate;
+    Q16_8 friction;
 
     Item item;
     char carname[32];
@@ -73,6 +73,5 @@ void Car_Update(Car* car);
 
 // Utility
 void Car_SetPosition(Car* car, Vec2 pos);
-
 
 #endif  // CAR_H

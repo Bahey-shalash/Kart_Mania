@@ -1,7 +1,7 @@
 #include "Car.h"
 
 #include <string.h>
-#define NULL ((void*)0)
+#include <stddef.h>
 
 // ---------------------------------------------
 // Helpers

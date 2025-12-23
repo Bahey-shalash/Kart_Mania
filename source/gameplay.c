@@ -25,7 +25,7 @@ static QuadrantID currentQuadrant = QUAD_TL;
 // Quadrant data structure
 //=============================================================================
 typedef struct {
-    const unsigned short* tiles;
+    const unsigned int* tiles;
     const unsigned short* map;
     unsigned int tilesLen;
 } QuadrantData;
