@@ -11,6 +11,7 @@
 #include "settings.h"
 #include "sound.h"
 #include "storage.h"
+#include "gameplay.h"
 
 //=============================================================================
 // PROTOTYPES
