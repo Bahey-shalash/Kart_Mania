@@ -4,10 +4,11 @@
 
 static GameContext gGameContext;  // actual game context
 
- GameContext* GameContext_Get(void) {
+GameContext* GameContext_Get(void) {
     return &gGameContext;
 }
-//should make const to stop things like GameContext_Get()->userSettings.musicEnabled = false
+// should make const to stop things like GameContext_Get()->userSettings.musicEnabled =
+// false
 
 void GameContext_InitDefaults(void) {
     gGameContext.userSettings.wifiEnabled = true;
