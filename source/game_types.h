@@ -81,4 +81,15 @@ typedef struct {
     char carname[32];  // or const char* if you prefer
 } Car;
 
+typedef enum {
+    QUAD_TL = 0,  // Top-Left
+    QUAD_TC = 1,  // Top-Center
+    QUAD_TR = 2,  // Top-Right
+    QUAD_ML = 3,  // Middle-Left
+    QUAD_MC = 4,  // Middle-Center
+    QUAD_MR = 5,  // Middle-Right
+    QUAD_BL = 6,  // Bottom-Left
+    QUAD_BC = 7,  // Bottom-Center
+    QUAD_BR = 8   // Bottom-Right
+} QuadrantID;
 #endif  // GAME_TYPES_H

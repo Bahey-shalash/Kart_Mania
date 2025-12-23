@@ -89,12 +89,12 @@ GameState Map_selection_update(void) {
             case SP_BTN_MAP2:
                 GameContext_SetMap(AlpinRush);
                 PlayCLICKSFX();
-                return GAMEPLAY;
+                return HOME_PAGE;
                 break;
             case SP_BTN_MAP3:
                 GameContext_SetMap(NeonCircuit);
                 PlayCLICKSFX();
-                return GAMEPLAY;
+                return HOME_PAGE;
                 break;
             case SP_BTN_HOME:
                 PlayCLICKSFX();
