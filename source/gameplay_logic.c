@@ -8,16 +8,12 @@
 // Constants - scale with tick rate for consistent feel
 //=============================================================================
 
-#define PLAYER_KEYS (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT | KEY_A | KEY_B)
-
 #define TURN_STEP_50CC 3  // units of 0..511 per tick @ 60Hz  (~127 deg/sec)
 
 //=============================================================================
 // Module State
 //=============================================================================
 static RaceState KartMania;
-
-static volatile u16 g_keysHeld = 0;
 
 static inline int AngleDiff512(int target, int current) {
     int d = (target - current) & ANGLE_MASK;  // 0..511
@@ -43,7 +39,6 @@ Car* Race_GetPlayerCar(void) {
 void stop_Race(void) {
     KartMania.raceStarted = false;
     RaceTick_TimerStop();
-    DisableInput();
 }
 
 void Race_Init(Map map, GameMode mode) {
@@ -95,20 +90,23 @@ void Race_Init(Map map, GameMode mode) {
         // Physics tuned for 50cc (Q16.8, 60Hz)
         // =============================================================================
 
-        car->maxSpeed = (FIXED_ONE * 75) / 100;
+        // Max speed: 0.75 pixels/frame in Q16.8 = 192
+        car->maxSpeed = (FIXED_ONE * 3) / 4;  // 192
 
-        // Minimum accel must clear Car_Update's snap-to-zero threshold (<= 1).
-        // Use 1.0 in Q16.8 so a single press produces visible movement even with friction.
+        // Acceleration: 1.0 px/frame in Q16.8 (clamped by maxSpeed)
+        // Using a full fixed-point unit keeps velocity above the snap-to-zero guard.
         car->accelRate = IntToFixed(1);
 
-        car->friction = 250;
+        // Friction: multiplier per frame. Lower = more drag.
+        // 240/256 = 0.9375 -> loses 6.25% speed per frame
+        // At 60Hz, coasting from max speed to stop takes ~40 frames (~0.7 sec)
+        car->friction = 240;
     }
 
     // TODO: Load checkpoints for this map
     KartMania.checkpointCount = 0;
 
-    // Start input and physics timer
-    PlayerInput_Init();
+    // Start physics timer
     RaceTick_TimerInit();
 }
 
@@ -137,10 +135,13 @@ void Race_Reset(void) {
         car->lastCheckpoint = 0;
         car->rank = i + 1;
         car->item = ITEM_NONE;
+
+        car->maxSpeed = (FIXED_ONE * 75) / 100;
+        car->accelRate = IntToFixed(1);
+        car->friction = 240;
     }
 
-    // Restart
-    PlayerInput_Init();
+    // Restart timer
     RaceTick_TimerInit();
 }
 
@@ -167,46 +168,60 @@ void Race_Tick(void) {
 
     Car* player = &KartMania.cars[KartMania.playerIndex];
 
-    // Read current key state
-    u16 keys = g_keysHeld;
+    // Read current input state
+    uint32 held = keysHeld();
 
-    int targetAngle = player->angle512;  // default: keep heading if no D-pad
+    bool pressingA = held & KEY_A;
+    bool pressingB = held & KEY_B;
 
-    // Determine targetAngle from D-pad (same logic you already have)
-    if ((keys & KEY_UP) && (keys & KEY_RIGHT)) {
-        targetAngle = ANGLE_UP_RIGHT;
-    } else if ((keys & KEY_UP) && (keys & KEY_LEFT)) {
-        targetAngle = ANGLE_UP_LEFT;
-    } else if ((keys & KEY_DOWN) && (keys & KEY_RIGHT)) {
-        targetAngle = ANGLE_DOWN_RIGHT;
-    } else if ((keys & KEY_DOWN) && (keys & KEY_LEFT)) {
-        targetAngle = ANGLE_DOWN_LEFT;
-    } else if (keys & KEY_UP) {
+    // Determine target angle from D-pad (8 directions)
+    int targetAngle = player->angle512;  // default: keep current heading
+    bool hasDpadInput = false;
+
+    bool up = held & KEY_UP;
+    bool down = held & KEY_DOWN;
+    bool left = held & KEY_LEFT;
+    bool right = held & KEY_RIGHT;
+
+    if (right && !left) {
+        hasDpadInput = true;
+        if (up)
+            targetAngle = ANGLE_UP_RIGHT;
+        else if (down)
+            targetAngle = ANGLE_DOWN_RIGHT;
+        else
+            targetAngle = ANGLE_RIGHT;
+    } else if (left && !right) {
+        hasDpadInput = true;
+        if (up)
+            targetAngle = ANGLE_UP_LEFT;
+        else if (down)
+            targetAngle = ANGLE_DOWN_LEFT;
+        else
+            targetAngle = ANGLE_LEFT;
+    } else if (up && !down) {
+        hasDpadInput = true;
         targetAngle = ANGLE_UP;
-    } else if (keys & KEY_DOWN) {
+    } else if (down && !up) {
+        hasDpadInput = true;
         targetAngle = ANGLE_DOWN;
-    } else if (keys & KEY_LEFT) {
-        targetAngle = ANGLE_LEFT;
-    } else if (keys & KEY_RIGHT) {
-        targetAngle = ANGLE_RIGHT;
     }
 
-    // Steer gradually toward targetAngle
-    int diff = AngleDiff512(targetAngle, player->angle512);
-    if (diff > TURN_STEP_50CC)
-        diff = TURN_STEP_50CC;
-    if (diff < -TURN_STEP_50CC)
-        diff = -TURN_STEP_50CC;
+    // Steering: only turn while accelerating AND pressing D-pad
+    if (pressingA && hasDpadInput) {
+        int diff = AngleDiff512(targetAngle, player->angle512);
+        if (diff > TURN_STEP_50CC)
+            diff = TURN_STEP_50CC;
+        if (diff < -TURN_STEP_50CC)
+            diff = -TURN_STEP_50CC;
 
-    player->angle512 = (player->angle512 + diff) & ANGLE_MASK;
+        player->angle512 = (player->angle512 + diff) & ANGLE_MASK;
+    }
 
-    // A = accelerate in current facing direction
-    if (keys & KEY_A) {
+    // Acceleration (A) and Braking (B)
+    if (pressingA && !pressingB) {
         Car_Accelerate(player);
-    }
-
-    // B = brake
-    if (keys & KEY_B) {
+    } else if (pressingB) {
         Car_Brake(player);
     }
 
@@ -230,32 +245,4 @@ void Race_Tick(void) {
     // TODO: Check checkpoint crossings
     // TODO: Update rankings
     // TODO: Check win condition
-}
-
-//=============================================================================
-// Input Handling
-//=============================================================================
-void PlayerInput_Init(void) {
-    g_keysHeld = 0;
-
-    // Configure keys to trigger interrupt
-    REG_KEYCNT = BIT(14) | PLAYER_KEYS;
-
-    irqSet(IRQ_KEYS, &PlayerInput_Apply_ISR);
-    irqEnable(IRQ_KEYS);
-}
-
-void PlayerInput_Apply_ISR(void) {
-    if (!KartMania.raceStarted || KartMania.raceFinished) {
-        return;
-    }
-
-    // Capture key state (KEYINPUT is active-low)
-    g_keysHeld = (u16)(~REG_KEYINPUT) & PLAYER_KEYS;
-}
-
-void DisableInput(void) {
-    irqDisable(IRQ_KEYS);
-    irqClear(IRQ_KEYS);
-    g_keysHeld = 0;
 }

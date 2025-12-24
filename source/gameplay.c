@@ -87,8 +87,8 @@ GameState Gameplay_update(void) {
     scanKeys();
     int keys = keysDown();
 
-    //!START to exit (placeholder for pause menu)
-    if (keys & KEY_START) {
+    //!select to exit (placeholder for pause menu)
+    if (keys & KEY_SELECT) {
         stop_Race();
         return HOME_PAGE;
         //TODO

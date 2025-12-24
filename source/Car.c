@@ -139,12 +139,12 @@ void Car_Update(Car* car) {
     car->friction = clamp_friction(car->friction);
     car->velocity = Vec2_Scale(car->velocity, car->friction);
 
-    // Snap tiny velocities to 0 (prevents endless drifting due to quantization)
-    // Threshold = 1/256 px/frame (one LSB in Q16.8)
-    if (FixedAbs(car->velocity.x) <= 1) {
+    // Snap tiny velocities to 0 (prevents endless drifting)
+    // Threshold ~0.02 pixels/frame in Q16.8 = 5
+    if (FixedAbs(car->velocity.x) <= 5) {
         car->velocity.x = 0;
     }
-    if (FixedAbs(car->velocity.y) <= 1) {
+    if (FixedAbs(car->velocity.y) <= 5) {
         car->velocity.y = 0;
     }
 
