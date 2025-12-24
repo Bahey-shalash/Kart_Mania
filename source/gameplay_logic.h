@@ -9,19 +9,20 @@
 //=============================================================================
 // Constants
 //=============================================================================
+
 #define MAX_CARS 8
 #define MAX_CHECKPOINTS 16
-
-
 
 //=============================================================================
 // Enums
 //=============================================================================
+
 typedef enum { SinglePlayer, MultiPlayer } GameMode;
 
 //=============================================================================
 // Structs
 //=============================================================================
+
 typedef struct {
     Vec2 topLeft;
     Vec2 bottomRight;
@@ -35,7 +36,7 @@ typedef struct {
     Map currentMap;
 
     int carCount;
-    int playerIndex;  // the guy playing on his own DS
+    int playerIndex;  // The player on this DS
     Car cars[MAX_CARS];
 
     int totalLaps;
@@ -47,20 +48,19 @@ typedef struct {
 //=============================================================================
 // Lifecycle
 //=============================================================================
+
 void Race_Init(Map map, GameMode mode);
 void Race_Tick(void);
 void Race_Reset(void);
-void stop_Race(void);
+void Race_Stop(void);  // Renamed from stop_Race
 
 //=============================================================================
-// Input
+// State Queries (Read-Only Access)
 //=============================================================================
-//todo
 
-//=============================================================================
-// Accessors
-//=============================================================================
-Car* Race_GetPlayerCar(void);
-RaceState* Race_GetState(void);
+const Car* Race_GetPlayerCar(void);    // Read-only access for rendering
+const RaceState* Race_GetState(void);  // Read-only access for UI/rendering
+bool Race_IsActive(void);              // Check if race is running
+int Race_GetLapCount(void);            // Get total laps for current map
 
 #endif  // GAMEPLAY_LOGIC_H

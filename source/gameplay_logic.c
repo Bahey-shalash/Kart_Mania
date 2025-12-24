@@ -34,7 +34,7 @@ static const int MapLaps[] = {
 };
 
 //=============================================================================
-// Module State
+// Module State (PRIVATE - do not expose)
 //=============================================================================
 
 static RaceState KartMania;
@@ -44,25 +44,32 @@ static RaceState KartMania;
 //=============================================================================
 
 static inline int AngleDiff512(int target, int current);
-static int getTargetAngleFromDpad(uint32 held, int currentAngle, bool* hasDpadInput);
 static void initCarAtSpawn(Car* car, int index);
 static void handlePlayerInput(Car* player);
 static void clampToMapBounds(Car* car);
 
 //=============================================================================
-// Public API - Accessors
+// Public API - State Queries (Read-Only)
 //=============================================================================
 
-RaceState* Race_GetState(void) {
+const RaceState* Race_GetState(void) {
     return &KartMania;
 }
 
-Car* Race_GetPlayerCar(void) {
+const Car* Race_GetPlayerCar(void) {
     return &KartMania.cars[KartMania.playerIndex];
 }
 
+bool Race_IsActive(void) {
+    return KartMania.raceStarted && !KartMania.raceFinished;
+}
+
+int Race_GetLapCount(void) {
+    return KartMania.totalLaps;
+}
+
 //=============================================================================
-// Public API - Lifecycle
+// Public API - State Modification (Controlled)
 //=============================================================================
 
 void Race_Init(Map map, GameMode mode) {
@@ -109,17 +116,17 @@ void Race_Reset(void) {
     RaceTick_TimerInit();
 }
 
-void stop_Race(void) {
+void Race_Stop(void) {
     KartMania.raceStarted = false;
     RaceTick_TimerStop();
 }
 
 //=============================================================================
-// Public API - Game Loop
+// Public API - Game Loop (Physics Tick)
 //=============================================================================
 
 void Race_Tick(void) {
-    if (!KartMania.raceStarted || KartMania.raceFinished) {
+    if (!Race_IsActive()) {
         return;
     }
 
@@ -152,7 +159,7 @@ static void initCarAtSpawn(Car* car, int index) {
     Vec2 spawnPos = Vec2_FromInt(100 + (index * 40), 100);
 
     car->position = spawnPos;
-    car->velocity = Vec2_Zero();
+    car->speed = 0;
     car->angle512 = 0;
     car->Lap = 0;
     car->lastCheckpoint = 0;
@@ -168,61 +175,24 @@ static void initCarAtSpawn(Car* car, int index) {
 // Private Implementation - Input
 //=============================================================================
 
-static int getTargetAngleFromDpad(uint32 held, int currentAngle, bool* hasDpadInput) {
-    bool up = held & KEY_UP;
-    bool down = held & KEY_DOWN;
-    bool left = held & KEY_LEFT;
-    bool right = held & KEY_RIGHT;
-
-    *hasDpadInput = false;
-
-    if (right && !left) {
-        *hasDpadInput = true;
-        if (up)
-            return ANGLE_UP_RIGHT;
-        if (down)
-            return ANGLE_DOWN_RIGHT;
-        return ANGLE_RIGHT;
-    }
-    if (left && !right) {
-        *hasDpadInput = true;
-        if (up)
-            return ANGLE_UP_LEFT;
-        if (down)
-            return ANGLE_DOWN_LEFT;
-        return ANGLE_LEFT;
-    }
-    if (up && !down) {
-        *hasDpadInput = true;
-        return ANGLE_UP;
-    }
-    if (down && !up) {
-        *hasDpadInput = true;
-        return ANGLE_DOWN;
-    }
-
-    return currentAngle;
-}
-
 static void handlePlayerInput(Car* player) {
     uint32 held = keysHeld();
 
     bool pressingA = held & KEY_A;
     bool pressingB = held & KEY_B;
-    bool hasDpadInput = false;
+    bool pressingLeft = held & KEY_LEFT;
+    bool pressingRight = held & KEY_RIGHT;
 
-    int targetAngle = getTargetAngleFromDpad(held, player->angle512, &hasDpadInput);
-
-    // Steering: only turn while accelerating AND pressing D-pad
-    if (pressingA && hasDpadInput) {
-        int diff = AngleDiff512(targetAngle, player->angle512);
-
-        if (diff > TURN_STEP_50CC)
-            diff = TURN_STEP_50CC;
-        if (diff < -TURN_STEP_50CC)
-            diff = -TURN_STEP_50CC;
-
-        player->angle512 = (player->angle512 + diff) & ANGLE_MASK;
+    // Steering: turn left/right relative to current facing
+    // Only allow steering while accelerating (like Mario Kart)
+    if (pressingA) {
+        if (pressingLeft && !pressingRight) {
+            // Turn left (CCW) - use Car_Steer to keep speed aligned with facing
+            Car_Steer(player, -TURN_STEP_50CC);
+        } else if (pressingRight && !pressingLeft) {
+            // Turn right (CW) - use Car_Steer to keep speed aligned with facing
+            Car_Steer(player, TURN_STEP_50CC);
+        }
     }
 
     // Acceleration (A) and Braking (B)
@@ -251,5 +221,5 @@ static void clampToMapBounds(Car* car) {
     if (car->position.y > maxPosY)
         car->position.y = maxPosY;
 
-    //todo add circuit walls 
+    // TODO: Add circuit walls
 }

@@ -6,13 +6,13 @@
 #include "context.h"
 #include "game_types.h"
 #include "gameplay.h"
+#include "gameplay_logic.h"
 #include "graphics.h"
 #include "home_page.h"
 #include "map_selection.h"
 #include "settings.h"
 #include "sound.h"
 #include "storage.h"
-#include "gameplay_logic.h"
 
 //=============================================================================
 // PROTOTYPES
@@ -110,7 +110,7 @@ static void cleanup_state(GameState state) {
             break;
         case GAMEPLAY:
 
-            stop_Race();
+            Race_Stop();
             break;
         case SETTINGS:
 
