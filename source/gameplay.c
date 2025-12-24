@@ -53,7 +53,7 @@ static const QuadrantData quadrantData[9] = {
 static void configureGraphics(void);
 static void configureBackground(void);
 static void configureSprite(void);
-static void configureConsole(void);
+/* static void configureConsole(void); */
 static void loadQuadrant(QuadrantID quad);
 static QuadrantID determineQuadrant(int x, int y);
 
@@ -64,7 +64,7 @@ void Graphical_Gameplay_initialize(void) {
     configureGraphics();
     configureBackground();
     configureSprite();
-    configureConsole();
+   /*  configureConsole(); */
 
     // Start the race backend
     Map selectedMap = GameContext_GetMap();
@@ -145,7 +145,7 @@ void Gameplay_OnVBlank(void) {
     bool moving = Car_IsMoving(player);
     Vec2 velocityVec = Vec2_Scale(Vec2_FromAngle(player->angle512), speed);
 
-    // Clear and print debug info
+   /*  // Clear and print debug info
     consoleClear();
     printf("=== CAR DEBUG ===\n");
     printf("Facing:   %3d\n", facingAngle);
@@ -167,7 +167,7 @@ void Gameplay_OnVBlank(void) {
 
     printf("\nPos: %d,%d\n", carX, carY);
     printf("Vel: %d,%d\n", FixedToInt(velocityVec.x), FixedToInt(velocityVec.y));
-
+ */
     // Your system: CW angles (0=right, 128=down, 256=left, 384=up)
     // DS system: CCW angles
     // Solution: negate
@@ -223,7 +223,7 @@ static void configureSprite(void) {
     swiCopy(kart_spriteTiles, playerKartGfx, kart_spriteTilesLen / 2);
 }
 
-static void configureConsole(void) {
+/* static void configureConsole(void) {
     // Initialize console on sub (bottom) screen
     // layer=0, type=Text4bpp, size=256x256, mapBase=30, tileBase=0,
     // mainDisplay=false (use sub), loadGraphics=true
@@ -232,7 +232,7 @@ static void configureConsole(void) {
     printf("\x1b[2J");  // Clear screen
     printf("=== KART DEBUG ===\n");
     printf("SELECT = exit\n\n");
-}
+} */
 
 static void loadQuadrant(QuadrantID quad) {
     const QuadrantData* data = &quadrantData[quad];
