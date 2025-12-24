@@ -12,6 +12,7 @@
 #include "settings.h"
 #include "sound.h"
 #include "storage.h"
+#include "gameplay_logic.h"
 
 //=============================================================================
 // PROTOTYPES
@@ -19,6 +20,8 @@
 
 static GameState update_state(GameState state);
 static void init_state(GameState state);
+static void cleanup_state(GameState state);
+
 //=============================================================================
 // MAIN
 //=============================================================================
@@ -48,6 +51,7 @@ int main(void) {
         GameState nextState = update_state(ctx->currentGameState);
 
         if (nextState != ctx->currentGameState) {
+            cleanup_state(ctx->currentGameState);
             ctx->currentGameState = nextState;
             video_nuke();
             init_state(nextState);
@@ -92,6 +96,24 @@ static void init_state(GameState state) {
             break;
         case SETTINGS:
             Settings_initialize();
+            break;
+    }
+}
+
+static void cleanup_state(GameState state) {
+    switch (state) {
+        case HOME_PAGE:
+
+            break;
+        case MAPSELECTION:
+
+            break;
+        case GAMEPLAY:
+
+            stop_Race();
+            break;
+        case SETTINGS:
+
             break;
     }
 }

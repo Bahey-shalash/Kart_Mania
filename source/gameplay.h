@@ -17,4 +17,5 @@
 
 void Graphical_Gameplay_initialize(void);
 GameState Gameplay_update(void);
+void Gameplay_OnVBlank(void);        
 #endif  // GAMEPLAY_H

@@ -40,37 +40,41 @@ void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelR
     car->maxSpeed = maxSpeed;
     car->accelRate = accelRate;
     car->friction = clamp_friction(friction);
-    car->Lap = 0;  // add this
+    car->angle512 = 0;  // facing right (east)
+    car->Lap = 0;
+    car->rank = 0;
+    car->lastCheckpoint = -1;
     car->item = ITEM_NONE;
     copy_name(car->carname, name);
 }
 
 void Car_Reset(Car* car, Vec2 spawnPos) {
+    if (car == NULL) {
+        return;
+    }
+
     car->position = spawnPos;
     car->velocity = Vec2_Zero();
-    car->Lap = 0;  // add this
+    car->angle512 = 0;  // reset facing direction
+    car->Lap = 0;
+    car->rank = 0;
+    car->lastCheckpoint = -1;
     car->item = ITEM_NONE;
 }
+
 // ---------------------------------------------
 // Physics
 // ---------------------------------------------
 
-// Accelerate "forward".
-// Without a stored heading, we infer forward from current velocity.
-// If stopped, we accelerate along +X (angle = 0).
+// Accelerate in the direction the car is facing (angle512).
+// This allows acceleration from standstill in any direction.
 void Car_Accelerate(Car* car) {
     if (car == NULL) {
         return;
     }
 
-    Vec2 forward;
-    if (!Vec2_IsZero(car->velocity)) {
-        // Forward = normalized velocity direction
-        forward = Vec2_Normalize(car->velocity);
-    } else {
-        // Standing still: choose a default forward direction
-        forward = Vec2_FromAngle(0);  // (1, 0) in Q16.8
-    }
+    // Forward direction from car's facing angle
+    Vec2 forward = Vec2_FromAngle(car->angle512);
 
     // dv = forward * accelRate
     Vec2 dv = Vec2_Scale(forward, car->accelRate);
@@ -83,7 +87,6 @@ void Car_Accelerate(Car* car) {
 }
 
 // Brake reduces speed along the opposite of current velocity.
-// If accelRate is "brake strength" too, this is symmetric and simple.
 void Car_Brake(Car* car) {
     if (car == NULL) {
         return;
@@ -109,17 +112,21 @@ void Car_Brake(Car* car) {
     car->velocity = Vec2_Sub(car->velocity, dv);
 }
 
-// Steering rotates the velocity vector by deltaAngle512.
-// If velocity is zero, nothing happens (no heading stored).
+// Steering rotates the car's facing angle.
+// Also rotates velocity to follow the new heading (drift-free steering).
 void Car_Steer(Car* car, int deltaAngle512) {
     if (car == NULL) {
         return;
     }
-    if (Vec2_IsZero(car->velocity)) {
-        return;
-    }
 
-    car->velocity = Vec2_Rotate(car->velocity, deltaAngle512);
+    // Update facing angle (always works, even when stopped)
+    car->angle512 = (car->angle512 + deltaAngle512) & ANGLE_MASK;
+
+    // If moving, rotate velocity to match new heading
+    // This gives "grip" steering - velocity follows where car points
+    if (!Vec2_IsZero(car->velocity)) {
+        car->velocity = Vec2_Rotate(car->velocity, deltaAngle512);
+    }
 }
 
 // Update integrates velocity into position and applies friction + speed cap.
@@ -132,8 +139,8 @@ void Car_Update(Car* car) {
     car->friction = clamp_friction(car->friction);
     car->velocity = Vec2_Scale(car->velocity, car->friction);
 
-    // Snap tiny velocities to 0 (optional, prevents endless drifting due to
-    // quantization) Threshold = 1/256 px/frame (one LSB in Q16.8)
+    // Snap tiny velocities to 0 (prevents endless drifting due to quantization)
+    // Threshold = 1/256 px/frame (one LSB in Q16.8)
     if (FixedAbs(car->velocity.x) <= 1) {
         car->velocity.x = 0;
     }
@@ -160,11 +167,12 @@ void Car_SetPosition(Car* car, Vec2 pos) {
     car->position = pos;
 }
 
+// Returns the car's facing angle (not velocity direction)
 int GetCarAngle(const Car* car) {
-    if (car == NULL || Vec2_IsZero(car->velocity)) {
-        return 0;  // default facing right (angle 0)
+    if (car == NULL) {
+        return 0;
     }
-    return Vec2_ToAngle(car->velocity);
+    return car->angle512;
 }
 
 void Car_LapComplete(Car* car) {

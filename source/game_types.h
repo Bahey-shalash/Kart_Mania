@@ -59,6 +59,7 @@ typedef enum {
 
 typedef enum { NONEMAP, ScorchingSands, AlpinRush, NeonCircuit } Map;
 
+
 typedef enum {
     TILE_SEL_MAP1 = 0,
     TILE_SEL_MAP2 = 1,

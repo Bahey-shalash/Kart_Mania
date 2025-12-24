@@ -16,7 +16,10 @@ typedef struct {
     Q16_8 maxSpeed;
     Q16_8 accelRate;
     Q16_8 friction;
+    int angle512;
     int Lap;
+    int rank;  // raceposotion 1st 2nd etc
+    int lastCheckpoint;
 
     Item item;
     char carname[32];
@@ -32,7 +35,10 @@ static inline Car CarCreate(Vec2 pos, Vec2 speed, Q16_8 SpeedMax, Q16_8 accel_ra
         .maxSpeed = SpeedMax,
         .accelRate = accel_rate,
         .friction = frictionn,
+        .angle512 = 0,
         .Lap = 0,
+        .rank = 0,
+        .lastCheckpoint = -1,
         .item = init_item,
         .carname = {0},
 
@@ -50,9 +56,12 @@ static inline Car emptyCar(const char* name) {
         .position = Vec2_Zero(),
         .velocity = Vec2_Zero(),
         .maxSpeed = 0,
+        .angle512 = 0,
         .accelRate = 0,
         .friction = 0,
         .Lap = 0,
+        .rank = 0,
+        .lastCheckpoint = -1,
         .item = ITEM_NONE,
         .carname = {0},
     };
