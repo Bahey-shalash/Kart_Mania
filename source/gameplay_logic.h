@@ -12,12 +12,7 @@
 #define MAX_CARS 8
 #define MAX_CHECKPOINTS 16
 
-static const int MapLaps[] = {
-    [NONEMAP] = 0,
-    [ScorchingSands] = 10,
-    [AlpinRush] = 10,
-    [NeonCircuit] = 10,
-};
+
 
 //=============================================================================
 // Enums

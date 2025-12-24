@@ -5,8 +5,6 @@
 
 #include "vect2.h"
 
-#define NUMBER_OF_CARS 1
-
 typedef enum { ITEM_NONE = 0, ITEM_OIL, ITEM_BOMB } Item;
 
 typedef struct {
