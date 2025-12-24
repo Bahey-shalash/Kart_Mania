@@ -1,7 +1,7 @@
 #include "Car.h"
 
-#include <string.h>
 #include <stddef.h>
+#include <string.h>
 
 // ---------------------------------------------
 // Helpers
@@ -40,6 +40,7 @@ void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelR
     car->maxSpeed = maxSpeed;
     car->accelRate = accelRate;
     car->friction = clamp_friction(friction);
+    car->Lap = 0;  // add this
     car->item = ITEM_NONE;
     copy_name(car->carname, name);
 }
@@ -47,8 +48,8 @@ void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelR
 void Car_Reset(Car* car, Vec2 spawnPos) {
     car->position = spawnPos;
     car->velocity = Vec2_Zero();
+    car->Lap = 0;  // add this
     car->item = ITEM_NONE;
-    // keeps name, maxSpeed, accelRate, friction
 }
 // ---------------------------------------------
 // Physics
@@ -157,4 +158,18 @@ void Car_SetPosition(Car* car, Vec2 pos) {
         return;
     }
     car->position = pos;
+}
+
+int GetCarAngle(const Car* car) {
+    if (car == NULL || Vec2_IsZero(car->velocity)) {
+        return 0;  // default facing right (angle 0)
+    }
+    return Vec2_ToAngle(car->velocity);
+}
+
+void Car_LapComplete(Car* car) {
+    if (car == NULL) {
+        return;
+    }
+    car->Lap++;
 }

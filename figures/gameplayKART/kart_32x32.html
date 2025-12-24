@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kart Mania - 32x32 Sprite</title>
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .container {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+        }
+        #game-container {
+            position: relative;
+            border: 3px solid #4a4a6a;
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        #sprite-preview {
+            border: 2px solid #4a4a6a;
+            border-radius: 4px;
+            background: #222;
+        }
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+        #controls {
+            color: #aaa;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 13px;
+        }
+        #controls strong {
+            color: #fff;
+            background: #3a3a5a;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        #debug {
+            color: #5a5;
+            font-size: 11px;
+            margin-top: 12px;
+            font-family: monospace;
+        }
+        h1 {
+            color: #fff;
+            margin-bottom: 20px;
+            font-weight: 300;
+        }
+        .label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .preview-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏎️ 32×32 Kart Sprite</h1>
+    <div class="container">
+        <div>
+            <div class="label">Game View (256×192)</div>
+            <div id="game-container">
+                <canvas id="game" width="256" height="192"></canvas>
+            </div>
+        </div>
+        <div class="preview-box">
+            <div class="label">Sprite 1:1 (32×32)</div>
+            <canvas id="sprite-preview" width="32" height="32"></canvas>
+            <div class="label" style="margin-top: 16px;">Sprite 8× (256×256)</div>
+            <canvas id="sprite-zoomed" width="256" height="256" style="border: 2px solid #4a4a6a; border-radius: 4px; background: #222;"></canvas>
+        </div>
+    </div>
+    <div id="controls">
+        <strong>↑</strong> <strong>↓</strong> Accelerate / Reverse &nbsp;&nbsp;
+        <strong>←</strong> <strong>→</strong> Steer &nbsp;&nbsp;
+        <strong>SPACE</strong> Brake
+    </div>
+    <div id="debug"></div>
+
+    <script>
+        const canvas = document.getElementById('game');
+        const ctx = canvas.getContext('2d');
+        const spriteCanvas = document.getElementById('sprite-preview');
+        const spriteCtx = spriteCanvas.getContext('2d');
+        const zoomedCanvas = document.getElementById('sprite-zoomed');
+        const zoomedCtx = zoomedCanvas.getContext('2d');
+        const debug = document.getElementById('debug');
+
+        // Car state
+        const car = {
+            x: 128,
+            y: 96,
+            angle: -90,
+            vx: 0,
+            vy: 0,
+            maxSpeed: 3,
+            accelRate: 0.1,
+            friction: 0.97,
+            turnSpeed: 3.2
+        };
+
+        const keys = { up: false, down: false, left: false, right: false, brake: false };
+
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'ArrowUp': case 'KeyW': keys.up = true; break;
+                case 'ArrowDown': case 'KeyS': keys.down = true; break;
+                case 'ArrowLeft': case 'KeyA': keys.left = true; break;
+                case 'ArrowRight': case 'KeyD': keys.right = true; break;
+                case 'Space': keys.brake = true; break;
+            }
+            if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            switch(e.code) {
+                case 'ArrowUp': case 'KeyW': keys.up = false; break;
+                case 'ArrowDown': case 'KeyS': keys.down = false; break;
+                case 'ArrowLeft': case 'KeyA': keys.left = false; break;
+                case 'ArrowRight': case 'KeyD': keys.right = false; break;
+                case 'Space': keys.brake = false; break;
+            }
+        });
+
+        function getSpeed() {
+            return Math.sqrt(car.vx * car.vx + car.vy * car.vy);
+        }
+
+        function updateCar() {
+            const speed = getSpeed();
+            if (speed > 0.05) {
+                const turnAmount = car.turnSpeed * Math.min(1, speed / car.maxSpeed * 1.5);
+                if (keys.left) car.angle -= turnAmount;
+                if (keys.right) car.angle += turnAmount;
+            }
+            const rad = car.angle * Math.PI / 180;
+            const forwardX = Math.cos(rad);
+            const forwardY = Math.sin(rad);
+            if (keys.up) { car.vx += forwardX * car.accelRate; car.vy += forwardY * car.accelRate; }
+            if (keys.down) { car.vx -= forwardX * car.accelRate * 0.4; car.vy -= forwardY * car.accelRate * 0.4; }
+            if (keys.brake) { car.vx *= 0.85; car.vy *= 0.85; }
+            car.vx *= car.friction;
+            car.vy *= car.friction;
+            const currentSpeed = getSpeed();
+            if (currentSpeed > car.maxSpeed) {
+                const scale = car.maxSpeed / currentSpeed;
+                car.vx *= scale; car.vy *= scale;
+            }
+            if (Math.abs(car.vx) < 0.005) car.vx = 0;
+            if (Math.abs(car.vy) < 0.005) car.vy = 0;
+            car.x += car.vx;
+            car.y += car.vy;
+            if (car.x < -20) car.x = 276;
+            if (car.x > 276) car.x = -20;
+            if (car.y < -20) car.y = 212;
+            if (car.y > 212) car.y = -20;
+        }
+
+        // Draw the 32x32 kart sprite (centered at 16,16)
+        function drawKartSprite(c, scale = 1) {
+            c.save();
+            c.translate(16 * scale, 16 * scale);
+            if (scale > 1) c.scale(scale, scale);
+
+            // Sprite is 30x26 max, centered in 32x32
+            // Car points RIGHT (angle 0)
+
+            // ===== SHADOW =====
+            c.fillStyle = 'rgba(0,0,0,0.3)';
+            c.beginPath();
+            c.ellipse(1, 2, 13, 8, 0, 0, Math.PI * 2);
+            c.fill();
+
+            // ===== REAR WHEELS (left side in top-down, which is top when pointing right) =====
+            // Rear left wheel
+            c.fillStyle = '#0a0a0a';
+            c.fillRect(-12, -12, 7, 5);
+            c.fillStyle = '#1a1a1a';
+            c.fillRect(-11, -11, 5, 3);
+            c.fillStyle = '#333';
+            c.fillRect(-10, -11, 1, 3); // tread
+            c.fillRect(-8, -11, 1, 3);
+
+            // Rear right wheel
+            c.fillStyle = '#0a0a0a';
+            c.fillRect(-12, 7, 7, 5);
+            c.fillStyle = '#1a1a1a';
+            c.fillRect(-11, 8, 5, 3);
+            c.fillStyle = '#333';
+            c.fillRect(-10, 8, 1, 3);
+            c.fillRect(-8, 8, 1, 3);
+
+            // ===== FRONT WHEELS =====
+            // Front left wheel
+            c.fillStyle = '#0a0a0a';
+            c.fillRect(7, -11, 6, 4);
+            c.fillStyle = '#1a1a1a';
+            c.fillRect(8, -10, 4, 2);
+            c.fillStyle = '#333';
+            c.fillRect(9, -10, 1, 2);
+
+            // Front right wheel
+            c.fillStyle = '#0a0a0a';
+            c.fillRect(7, 7, 6, 4);
+            c.fillStyle = '#1a1a1a';
+            c.fillRect(8, 8, 4, 2);
+            c.fillStyle = '#333';
+            c.fillRect(9, 8, 1, 2);
+
+            // ===== REAR WING =====
+            c.fillStyle = '#1a1a1a';
+            c.fillRect(-14, -8, 3, 16);
+            // Wing pillars
+            c.fillStyle = '#2a2a2a';
+            c.fillRect(-13, -6, 2, 2);
+            c.fillRect(-13, 4, 2, 2);
+            // Wing endplates
+            c.fillStyle = '#333';
+            c.fillRect(-14, -9, 4, 2);
+            c.fillRect(-14, 7, 4, 2);
+            // Wing highlight
+            c.fillStyle = '#444';
+            c.fillRect(-14, -1, 3, 2);
+
+            // ===== MAIN BODY =====
+            // Body base
+            c.fillStyle = '#dc3545';
+            c.beginPath();
+            c.moveTo(-10, -7);
+            c.lineTo(10, -6);
+            c.quadraticCurveTo(14, 0, 10, 6);
+            c.lineTo(-10, 7);
+            c.lineTo(-11, 0);
+            c.closePath();
+            c.fill();
+
+            // Body shadow (bottom half)
+            c.fillStyle = '#b82d3a';
+            c.beginPath();
+            c.moveTo(-10, 0);
+            c.lineTo(12, 0);
+            c.quadraticCurveTo(14, 3, 10, 6);
+            c.lineTo(-10, 7);
+            c.lineTo(-11, 0);
+            c.closePath();
+            c.fill();
+
+            // Body highlight (top edge)
+            c.fillStyle = '#ef5350';
+            c.fillRect(-8, -6, 14, 1);
+
+            // ===== ENGINE COVER =====
+            c.fillStyle = '#a31515';
+            c.fillRect(-9, -3, 5, 6);
+            // Air intake scoop
+            c.fillStyle = '#222';
+            c.fillRect(-8, -2, 3, 4);
+            c.fillStyle = '#111';
+            c.fillRect(-7, -1, 1, 2);
+
+            // ===== SIDE PODS =====
+            // Left pod
+            c.fillStyle = '#c82333';
+            c.fillRect(-4, -7, 8, 3);
+            c.fillStyle = '#222';
+            c.fillRect(-2, -6, 1, 2); // vent
+            c.fillRect(1, -6, 1, 2);
+            c.fillRect(4, -6, 1, 2);
+
+            // Right pod
+            c.fillStyle = '#c82333';
+            c.fillRect(-4, 4, 8, 3);
+            c.fillStyle = '#222';
+            c.fillRect(-2, 4, 1, 2);
+            c.fillRect(1, 4, 1, 2);
+            c.fillRect(4, 4, 1, 2);
+
+            // ===== COCKPIT =====
+            // Cockpit surround
+            c.fillStyle = '#222';
+            c.beginPath();
+            c.ellipse(0, 0, 6, 5, 0, 0, Math.PI * 2);
+            c.fill();
+
+            // Cockpit opening
+            c.fillStyle = '#111';
+            c.beginPath();
+            c.ellipse(0, 0, 5, 4, 0, 0, Math.PI * 2);
+            c.fill();
+
+            // ===== DRIVER =====
+            // Helmet
+            c.fillStyle = '#2962ff';
+            c.beginPath();
+            c.arc(1, 0, 4, 0, Math.PI * 2);
+            c.fill();
+
+            // Helmet dark base
+            c.fillStyle = '#1a47b8';
+            c.beginPath();
+            c.arc(1, 0, 4, 0.3, Math.PI - 0.3);
+            c.fill();
+
+            // Helmet stripe
+            c.fillStyle = '#fff';
+            c.fillRect(-1, -3, 4, 1);
+            c.fillRect(-1, 2, 4, 1);
+
+            // Visor
+            c.fillStyle = '#0d1b4a';
+            c.beginPath();
+            c.arc(3, 0, 2.5, -0.7, 0.7);
+            c.lineTo(3, 0);
+            c.closePath();
+            c.fill();
+
+            // Visor shine
+            c.fillStyle = 'rgba(255,255,255,0.2)';
+            c.fillRect(3, -1, 1, 1);
+
+            // Helmet top shine
+            c.fillStyle = 'rgba(255,255,255,0.35)';
+            c.beginPath();
+            c.arc(-1, -2, 1.5, 0, Math.PI * 2);
+            c.fill();
+
+            // ===== NOSE CONE =====
+            c.fillStyle = '#ffffff';
+            c.beginPath();
+            c.moveTo(10, -4);
+            c.lineTo(14, 0);
+            c.lineTo(10, 4);
+            c.quadraticCurveTo(11, 0, 10, -4);
+            c.fill();
+
+            // Nose shadow
+            c.fillStyle = '#ddd';
+            c.beginPath();
+            c.moveTo(10, 0);
+            c.lineTo(14, 0);
+            c.lineTo(10, 4);
+            c.closePath();
+            c.fill();
+
+            // Nose tip
+            c.fillStyle = '#c00';
+            c.beginPath();
+            c.arc(13, 0, 1, 0, Math.PI * 2);
+            c.fill();
+
+            // ===== FRONT WING =====
+            c.fillStyle = '#eee';
+            c.fillRect(8, -9, 5, 2);
+            c.fillRect(8, 7, 5, 2);
+            // Wing detail
+            c.fillStyle = '#ccc';
+            c.fillRect(9, -8, 3, 1);
+            c.fillRect(9, 7, 3, 1);
+            // Endplates
+            c.fillStyle = '#ddd';
+            c.fillRect(8, -10, 2, 3);
+            c.fillRect(8, 7, 2, 3);
+
+            // ===== MIRRORS =====
+            c.fillStyle = '#333';
+            c.fillRect(3, -6, 2, 1);
+            c.fillRect(3, 5, 2, 1);
+
+            // ===== EXHAUSTS =====
+            c.fillStyle = '#444';
+            c.beginPath();
+            c.arc(-10, -3, 1.5, 0, Math.PI * 2);
+            c.fill();
+            c.beginPath();
+            c.arc(-10, 3, 1.5, 0, Math.PI * 2);
+            c.fill();
+            // Inner
+            c.fillStyle = '#222';
+            c.beginPath();
+            c.arc(-10, -3, 0.8, 0, Math.PI * 2);
+            c.fill();
+            c.beginPath();
+            c.arc(-10, 3, 0.8, 0, Math.PI * 2);
+            c.fill();
+
+            // ===== RACING NUMBER =====
+            c.fillStyle = '#fff';
+            c.beginPath();
+            c.arc(-4, 0, 3, 0, Math.PI * 2);
+            c.fill();
+            c.fillStyle = '#111';
+            c.font = 'bold 5px Arial';
+            c.textAlign = 'center';
+            c.textBaseline = 'middle';
+            c.fillText('7', -4, 0.5);
+
+            // ===== ANTENNA =====
+            c.fillStyle = '#666';
+            c.fillRect(-7, -1, 1, 2);
+            c.fillStyle = '#f50';
+            c.fillRect(-7, -2, 1, 1);
+
+            c.restore();
+        }
+
+        function drawCarInGame() {
+            ctx.save();
+            ctx.translate(Math.floor(car.x), Math.floor(car.y));
+            ctx.rotate(car.angle * Math.PI / 180);
+            ctx.translate(-16, -16);
+            drawKartSprite(ctx);
+            ctx.restore();
+        }
+
+        function drawBackground() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, 192);
+            gradient.addColorStop(0, '#3d5a80');
+            gradient.addColorStop(1, '#293241');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 256, 192);
+
+            ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < 256; x += 16) {
+                ctx.beginPath();
+                ctx.moveTo(x + 0.5, 0);
+                ctx.lineTo(x + 0.5, 192);
+                ctx.stroke();
+            }
+            for (let y = 0; y < 192; y += 16) {
+                ctx.beginPath();
+                ctx.moveTo(0, y + 0.5);
+                ctx.lineTo(256, y + 0.5);
+                ctx.stroke();
+            }
+        }
+
+        function drawSpritePreview() {
+            // 1:1 preview
+            spriteCtx.fillStyle = '#222';
+            spriteCtx.fillRect(0, 0, 32, 32);
+            // Grid to show 32x32 boundary
+            spriteCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+            spriteCtx.strokeRect(0, 0, 32, 32);
+            drawKartSprite(spriteCtx);
+
+            // 8x zoomed preview
+            zoomedCtx.fillStyle = '#222';
+            zoomedCtx.fillRect(0, 0, 256, 256);
+            // Draw grid
+            zoomedCtx.strokeStyle = 'rgba(255,255,255,0.1)';
+            for (let i = 0; i <= 32; i++) {
+                zoomedCtx.beginPath();
+                zoomedCtx.moveTo(i * 8, 0);
+                zoomedCtx.lineTo(i * 8, 256);
+                zoomedCtx.stroke();
+                zoomedCtx.beginPath();
+                zoomedCtx.moveTo(0, i * 8);
+                zoomedCtx.lineTo(256, i * 8);
+                zoomedCtx.stroke();
+            }
+            drawKartSprite(zoomedCtx, 8);
+        }
+
+        function gameLoop() {
+            drawBackground();
+            updateCar();
+            drawCarInGame();
+            drawSpritePreview();
+
+            const speed = getSpeed();
+            debug.textContent = `x: ${car.x.toFixed(0)} | y: ${car.y.toFixed(0)} | angle: ${((car.angle % 360) + 360) % 360}° | speed: ${(speed * 10).toFixed(1)}`;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>

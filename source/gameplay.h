@@ -2,7 +2,6 @@
 #define GAMEPLAY_H
 #include "game_types.h"
 
-
 //=============================================================================
 // Public constants
 //=============================================================================
@@ -16,6 +15,6 @@
 #define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
 #define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
 
-void Gameplay_initialize(void);
+void Graphical_Gameplay_initialize(void);
 GameState Gameplay_update(void);
-#endif // GAMEPLAY_H
+#endif  // GAMEPLAY_H

@@ -16,6 +16,7 @@ typedef struct {
     Q16_8 maxSpeed;
     Q16_8 accelRate;
     Q16_8 friction;
+    int Lap;
 
     Item item;
     char carname[32];
@@ -31,8 +32,10 @@ static inline Car CarCreate(Vec2 pos, Vec2 speed, Q16_8 SpeedMax, Q16_8 accel_ra
         .maxSpeed = SpeedMax,
         .accelRate = accel_rate,
         .friction = frictionn,
+        .Lap = 0,
         .item = init_item,
         .carname = {0},
+
     };
     if (name) {
         strncpy(car.carname, name, sizeof(car.carname) - 1);
@@ -49,6 +52,7 @@ static inline Car emptyCar(const char* name) {
         .maxSpeed = 0,
         .accelRate = 0,
         .friction = 0,
+        .Lap = 0,
         .item = ITEM_NONE,
         .carname = {0},
     };
@@ -73,5 +77,7 @@ void Car_Update(Car* car);
 
 // Utility
 void Car_SetPosition(Car* car, Vec2 pos);
+int GetCarAngle(const Car* car);
+void Car_LapComplete(Car* car);
 
 #endif  // CAR_H

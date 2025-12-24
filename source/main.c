@@ -5,13 +5,13 @@
 
 #include "context.h"
 #include "game_types.h"
+#include "gameplay.h"
 #include "graphics.h"
 #include "home_page.h"
 #include "map_selection.h"
 #include "settings.h"
 #include "sound.h"
 #include "storage.h"
-#include "gameplay.h"
 
 //=============================================================================
 // PROTOTYPES
@@ -88,7 +88,7 @@ static void init_state(GameState state) {
             Map_Selection_initialize();
             break;
         case GAMEPLAY:
-            Gameplay_initialize();
+            Graphical_Gameplay_initialize();
             break;
         case SETTINGS:
             Settings_initialize();
