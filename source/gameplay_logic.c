@@ -177,6 +177,7 @@ static void initCarAtSpawn(Car* car, int index) {
 //=============================================================================
 
 static void handlePlayerInput(Car* player) {
+    scanKeys();
     uint32 held = keysHeld();
 
     bool pressingA = held & KEY_A;
