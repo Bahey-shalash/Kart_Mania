@@ -73,6 +73,7 @@ int Race_GetLapCount(void) {
 //=============================================================================
 
 void Race_Init(Map map, GameMode mode) {
+    init_pause_interupt();
     if (map == NONEMAP || map > NeonCircuit) {
         return;
     }
@@ -222,4 +223,21 @@ static void clampToMapBounds(Car* car) {
         car->position.y = maxPosY;
 
     // TODO: Add circuit walls
+}
+static bool isPaused = false;
+
+void init_pause_interupt(void) {
+    REG_KEYCNT = BIT(14) | KEY_START;
+    irqSet(IRQ_KEYS, PauseISR);
+    irqEnable(IRQ_KEYS);
+}
+
+void PauseISR(void) {
+    isPaused = !isPaused;
+
+    if (isPaused) {
+        RaceTick_TimerPause();
+    } else {
+        RaceTick_TimerEnable();
+    }
 }

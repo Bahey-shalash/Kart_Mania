@@ -55,10 +55,17 @@ void RaceTick_TimerInit(void) {
 }
 
 void RaceTick_TimerStop(void) {
-    TIMER0_CR = 0;
     irqDisable(IRQ_TIMER0);
     irqClear(IRQ_TIMER0);
 }
+void RaceTick_TimerPause(void) {
+    irqDisable(IRQ_TIMER0);
+}
+
+void RaceTick_TimerEnable(void) {
+    irqEnable(IRQ_TIMER0);
+}
+
 
 static void RaceTick_ISR(void) {
     Race_Tick();
