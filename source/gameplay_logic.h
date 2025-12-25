@@ -2,7 +2,7 @@
 #define GAMEPLAY_LOGIC_H
 
 #include <stdbool.h>
-
+#include "wall_collision.h"
 #include "Car.h"
 #include "game_types.h"
 
@@ -12,7 +12,7 @@
 
 #define MAX_CARS 8
 #define MAX_CHECKPOINTS 16
-
+#define QUAD_OFFSET 256
 //=============================================================================
 // Enums
 //=============================================================================
@@ -62,7 +62,7 @@ const Car* Race_GetPlayerCar(void);    // Read-only access for rendering
 const RaceState* Race_GetState(void);  // Read-only access for UI/rendering
 bool Race_IsActive(void);              // Check if race is running
 int Race_GetLapCount(void);            // Get total laps for current map
-
+bool Race_CheckFinishLineCross(const Car* car);
 void init_pause_interrupt(void);
 void PauseISR(void);
 
