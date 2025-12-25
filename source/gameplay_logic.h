@@ -63,7 +63,7 @@ const RaceState* Race_GetState(void);  // Read-only access for UI/rendering
 bool Race_IsActive(void);              // Check if race is running
 int Race_GetLapCount(void);            // Get total laps for current map
 
-void init_pause_interupt(void);
+void init_pause_interrupt(void);
 void PauseISR(void);
 
 #endif  // GAMEPLAY_LOGIC_H

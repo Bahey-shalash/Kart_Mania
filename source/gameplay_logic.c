@@ -73,7 +73,7 @@ int Race_GetLapCount(void) {
 //=============================================================================
 
 void Race_Init(Map map, GameMode mode) {
-    init_pause_interupt();
+    init_pause_interrupt();
     if (map == NONEMAP || map > NeonCircuit) {
         return;
     }
@@ -226,7 +226,7 @@ static void clampToMapBounds(Car* car) {
 }
 static bool isPaused = false;
 
-void init_pause_interupt(void) {
+void init_pause_interrupt(void) {
     REG_KEYCNT = BIT(14) | KEY_START;
     irqSet(IRQ_KEYS, PauseISR);
     irqEnable(IRQ_KEYS);
