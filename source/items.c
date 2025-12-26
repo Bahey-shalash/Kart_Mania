@@ -118,7 +118,7 @@ void Items_Update(void) {
 }
 
 void Items_CheckCollisions(Car* cars, int carCount) {
-    // ✅ FIX 1: Check item box pickups
+    
     for (int i = 0; i < itemBoxCount; i++) {
         if (!itemBoxSpawns[i].active)
             continue;
@@ -139,7 +139,7 @@ void Items_CheckCollisions(Car* cars, int carCount) {
         }
     }
 
-    // ✅ FIX 2: Check projectile collisions (MISSING!)
+    
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
@@ -152,7 +152,7 @@ void Items_CheckCollisions(Car* cars, int carCount) {
         }
     }
 
-    // ✅ FIX 3: Check hazard collisions (MISSING!)
+    
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
