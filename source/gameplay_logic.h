@@ -65,5 +65,6 @@ int Race_GetLapCount(void);            // Get total laps for current map
 bool Race_CheckFinishLineCross(const Car* car);
 void init_pause_interrupt(void);
 void PauseISR(void);
+void Race_SetLoadedQuadrant(QuadrantID quad);
 
 #endif  // GAMEPLAY_LOGIC_H

@@ -1,5 +1,5 @@
 //=============================================================================
-// wall_collision.c - CORRECTED FOR QUAD_OFFSET = 256
+// wall_collision.c
 //=============================================================================
 #include "wall_collision.h"
 
@@ -101,8 +101,8 @@ static const WallSegment walls_BC[] = {
 
 // BR Quadrant (offset: 512, 512) - add 512 to both X and Y
 static const WallSegment walls_BR[] = {
-    {WALL_HORIZONTAL, 1016, 512, 1016},   // Y=504 → 1016, X: 0-504 → 512-1016 good 
-    {WALL_VERTICAL, 1016, 512, 1016},     // X=504 → 1016, Y: 0-512 → 512-1016 good 
+    {WALL_HORIZONTAL, 1008, 512, 1008},   // Y=504 → 1016, X: 0-504 → 512-1016 good 
+    {WALL_VERTICAL, 1008, 512, 1008},     // X=504 → 1016, Y: 0-512 → 512-1016 good 
     {WALL_HORIZONTAL, 815, 736, 815},     // Y=303 → 815, X: 224-303 → 736-815 good 
     {WALL_VERTICAL, 736, 512, 815},       // X=224 → 736, Y: 0-303 → 512-815 good 
     {WALL_VERTICAL, 815, 512, 815}        // X=303 → 813, Y: 0-303 → 512-815 good 

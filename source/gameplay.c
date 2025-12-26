@@ -174,6 +174,7 @@ void Gameplay_OnVBlank(void) {
     if (newQuadrant != currentQuadrant) {
         loadQuadrant(newQuadrant);
         currentQuadrant = newQuadrant;
+        Race_SetLoadedQuadrant(newQuadrant);
     }
 
     int col = currentQuadrant % 3;
@@ -208,7 +209,6 @@ void Gameplay_OnVBlank(void) {
     printf("\nPos: %d,%d\n", carX, carY);
     printf("Vel: %d,%d\n", FixedToInt(velocityVec.x), FixedToInt(velocityVec.y));
     */
-
     int dsAngle = -(player->angle512 << 6);
     oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
 

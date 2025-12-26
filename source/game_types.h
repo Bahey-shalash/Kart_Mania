@@ -4,7 +4,6 @@
 #include <stdbool.h>
 
 #include "vect2.h"
-
 typedef enum { HOME_PAGE, SETTINGS, MAPSELECTION, GAMEPLAY } GameState;
 
 typedef struct {

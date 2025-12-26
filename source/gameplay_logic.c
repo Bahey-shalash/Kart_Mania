@@ -2,6 +2,7 @@
 #include <nds.h>
 #include "wall_collision.h"
 #include "timer.h"
+#include "terrain_detection.h"
 
 //=============================================================================
 // Constants
@@ -9,11 +10,13 @@
 #define TURN_STEP_50CC 3
 
 // Physics tuning (50cc class, Q16.8 format, 60Hz)
-#define SPEED_50CC ((FIXED_ONE * 3))      // Max forward speed
-#define REVERSE_SPEED_50CC (-(FIXED_ONE)) // Max reverse speed: -1.0 px/frame
+#define SPEED_50CC ((FIXED_ONE * 3))      // Max forward speedm
 #define ACCEL_50CC IntToFixed(1)          // 1.0 px/frame
-#define REVERSE_ACCEL_50CC (IntToFixed(1) / 2)  // Slower reverse acceleration
 #define FRICTION_50CC 240                 // 240/256 = 0.9375
+
+// Sand Physics - SEVERE PENALTIES
+#define SAND_FRICTION 150           // Much higher friction (150/256 = 0.586 - very draggy!)
+#define SAND_MAX_SPEED (SPEED_50CC / 2)  // Only 50% max speed on sand (was 75%)
 
 // Collision state
 #define COLLISION_LOCKOUT_FRAMES 60       // Frames to disable acceleration after wall hit
@@ -68,9 +71,8 @@ static CheckpointProgressState cpState[MAX_CARS] = {CP_STATE_START};
 static bool wasOnLeftSide[MAX_CARS] = {false};
 static bool wasOnTopSide[MAX_CARS] = {false};
 static bool isPaused = false;
-
-// Collision lockout tracking
 static int collisionLockoutTimer[MAX_CARS] = {0};
+static QuadrantID loadedQuadrant = QUAD_BR;
 
 //=============================================================================
 // Private Prototypes
@@ -82,7 +84,7 @@ static void clampToMapBounds(Car* car, int carIndex);
 static QuadrantID determineCarQuadrant(int x, int y);
 static void checkCheckpointProgression(const Car* car, int carIndex);
 static bool checkFinishLineCross(const Car* car, int carIndex);
-
+static void applyTerrainEffects(Car* car);
 //=============================================================================
 // Public API - State Queries
 //=============================================================================
@@ -106,6 +108,9 @@ bool Race_CheckFinishLineCross(const Car* car) {
     return checkFinishLineCross(car, 0);
 }
 
+void Race_SetLoadedQuadrant(QuadrantID quad) {
+    loadedQuadrant = quad;
+}
 //=============================================================================
 // Public API - Lifecycle
 //=============================================================================
@@ -158,6 +163,8 @@ void Race_Stop(void) {
 //=============================================================================
 // Public API - Game Loop
 //=============================================================================
+
+// Modify Race_Tick to include terrain effects
 void Race_Tick(void) {
     if (!Race_IsActive()) {
         return;
@@ -166,11 +173,11 @@ void Race_Tick(void) {
     Car* player = &KartMania.cars[KartMania.playerIndex];
 
     handlePlayerInput(player, KartMania.playerIndex);
+    applyTerrainEffects(player); 
     Car_Update(player);
     clampToMapBounds(player, KartMania.playerIndex);
     checkCheckpointProgression(player, KartMania.playerIndex);
     
-    // Decrement collision lockout timer
     if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
         collisionLockoutTimer[KartMania.playerIndex]--;
     }
@@ -250,7 +257,23 @@ static bool checkFinishLineCross(const Car* car, int carIndex) {
     
     return false;
 }
+//=============================================================================
+// Terrain Applications
+//=============================================================================
 
+static void applyTerrainEffects(Car* car) {
+    int carX = FixedToInt(car->position.x);
+    int carY = FixedToInt(car->position.y);
+    if (Terrain_IsOnSand(carX, carY, loadedQuadrant)) {
+        car->friction = SAND_FRICTION;
+        if (car->speed > SAND_MAX_SPEED) {
+            Q16_8 excessSpeed = car->speed - SAND_MAX_SPEED;
+            car->speed -= (excessSpeed / 2);
+        }
+    } else {
+        car->friction = FRICTION_50CC;
+    }
+}
 //=============================================================================
 // Private Implementation
 //=============================================================================
@@ -300,8 +323,6 @@ static void handlePlayerInput(Car* player, int carIndex) {
             Car_Steer(player, TURN_STEP_50CC);
         }
     }
-
-    // Acceleration and braking
     bool isLockedOut = (collisionLockoutTimer[carIndex] > 0);
     
     if (pressingA && !pressingB && !isLockedOut) {
