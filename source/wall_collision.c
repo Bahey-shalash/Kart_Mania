@@ -5,101 +5,107 @@
 
 // TL Quadrant (offset: 0, 0) - walls already in correct global coords
 static const WallSegment walls_TL[] = {
-    {WALL_VERTICAL, 8, 0, 512},
-    {WALL_HORIZONTAL, 8, 0, 512},
-    {WALL_VERTICAL, 168, 162, 512},
-    {WALL_HORIZONTAL, 162, 168, 272},
-    {WALL_VERTICAL, 272, 162, 378},
-    {WALL_HORIZONTAL, 378, 272, 512}
+    {WALL_VERTICAL, 8, 0, 512}, // good 
+    {WALL_HORIZONTAL, 8, 0, 512}, // good
+    {WALL_VERTICAL, 167, 160, 512}, // good 
+    {WALL_HORIZONTAL, 160, 167, 273}, // good
+    {WALL_VERTICAL, 273, 162, 375}, // good 
+    {WALL_HORIZONTAL, 375, 273, 512} // good
 };
 
 // TC Quadrant (offset: 256, 0) - add 256 to all X coords
 static const WallSegment walls_TC[] = {
-    {WALL_HORIZONTAL, 10, 256, 736},      // Y=10, X: 0-480 → 256-736
-    {WALL_VERTICAL, 736, 10, 162},        // X=480 → 736, Y: 10-162
-    {WALL_HORIZONTAL, 162, 736, 768},     // Y=162, X: 480-512 → 736-768
-    {WALL_HORIZONTAL, 162, 256, 274},     // Y=162, X: 0-18 → 256-274
-    {WALL_VERTICAL, 274, 162, 377},       // X=18 → 274, Y: 162-377
-    {WALL_HORIZONTAL, 377, 274, 690},     // Y=377, X: 18-434 → 274-690
-    {WALL_HORIZONTAL, 418, 690, 768},     // Y=418, X: 434-512 → 690-768
-    {WALL_VERTICAL, 690, 377, 418}        // X=434 → 690, Y: 377-418
+    {WALL_HORIZONTAL, 8, 256, 734},      // Y=10, X: 0-478 → 256-734 good
+    {WALL_VERTICAL, 734, 8, 160},        // X=478 → 734, Y: 8-160 good
+    {WALL_HORIZONTAL, 160, 734, 768},     // Y=162, X: 480-512 → 736-768 good
+    {WALL_HORIZONTAL, 160, 256, 272},     // Y=160, X: 0-16 → 256-272 good
+    {WALL_VERTICAL, 272, 160, 376},       // X=16 → 274, Y: 160-376 good 
+    {WALL_HORIZONTAL, 376, 272, 688},     // Y=376, X: 16-432 → 272-688 good
+    {WALL_HORIZONTAL, 416, 688, 768},     // Y=418, X: 434-512 → 690-768 good
+    {WALL_VERTICAL, 688, 376, 416}        // X=434 → 690, Y: 377-418 good 
 };
 
 // TR Quadrant (offset: 512, 0) - add 512 to all X coords
 static const WallSegment walls_TR[] = {
-    {WALL_HORIZONTAL, 10, 512, 734},      // Y=10, X: 0-222 → 512-734
-    {WALL_VERTICAL, 734, 10, 162},        // X=222 → 734, Y: 10-162
-    {WALL_HORIZONTAL, 162, 734, 1016},    // Y=162, X: 222-504 → 734-1016
-    {WALL_VERTICAL, 1016, 162, 512},      // X=504 → 1016, Y: 162-512
-    {WALL_HORIZONTAL, 378, 512, 688},     // Y=378, X: 0-176 → 512-688
-    {WALL_VERTICAL, 688, 378, 418},       // X=176 → 688, Y: 378-418
-    {WALL_HORIZONTAL, 418, 688, 818},     // Y=418, X: 176-306 → 688-818
-    {WALL_VERTICAL, 820, 418, 512}        // X=308 → 820, Y: 418-512
+    {WALL_HORIZONTAL, 8, 512, 735},      // Y=8, X: 0-223 → 512-735 good
+    {WALL_VERTICAL, 735, 8, 160},        // X=223 → 734, Y: 8-160 good 
+    {WALL_HORIZONTAL, 160, 735, 1016},    // Y=160, X: 223-504 → 734-1016 good 
+    {WALL_VERTICAL, 1016, 160, 512},      // X=504 → 1016, Y: 162-512 good
+    {WALL_HORIZONTAL, 376, 512, 687},     // Y=376, X: 0-175 → 512-687 good 
+    {WALL_VERTICAL, 687, 376, 416},       // X=175 → 687, Y: 376-416 good 
+    {WALL_HORIZONTAL, 416, 687, 815},     // Y=416, X: 175-303 → 687-815 good 
+    {WALL_VERTICAL, 815, 416, 512}        // X=308 → 820, Y: 418-512 good 
 };
 
 // ML Quadrant (offset: 0, 256) - add 256 to all Y coords
 static const WallSegment walls_ML[] = {
-    {WALL_VERTICAL, 8, 256, 768},         // X=8, Y: 0-512 → 256-768
-    {WALL_VERTICAL, 168, 256, 554},       // X=168, Y: 0-298 → 256-554
-    {WALL_HORIZONTAL, 554, 135, 168},     // Y=298 → 554, X: 135-168
-    {WALL_VERTICAL, 135, 554, 668},       // X=135, Y: 298-412 → 554-668
-    {WALL_HORIZONTAL, 668, 135, 178},     // Y=412 → 668, X: 135-178
-    {WALL_VERTICAL, 178, 596, 668},       // X=178, Y: 340-412 → 596-668
-    {WALL_HORIZONTAL, 596, 178, 275},     // Y=340 → 596, X: 178-275
-    {WALL_VERTICAL, 275, 496, 596},       // X=275, Y: 240-340 → 496-596
-    {WALL_HORIZONTAL, 496, 275, 512}      // Y=240 → 496, X: 275-512
+    {WALL_VERTICAL, 8, 256, 768},         // X=8, Y: 0-512 → 256-768 good
+    {WALL_VERTICAL, 168, 256, 552},       // X=168, Y: 0-296 → 256-552 good 
+    {WALL_HORIZONTAL, 552, 136, 168},     // Y=296 → 552, X: 136-168 good
+    {WALL_VERTICAL, 136, 552, 664},       // X=136, Y: 296-408 → 552-664 good 
+    {WALL_HORIZONTAL, 664, 136, 176},     // Y=408 → 664, X: 136-176 good 
+    {WALL_VERTICAL, 176, 594, 664},       // X=176, Y: 336-408 → 592-664 good 
+    {WALL_HORIZONTAL, 594, 176, 271},     // Y=336 → 592, X: 176-271 good 
+    {WALL_VERTICAL, 271, 496, 594},       // X=271, Y: 240-336 → 496-592 good 
+    {WALL_HORIZONTAL, 496, 271, 512}      // Y=240 → 496, X: 271-512 good 
 };
 
 // MC Quadrant (offset: 256, 256) - add 256 to both X and Y
 static const WallSegment walls_MC[] = {
-    {WALL_VERTICAL, 738, 500, 768},       // X=482 → 738, Y: 244-512 → 500-768
-    {WALL_HORIZONTAL, 500, 274, 738},     // Y=244 → 500, X: 18-482 → 274-738
-    {WALL_VERTICAL, 274, 500, 594},       // X=18 → 274, Y: 244-338 → 500-594
-    {WALL_HORIZONTAL, 594, 256, 274}      // Y=338 → 594, X: 0-18 → 256-274
+    {WALL_VERTICAL, 735, 496, 768},       // X=479 → 735, Y: 240-512 → 496-768 good 
+    {WALL_HORIZONTAL, 496, 272, 735},     // Y=240 → 496, X: 16-479 → 272-735 good 
+    {WALL_VERTICAL, 272, 496, 594},       // X=16 → 272, Y: 240-336 → 496-592 good 
+    {WALL_HORIZONTAL, 594, 256, 272},   // Y=336 → 592, X: 0-16 → 256-272 good 
+    {WALL_VERTICAL, 272, 256, 376},       // X=16 → 272, Y: 0-120 → 256-376 good 
+    {WALL_HORIZONTAL, 376, 272, 688},     // Y=120 → 376, X:16-432 -→ 256-688 good
+    {WALL_VERTICAL, 688,376, 416},       // X=432 → 688, Y: 120-160 → 376-416 good 
+    {WALL_HORIZONTAL, 416, 688, 768},     // Y=160 → 416, X:432-512 -→ 688-768 good
 };
 
 // MR Quadrant (offset: 512, 256) - add 512 to X, 256 to Y
 static const WallSegment walls_MR[] = {
-    {WALL_VERTICAL, 734, 499, 768},       // X=222 → 734, Y: 243-512 → 499-768
-    {WALL_VERTICAL, 818, 417, 768},       // X=306 → 818, Y: 161-512 → 417-768
-    {WALL_VERTICAL, 1016, 256, 768},      // X=504 → 1016, Y: 0-512 → 256-768
-    {WALL_HORIZONTAL, 417, 689, 818},     // Y=161 → 417, X: 177-306 → 689-818
-    {WALL_VERTICAL, 689, 378, 417},       // X=177 → 689, Y: 122-161 → 378-417
-    {WALL_HORIZONTAL, 378, 512, 689}      // Y=122 → 378, X: 0-177 → 512-689
+    {WALL_VERTICAL, 815, 416, 768},       // X=303 → 815, Y: 160-512 → 416-768 good 
+    {WALL_VERTICAL, 1016, 256, 768},      // X=504 → 1016, Y: 0-512 → 256-768 good 
+    {WALL_HORIZONTAL, 416, 688, 815},     // Y=160 → 416, X: 176-303 → 688-815 good 
+    {WALL_VERTICAL, 688, 376, 416},       // X=176 → 688, Y: 120-160 → 376-416 good 
+    {WALL_HORIZONTAL, 376, 512, 688},     // Y=120 → 376, X: 0-176 → 512-688 good 
+    {WALL_HORIZONTAL, 495, 512, 735},      // Y=239 → 495, X: 0-223 → 512-735 good
+    {WALL_VERTICAL, 735, 495, 768}      // X=223 → 735, Y: 239-512 → 495-768 good 
 };
 
 // BL Quadrant (offset: 0, 512) - add 512 to all Y coords
 static const WallSegment walls_BL[] = {
-    {WALL_HORIZONTAL, 1018, 480, 512},    // Y=506 → 1018, X: 480-512
-    {WALL_HORIZONTAL, 875, 0, 480},       // Y=363 → 875, X: 0-480
-    {WALL_VERTICAL, 480, 875, 1024},      // X=480, Y: 363-512 → 875-1024
-    {WALL_VERTICAL, 8, 512, 875},         // X=8, Y: 0-363 → 512-875
-    {WALL_HORIZONTAL, 595, 178, 274},     // Y=83 → 595, X: 178-274
-    {WALL_VERTICAL, 178, 595, 667},       // X=178, Y: 83-155 → 595-667
-    {WALL_HORIZONTAL, 667, 136, 178},     // Y=155 → 667, X: 136-178
-    {WALL_VERTICAL, 136, 556, 667},       // X=136, Y: 44-155 → 556-667
-    {WALL_HORIZONTAL, 556, 136, 166},     // Y=44 → 556, X: 136-166
-    {WALL_VERTICAL, 166, 512, 556}        // X=166, Y: 0-44 → 512-556
+    {WALL_HORIZONTAL, 1016, 480, 512},    // Y=504 → 1016, X: 480-512 good 
+    {WALL_HORIZONTAL, 872, 0, 479},       // Y=360 → 872, X: 0-479 good 
+    {WALL_VERTICAL, 479, 872, 1016},      // X=479, Y: 360-504 → 872-1016 good 
+    {WALL_VERTICAL, 8, 512, 872},         // X=8, Y: 0-360 → 512-872 good 
+    {WALL_HORIZONTAL, 592, 176, 271},     // Y=80 → 592, X: 176-271 good 
+    {WALL_VERTICAL, 176, 592, 663},       // X=176, Y: 80-151 → 592-663 good 
+    {WALL_HORIZONTAL, 663, 136, 176},     // Y=151 → 667, X: 136-176 good 
+    {WALL_VERTICAL, 136, 552, 663},       // X=136, Y: 40-151 → 552-663 good 
+    {WALL_HORIZONTAL, 552, 136, 168},     // Y=40 → 552, X: 136-168 good 
+    {WALL_VERTICAL, 168, 512, 552},        // X=168, Y: 0-40 → 512-552 good 
+    {WALL_VERTICAL, 271, 512, 592},      // X=271, Y: 0-80 → 512-592 good 
 };
 
 // BC Quadrant (offset: 256, 512) - add 256 to X, 512 to Y
 static const WallSegment walls_BC[] = {
-    {WALL_VERTICAL, 739, 512, 819},       // X=483 → 739, Y: 0-307 → 512-819
-    {WALL_HORIZONTAL, 819, 739, 768},     // Y=307 → 819, X: 483-512 → 739-768
-    {WALL_HORIZONTAL, 1018, 479, 768},    // Y=506 → 1018, X: 223-512 → 479-768
-    {WALL_VERTICAL, 479, 875, 1024},      // X=223 → 479, Y: 363-512 → 875-1024
-    {WALL_HORIZONTAL, 875, 256, 489},     // Y=363 → 875, X: 0-233 → 256-489
-    {WALL_HORIZONTAL, 594, 256, 272},     // Y=82 → 594, X: 0-16 → 256-272
-    {WALL_VERTICAL, 272, 512, 594}        // X=16 → 272, Y: 0-82 → 512-594
+    {WALL_VERTICAL, 736, 512, 815},       // X=480 → 736, Y: 0-303 → 512-815 good 
+    {WALL_HORIZONTAL, 815, 736, 768},     // Y=303 → 815, X: 480-512 → 736-768 good 
+    {WALL_HORIZONTAL, 1016, 479, 768},    // Y=504 → 1016, X: 223-512 → 479-768 good 
+    {WALL_VERTICAL, 479, 872, 1016},      // X=223 → 479, Y: 360-504 → 875-1016 good
+    {WALL_HORIZONTAL, 872, 256, 479},     // Y=363 → 875, X: 0-223 → 256-479 good 
+    {WALL_HORIZONTAL, 592, 256, 272},     // Y=80 → 592, X: 0-16 → 256-272 good
+    {WALL_VERTICAL, 272, 512, 592}        // X=16 → 272, Y: 0-80 → 512-592 good 
 };
 
 // BR Quadrant (offset: 512, 512) - add 512 to both X and Y
 static const WallSegment walls_BR[] = {
-    {WALL_HORIZONTAL, 1018, 512, 1024},   // Y=506 → 1018, X: 0-512 → 512-1024
-    {WALL_VERTICAL, 1016, 512, 1024},     // X=504 → 1016, Y: 0-512 → 512-1024
-    {WALL_HORIZONTAL, 818, 734, 818},     // Y=306 → 818, X: 222-306 → 734-818
-    {WALL_VERTICAL, 734, 512, 818},       // X=222 → 734, Y: 0-306 → 512-818
-    {WALL_VERTICAL, 818, 512, 818}        // X=306 → 818, Y: 0-306 → 512-818
+    {WALL_HORIZONTAL, 1016, 512, 1016},   // Y=504 → 1016, X: 0-504 → 512-1016 good 
+    {WALL_VERTICAL, 1016, 512, 1016},     // X=504 → 1016, Y: 0-512 → 512-1016 good 
+    {WALL_HORIZONTAL, 815, 736, 815},     // Y=303 → 815, X: 224-303 → 736-815 good 
+    {WALL_VERTICAL, 736, 512, 815},       // X=224 → 736, Y: 0-303 → 512-815 good 
+    {WALL_VERTICAL, 815, 512, 815}        // X=303 → 813, Y: 0-303 → 512-815 good 
 };
 
 // Quadrant wall lookup table

@@ -32,8 +32,8 @@ typedef struct {
 
     Item item;
     char carname[32];
+    bool isReversing;  // NEW: Track if moving backward
 } Car;
-
 //=============================================================================
 // Constructors (inline helpers)
 //=============================================================================
@@ -96,7 +96,6 @@ void Car_Accelerate(Car* car);
 void Car_Brake(Car* car);
 void Car_Steer(Car* car, int deltaAngle512);  // ← ALWAYS use this for steering!
 void Car_Update(Car* car);                    // Call once per physics tick (60Hz)
-
 //=============================================================================
 // Read-Only Queries - Safe to call from anywhere
 //=============================================================================

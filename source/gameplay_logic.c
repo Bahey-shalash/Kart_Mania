@@ -9,10 +9,14 @@
 #define TURN_STEP_50CC 3
 
 // Physics tuning (50cc class, Q16.8 format, 60Hz)
-#define SPEED_50CC ((FIXED_ONE * 3))  // 0.75 px/frame = 192
-//((FIXED_ONE * 3) / 4) 
+#define SPEED_50CC ((FIXED_ONE * 3))      // Max forward speed
+#define REVERSE_SPEED_50CC (-(FIXED_ONE)) // Max reverse speed: -1.0 px/frame
 #define ACCEL_50CC IntToFixed(1)          // 1.0 px/frame
+#define REVERSE_ACCEL_50CC (IntToFixed(1) / 2)  // Slower reverse acceleration
 #define FRICTION_50CC 240                 // 240/256 = 0.9375
+
+// Collision state
+#define COLLISION_LOCKOUT_FRAMES 60       // Frames to disable acceleration after wall hit
 
 // World directions (0-511 binary angle)
 #define ANGLE_RIGHT 0        // 0°
@@ -65,13 +69,16 @@ static bool wasOnLeftSide[MAX_CARS] = {false};
 static bool wasOnTopSide[MAX_CARS] = {false};
 static bool isPaused = false;
 
+// Collision lockout tracking
+static int collisionLockoutTimer[MAX_CARS] = {0};
+
 //=============================================================================
 // Private Prototypes
 //=============================================================================
 static inline int AngleDiff512(int target, int current);
 static void initCarAtSpawn(Car* car, int index);
-static void handlePlayerInput(Car* player);
-static void clampToMapBounds(Car* car);
+static void handlePlayerInput(Car* player, int carIndex);
+static void clampToMapBounds(Car* car, int carIndex);
 static QuadrantID determineCarQuadrant(int x, int y);
 static void checkCheckpointProgression(const Car* car, int carIndex);
 static bool checkFinishLineCross(const Car* car, int carIndex);
@@ -119,6 +126,7 @@ void Race_Init(Map map, GameMode mode) {
 
     for (int i = 0; i < KartMania.carCount; i++) {
         initCarAtSpawn(&KartMania.cars[i], i);
+        collisionLockoutTimer[i] = 0;
     }
 
     RaceTick_TimerInit();
@@ -136,6 +144,7 @@ void Race_Reset(void) {
 
     for (int i = 0; i < KartMania.carCount; i++) {
         initCarAtSpawn(&KartMania.cars[i], i);
+        collisionLockoutTimer[i] = 0;
     }
 
     RaceTick_TimerInit();
@@ -156,10 +165,15 @@ void Race_Tick(void) {
 
     Car* player = &KartMania.cars[KartMania.playerIndex];
 
-    handlePlayerInput(player);
+    handlePlayerInput(player, KartMania.playerIndex);
     Car_Update(player);
-    clampToMapBounds(player);
+    clampToMapBounds(player, KartMania.playerIndex);
     checkCheckpointProgression(player, KartMania.playerIndex);
+    
+    // Decrement collision lockout timer
+    if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
+        collisionLockoutTimer[KartMania.playerIndex]--;
+    }
 }
 
 //=============================================================================
@@ -269,7 +283,7 @@ static void initCarAtSpawn(Car* car, int index) {
     wasOnTopSide[index] = false;
 }
 
-static void handlePlayerInput(Car* player) {
+static void handlePlayerInput(Car* player, int carIndex) {
     scanKeys();
     uint32 held = keysHeld();
 
@@ -278,7 +292,8 @@ static void handlePlayerInput(Car* player) {
     bool pressingLeft = held & KEY_LEFT;
     bool pressingRight = held & KEY_RIGHT;
 
-    if (pressingA) {
+    // Steering (only when accelerating forward)
+    if (pressingA && player->speed >= 0) {
         if (pressingLeft && !pressingRight) {
             Car_Steer(player, -TURN_STEP_50CC);
         } else if (pressingRight && !pressingLeft) {
@@ -286,14 +301,37 @@ static void handlePlayerInput(Car* player) {
         }
     }
 
-    if (pressingA && !pressingB) {
+    // Acceleration and braking
+    bool isLockedOut = (collisionLockoutTimer[carIndex] > 0);
+    
+    if (pressingA && !pressingB && !isLockedOut) {
+        // Forward acceleration (blocked during lockout)
         Car_Accelerate(player);
     } else if (pressingB) {
-        Car_Brake(player);
+        // Braking / Reverse
+        if (player->speed > 0) {
+            // Braking from forward motion
+            Car_Brake(player);
+        } else {
+            // Going into reverse or accelerating in reverse
+            // Reduce acceleration to half for reverse
+            Q16_8 oldAccel = player->accelRate;
+            player->accelRate = REVERSE_ACCEL_50CC;
+            
+            // Add reverse speed (negative)
+            player->speed -= player->accelRate;
+            
+            // Clamp to max reverse speed
+            if (player->speed < REVERSE_SPEED_50CC) {
+                player->speed = REVERSE_SPEED_50CC;
+            }
+            
+            player->accelRate = oldAccel;
+        }
     }
 }
 
-static void clampToMapBounds(Car* car) {
+static void clampToMapBounds(Car* car, int carIndex) {
     int carX = FixedToInt(car->position.x);
     int carY = FixedToInt(car->position.y);
     
@@ -304,16 +342,20 @@ static void clampToMapBounds(Car* car) {
         Wall_GetCollisionNormal(carX, carY, quad, &nx, &ny);
 
         if (nx != 0 || ny != 0) {
-            car->position.x += IntToFixed(nx);
-            car->position.y += IntToFixed(ny);
-            car->speed = car->speed / 4;
-
-            if (car->speed < IntToFixed(1)) {
-                car->speed = 0;
-            }
+            // Push car out of wall
+            int pushDistance = CAR_RADIUS + 2;
+            car->position.x += IntToFixed(nx * pushDistance);
+            car->position.y += IntToFixed(ny * pushDistance);
+            
+            // FULL STOP on collision
+            car->speed = 0;
+            
+            // Enable collision lockout to prevent immediate re-acceleration
+            collisionLockoutTimer[carIndex] = COLLISION_LOCKOUT_FRAMES;
         }
     }
 
+    // Map boundary clamping
     Q16_8 minPos = IntToFixed(0);
     Q16_8 maxPosX = IntToFixed(1024 - 32);
     Q16_8 maxPosY = IntToFixed(1024 - 32);
