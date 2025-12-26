@@ -1,7 +1,10 @@
 #include "gameplay_logic.h"
+
 #include <nds.h>
-#include "wall_collision.h"
+
+#include "Items.h"
 #include "timer.h"
+#include "wall_collision.h"
 
 //=============================================================================
 // Constants
@@ -10,9 +13,9 @@
 
 // Physics tuning (50cc class, Q16.8 format, 60Hz)
 #define SPEED_50CC ((FIXED_ONE * 3))  // 0.75 px/frame = 192
-//((FIXED_ONE * 3) / 4) 
-#define ACCEL_50CC IntToFixed(1)          // 1.0 px/frame
-#define FRICTION_50CC 240                 // 240/256 = 0.9375
+//((FIXED_ONE * 3) / 4)
+#define ACCEL_50CC IntToFixed(1)  // 1.0 px/frame
+#define FRICTION_50CC 240         // 240/256 = 0.9375
 
 // World directions (0-511 binary angle)
 #define ANGLE_RIGHT 0        // 0°
@@ -64,6 +67,7 @@ static CheckpointProgressState cpState[MAX_CARS] = {CP_STATE_START};
 static bool wasOnLeftSide[MAX_CARS] = {false};
 static bool wasOnTopSide[MAX_CARS] = {false};
 static bool isPaused = false;
+static PlayerItemEffects playerItemEffects;
 
 //=============================================================================
 // Private Prototypes
@@ -99,6 +103,13 @@ bool Race_CheckFinishLineCross(const Car* car) {
     return checkFinishLineCross(car, 0);
 }
 
+void Race_SetCarGfx(int index, u16* gfx) {
+    if (index < 0 || index >= KartMania.carCount) {
+        return;
+    }
+    KartMania.cars[index].gfx = gfx;
+}
+
 //=============================================================================
 // Public API - Lifecycle
 //=============================================================================
@@ -121,6 +132,10 @@ void Race_Init(Map map, GameMode mode) {
         initCarAtSpawn(&KartMania.cars[i], i);
     }
 
+    // Initialize items system
+    Items_Init(map);
+    memset(&playerItemEffects, 0, sizeof(PlayerItemEffects));
+
     RaceTick_TimerInit();
 }
 
@@ -130,6 +145,10 @@ void Race_Reset(void) {
     }
 
     RaceTick_TimerStop();
+
+    // Reset items
+    Items_Reset();
+    memset(&playerItemEffects, 0, sizeof(PlayerItemEffects));
 
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
@@ -157,6 +176,9 @@ void Race_Tick(void) {
     Car* player = &KartMania.cars[KartMania.playerIndex];
 
     handlePlayerInput(player);
+    Items_Update();
+    Items_CheckCollisions(KartMania.cars, KartMania.carCount);
+    Items_UpdatePlayerEffects(player, &playerItemEffects);
     Car_Update(player);
     clampToMapBounds(player);
     checkCheckpointProgression(player, KartMania.playerIndex);
@@ -168,39 +190,39 @@ void Race_Tick(void) {
 static void checkCheckpointProgression(const Car* car, int carIndex) {
     int carX = FixedToInt(car->position.x);
     int carY = FixedToInt(car->position.y);
-    
+
     bool isOnLeftSide = (carX < CHECKPOINT_DIVIDE_X);
     bool isOnTopSide = (carY < CHECKPOINT_DIVIDE_Y);
-    
+
     switch (cpState[carIndex]) {
         case CP_STATE_START:
             if (!wasOnTopSide[carIndex] && isOnTopSide) {
                 cpState[carIndex] = CP_STATE_NEED_LEFT;
             }
             break;
-            
+
         case CP_STATE_NEED_LEFT:
             if (!wasOnLeftSide[carIndex] && isOnLeftSide) {
                 cpState[carIndex] = CP_STATE_NEED_DOWN;
             }
             break;
-            
+
         case CP_STATE_NEED_DOWN:
             if (wasOnTopSide[carIndex] && !isOnTopSide) {
                 cpState[carIndex] = CP_STATE_NEED_RIGHT;
             }
             break;
-            
+
         case CP_STATE_NEED_RIGHT:
             if (wasOnLeftSide[carIndex] && !isOnLeftSide) {
                 cpState[carIndex] = CP_STATE_READY_FOR_LAP;
             }
             break;
-            
+
         case CP_STATE_READY_FOR_LAP:
             break;
     }
-    
+
     wasOnLeftSide[carIndex] = isOnLeftSide;
     wasOnTopSide[carIndex] = isOnTopSide;
 }
@@ -211,29 +233,29 @@ static void checkCheckpointProgression(const Car* car, int carIndex) {
 static bool checkFinishLineCross(const Car* car, int carIndex) {
     int carX = FixedToInt(car->position.x);
     int carY = FixedToInt(car->position.y);
-    
+
     bool inXRange = (carX >= FINISH_LINE_X_MIN && carX <= FINISH_LINE_X_MAX);
-    
+
     if (!inXRange) {
         wasAboveFinishLine[carIndex] = (carY < FINISH_LINE_Y);
         return false;
     }
-    
+
     bool isNowAbove = (carY < FINISH_LINE_Y);
     bool crossedLine = !wasAboveFinishLine[carIndex] && isNowAbove;
-    
+
     wasAboveFinishLine[carIndex] = isNowAbove;
-    
+
     if (crossedLine && !hasCompletedFirstCrossing[carIndex]) {
         hasCompletedFirstCrossing[carIndex] = true;
         return false;
     }
-    
+
     if (crossedLine && cpState[carIndex] == CP_STATE_READY_FOR_LAP) {
         cpState[carIndex] = CP_STATE_START;
         return true;
     }
-    
+
     return false;
 }
 
@@ -250,7 +272,7 @@ static inline int AngleDiff512(int target, int current) {
 
 static void initCarAtSpawn(Car* car, int index) {
     Vec2 spawnPos = Vec2_FromInt(START_LINE_X, START_LINE_Y + (index * CAR_SPACING));
-    
+
     car->position = spawnPos;
     car->speed = 0;
     car->angle512 = START_FACING_ANGLE;
@@ -261,7 +283,7 @@ static void initCarAtSpawn(Car* car, int index) {
     car->maxSpeed = SPEED_50CC;
     car->accelRate = ACCEL_50CC;
     car->friction = FRICTION_50CC;
-    
+
     wasAboveFinishLine[index] = false;
     hasCompletedFirstCrossing[index] = false;
     cpState[index] = CP_STATE_START;
@@ -272,20 +294,36 @@ static void initCarAtSpawn(Car* car, int index) {
 static void handlePlayerInput(Car* player) {
     scanKeys();
     uint32 held = keysHeld();
+    uint32 down = keysDown();
 
     bool pressingA = held & KEY_A;
     bool pressingB = held & KEY_B;
     bool pressingLeft = held & KEY_LEFT;
     bool pressingRight = held & KEY_RIGHT;
+    bool pressingUp = held & KEY_UP;
+    bool pressingDown = held & KEY_DOWN;
+
+    // Item usage
+    if (down & KEY_R) {
+        bool fireForward = !pressingDown;  // Default forward unless DOWN held
+        Items_UsePlayerItem(player, fireForward);
+    }
+
+    // Steering (potentially inverted by mushroom confusion)
+    const PlayerItemEffects* effects = Items_GetPlayerEffects();
+    bool invertControls = effects->confusionActive;
 
     if (pressingA) {
         if (pressingLeft && !pressingRight) {
-            Car_Steer(player, -TURN_STEP_50CC);
+            int turnAmount = invertControls ? TURN_STEP_50CC : -TURN_STEP_50CC;
+            Car_Steer(player, turnAmount);
         } else if (pressingRight && !pressingLeft) {
-            Car_Steer(player, TURN_STEP_50CC);
+            int turnAmount = invertControls ? -TURN_STEP_50CC : TURN_STEP_50CC;
+            Car_Steer(player, turnAmount);
         }
     }
 
+    // Acceleration/Braking (unchanged)
     if (pressingA && !pressingB) {
         Car_Accelerate(player);
     } else if (pressingB) {
@@ -296,9 +334,9 @@ static void handlePlayerInput(Car* player) {
 static void clampToMapBounds(Car* car) {
     int carX = FixedToInt(car->position.x);
     int carY = FixedToInt(car->position.y);
-    
+
     QuadrantID quad = determineCarQuadrant(carX, carY);
-    
+
     if (Wall_CheckCollision(carX, carY, CAR_RADIUS, quad)) {
         int nx, ny;
         Wall_GetCollisionNormal(carX, carY, quad, &nx, &ny);
@@ -318,10 +356,14 @@ static void clampToMapBounds(Car* car) {
     Q16_8 maxPosX = IntToFixed(1024 - 32);
     Q16_8 maxPosY = IntToFixed(1024 - 32);
 
-    if (car->position.x < minPos) car->position.x = minPos;
-    if (car->position.y < minPos) car->position.y = minPos;
-    if (car->position.x > maxPosX) car->position.x = maxPosX;
-    if (car->position.y > maxPosY) car->position.y = maxPosY;
+    if (car->position.x < minPos)
+        car->position.x = minPos;
+    if (car->position.y < minPos)
+        car->position.y = minPos;
+    if (car->position.x > maxPosX)
+        car->position.x = maxPosX;
+    if (car->position.y > maxPosY)
+        car->position.y = maxPosY;
 }
 
 static QuadrantID determineCarQuadrant(int x, int y) {

@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kart Racing Items - Pixel Art</title>
+    <style>
+        body {
+            background: #2a2a2a;
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        
+        .item-card {
+            background: #3a3a3a;
+            border: 2px solid #555;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .item-title {
+            margin-bottom: 10px;
+            font-size: 14px;
+            color: #ffd700;
+        }
+        
+        .item-size {
+            margin-bottom: 15px;
+            font-size: 11px;
+            color: #aaa;
+        }
+        
+        canvas {
+            border: 1px solid #666;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            background: repeating-conic-gradient(#444 0% 25%, #4a4a4a 0% 50%) 50% / 8px 8px;
+        }
+        
+        .controls {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        button {
+            background: #555;
+            color: #fff;
+            border: 1px solid #777;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+        
+        button:hover {
+            background: #666;
+        }
+        
+        .download-btn {
+            margin-top: 10px;
+            padding: 5px 15px;
+            font-size: 11px;
+            background: #2a5a2a;
+        }
+        
+        .download-btn:hover {
+            background: #3a7a3a;
+        }
+        
+        h1 {
+            color: #ffd700;
+            text-align: center;
+        }
+        
+        .note {
+            margin-top: 20px;
+            padding: 15px;
+            background: #3a3a3a;
+            border-left: 3px solid #ffd700;
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏁 Kart Racing Items - Pixel Art 🏁</h1>
+    
+    <div class="container" id="itemsContainer"></div>
+    
+    <div class="controls">
+        <button onclick="toggleZoom()">Toggle 4x Zoom</button>
+        <button onclick="exportAll()">Export Sprite Data</button>
+        <button onclick="downloadAllPNGs()">Download All PNGs</button>
+    </div>
+    
+    <div class="note">
+        <strong>Item Sprites for Nintendo DS</strong><br>
+        • Oil Slick: 16x16 (ground hazard)<br>
+        • Bomb: 16x16 (throwable explosive)<br>
+        • Red Shell: 16x16 (homing projectile)<br>
+        • Green Shell: 16x16 (straight projectile)<br>
+        • Banana: 16x16 (spin-out hazard)<br>
+        • Speed Boost: 16x16 (pickup)<br>
+        • Missile: 16x32 (vertical projectile)<br>
+        • Triple Shell: 32x16 (wide formation)<br>
+        All items use 16-color palette for DS compatibility
+    </div>
+
+    <script>
+        let zoomLevel = 1;
+        
+        const items = [
+            {
+                name: 'Item Box',
+                size: '16x16',
+                dsSize: 'SpriteSize_16x16',
+                width: 16,
+                height: 16,
+                draw: (ctx) => {
+                    const colors = {
+                        darkBlue: '#0047ab',
+                        blue: '#0066cc',
+                        lightBlue: '#3399ff',
+                        brightBlue: '#66b3ff',
+                        gold: '#ffd700',
+                        darkGold: '#daa520',
+                        yellow: '#ffed4e',
+                        white: '#ffffff',
+                        darkGray: '#404040',
+                        black: '#000000'
+                    };
+                    
+                    // Box body (blue cube perspective)
+                    // Front face
+                    ctx.fillStyle = colors.darkBlue;
+                    ctx.fillRect(4, 6, 8, 8);
+                    
+                    ctx.fillStyle = colors.blue;
+                    ctx.fillRect(5, 7, 6, 6);
+                    
+                    ctx.fillStyle = colors.lightBlue;
+                    ctx.fillRect(6, 8, 4, 4);
+                    
+                    ctx.fillStyle = colors.brightBlue;
+                    ctx.fillRect(6, 8, 2, 2);
+                    
+                    // Top face (lighter, angled)
+                    ctx.fillStyle = colors.lightBlue;
+                    ctx.fillRect(5, 4, 6, 3);
+                    ctx.fillRect(6, 3, 4, 1);
+                    
+                    ctx.fillStyle = colors.brightBlue;
+                    ctx.fillRect(6, 4, 4, 2);
+                    
+                    // Right side face (darker)
+                    ctx.fillStyle = colors.darkBlue;
+                    ctx.fillRect(11, 7, 2, 7);
+                    ctx.fillRect(12, 6, 1, 1);
+                    
+                    ctx.fillStyle = colors.blue;
+                    ctx.fillRect(11, 7, 1, 6);
+                    
+                    // Question mark (gold)
+                    ctx.fillStyle = colors.darkGold;
+                    // Top curve
+                    ctx.fillRect(7, 8, 2, 1);
+                    ctx.fillRect(6, 9, 1, 1);
+                    ctx.fillRect(9, 9, 1, 1);
+                    // Stem
+                    ctx.fillRect(8, 10, 1, 1);
+                    // Dot
+                    ctx.fillRect(8, 12, 1, 1);
+                    
+                    ctx.fillStyle = colors.gold;
+                    ctx.fillRect(7, 8, 2, 1);
+                    ctx.fillRect(8, 9, 1, 2);
+                    ctx.fillRect(8, 12, 1, 1);
+                    
+                    ctx.fillStyle = colors.yellow;
+                    ctx.fillRect(7, 8, 1, 1);
+                    ctx.fillRect(8, 12, 1, 1);
+                    
+                    // Border/outline accents
+                    ctx.fillStyle = colors.black;
+                    ctx.fillRect(4, 6, 8, 1);
+                    ctx.fillRect(4, 6, 1, 8);
+                    ctx.fillRect(11, 6, 1, 8);
+                    ctx.fillRect(4, 13, 8, 1);
+                    
+                    // Shine on top
+                    ctx.fillStyle = colors.white;
+                    ctx.fillRect(7, 4, 1, 1);
+                }
+            },
+            {
+                name: 'Oil Slick',
+                size: '32x32',
+                dsSize: 'SpriteSize_32x32',
+                width: 32,
+                height: 32,
+                draw: (ctx) => {
+                    // Dark oil puddle with shine (scaled up 2x)
+                    const colors = {
+                        bg: '#000000',
+                        oil1: '#1a1a1a',
+                        oil2: '#2d2d2d',
+                        oil3: '#404040',
+                        oil4: '#505050',
+                        shine1: '#6b6b6b',
+                        shine2: '#8f8f8f',
+                        shine3: '#a0a0a0',
+                        highlight: '#b8b8b8',
+                        brightHighlight: '#d0d0d0'
+                    };
+                    
+                    // Outer dark shape (larger, more organic)
+                    ctx.fillStyle = colors.oil1;
+                    ctx.fillRect(4, 6, 24, 20);
+                    ctx.fillRect(2, 10, 28, 12);
+                    ctx.fillRect(6, 4, 20, 24);
+                    ctx.fillRect(8, 3, 16, 26);
+                    
+                    // Second layer
+                    ctx.fillStyle = colors.oil2;
+                    ctx.fillRect(6, 8, 20, 16);
+                    ctx.fillRect(8, 6, 16, 20);
+                    ctx.fillRect(5, 12, 22, 8);
+                    
+                    // Mid tone
+                    ctx.fillStyle = colors.oil3;
+                    ctx.fillRect(8, 10, 16, 12);
+                    ctx.fillRect(10, 8, 12, 16);
+                    
+                    // Inner darker area
+                    ctx.fillStyle = colors.oil4;
+                    ctx.fillRect(10, 12, 12, 8);
+                    ctx.fillRect(12, 10, 8, 12);
+                    
+                    // Highlights/shine (larger, more detailed)
+                    ctx.fillStyle = colors.shine1;
+                    ctx.fillRect(12, 12, 6, 4);
+                    ctx.fillRect(20, 16, 4, 4);
+                    ctx.fillRect(10, 14, 3, 3);
+                    
+                    ctx.fillStyle = colors.shine2;
+                    ctx.fillRect(14, 12, 4, 2);
+                    ctx.fillRect(21, 17, 2, 2);
+                    
+                    ctx.fillStyle = colors.shine3;
+                    ctx.fillRect(15, 12, 2, 2);
+                    
+                    ctx.fillStyle = colors.highlight;
+                    ctx.fillRect(16, 12, 2, 1);
+                    ctx.fillRect(16, 13, 1, 1);
+                    
+                    ctx.fillStyle = colors.brightHighlight;
+                    ctx.fillRect(16, 12, 1, 1);
+                }
+            },
+            {
+                name: 'Bomb',
+                size: '16x16',
+                dsSize: 'SpriteSize_16x16',
+                width: 16,
+                height: 16,
+                draw: (ctx) => {
+                    const colors = {
+                        black: '#0d0d0d',
+                        dark: '#1a1a1a',
+                        body: '#2d2d2d',
+                        light: '#404040',
+                        fuse: '#8b4513',
+                        fuseLight: '#a0522d',
+                        spark: '#ff4500',
+                        sparkBright: '#ff6347'
+                    };
+                    
+                    // Bomb body (round)
+                    ctx.fillStyle = colors.black;
+                    ctx.fillRect(5, 7, 6, 6);
+                    ctx.fillRect(4, 8, 8, 4);
+                    ctx.fillRect(6, 6, 4, 8);
+                    
+                    ctx.fillStyle = colors.dark;
+                    ctx.fillRect(6, 7, 4, 6);
+                    ctx.fillRect(5, 8, 6, 4);
+                    
+                    ctx.fillStyle = colors.body;
+                    ctx.fillRect(6, 8, 4, 4);
+                    
+                    ctx.fillStyle = colors.light;
+                    ctx.fillRect(7, 8, 2, 2);
+                    ctx.fillRect(6, 9, 1, 1);
+                    
+                    // Fuse
+                    ctx.fillStyle = colors.fuse;
+                    ctx.fillRect(8, 5, 1, 2);
+                    ctx.fillRect(9, 4, 1, 1);
+                    ctx.fillRect(9, 3, 1, 1);
+                    
+                    ctx.fillStyle = colors.fuseLight;
+                    ctx.fillRect(8, 5, 1, 1);
+                    
+                    // Spark at top
+                    ctx.fillStyle = colors.spark;
+                    ctx.fillRect(9, 2, 1, 1);
+                    ctx.fillRect(8, 2, 1, 1);
+                    ctx.fillRect(10, 2, 1, 1);
+                    
+                    ctx.fillStyle = colors.sparkBright;
+                    ctx.fillRect(9, 1, 1, 1);
+                    ctx.fillRect(9, 2, 1, 1);
+                }
+            },
+            {
+                name: 'Red Shell',
+                size: '16x16',
+                dsSize: 'SpriteSize_16x16',
+                width: 16,
+                height: 16,
+                draw: (ctx) => {
+                    const colors = {
+                        darkRed: '#8b0000',
+                        red: '#dc143c',
+                        brightRed: '#ff1744',
+                        white: '#ffffff',
+                        lightGray: '#d3d3d3',
+                        darkGray: '#696969',
+                        black: '#000000'
+                    };
+                    
+                    // Shell outline
+                    ctx.fillStyle = colors.darkRed;
+                    ctx.fillRect(5, 6, 6, 6);
+                    ctx.fillRect(4, 7, 8, 4);
+                    ctx.fillRect(6, 5, 4, 8);
+                    
+                    // Red body
+                    ctx.fillStyle = colors.red;
+                    ctx.fillRect(6, 6, 4, 6);
+                    ctx.fillRect(5, 7, 6, 4);
+                    
+                    ctx.fillStyle = colors.brightRed;
+                    ctx.fillRect(7, 7, 2, 2);
+                    ctx.fillRect(6, 8, 1, 1);
+                    
+                    // White stripe/marking
+                    ctx.fillStyle = colors.white;
+                    ctx.fillRect(7, 9, 2, 2);
+                    ctx.fillRect(6, 10, 4, 1);
+                    
+                    ctx.fillStyle = colors.lightGray;
+                    ctx.fillRect(6, 11, 4, 1);
+                    
+                    // Spikes/details
+                    ctx.fillStyle = colors.darkGray;
+                    ctx.fillRect(5, 6, 1, 1);
+                    ctx.fillRect(10, 6, 1, 1);
+                    ctx.fillRect(5, 11, 1, 1);
+                }
+            },
+            {
+                name: 'Green Shell',
+                size: '16x16',
+                dsSize: 'SpriteSize_16x16',
+                width: 16,
+                height: 16,
+                draw: (ctx) => {
+                    const colors = {
+                        darkGreen: '#0b6623',
+                        green: '#228b22',
+                        brightGreen: '#32cd32',
+                        white: '#ffffff',
+                        lightGray: '#d3d3d3',
+                        darkGray: '#696969'
+                    };
+                    
+                    // Shell outline
+                    ctx.fillStyle = colors.darkGreen;
+                    ctx.fillRect(5, 6, 6, 6);
+                    ctx.fillRect(4, 7, 8, 4);
+                    ctx.fillRect(6, 5, 4, 8);
+                    
+                    // Green body
+                    ctx.fillStyle = colors.green;
+                    ctx.fillRect(6, 6, 4, 6);
+                    ctx.fillRect(5, 7, 6, 4);
+                    
+                    ctx.fillStyle = colors.brightGreen;
+                    ctx.fillRect(7, 7, 2, 2);
+                    ctx.fillRect(6, 8, 1, 1);
+                    
+                    // White stripe
+                    ctx.fillStyle = colors.white;
+                    ctx.fillRect(7, 9, 2, 2);
+                    ctx.fillRect(6, 10, 4, 1);
+                    
+                    ctx.fillStyle = colors.lightGray;
+                    ctx.fillRect(6, 11, 4, 1);
+                    
+                    // Spikes
+                    ctx.fillStyle = colors.darkGray;
+                    ctx.fillRect(5, 6, 1, 1);
+                    ctx.fillRect(10, 6, 1, 1);
+                    ctx.fillRect(5, 11, 1, 1);
+                }
+            },
+            {
+                name: 'Banana',
+                size: '16x16',
+                dsSize: 'SpriteSize_16x16',
+                width: 16,
+                height: 16,
+                draw: (ctx) => {
+                    const colors = {
+                        darkYellow: '#b8860b',
+                        yellow: '#ffd700',
+                        brightYellow: '#ffed4e',
+                        brown: '#654321',
+                        lightBrown: '#8b6914'
+                    };
+                    
+                    // Banana body (curved)
+                    ctx.fillStyle = colors.darkYellow;
+                    ctx.fillRect(4, 7, 8, 4);
+                    ctx.fillRect(5, 6, 6, 6);
+                    ctx.fillRect(6, 5, 4, 8);
+                    ctx.fillRect(7, 11, 4, 2);
+                    
+                    ctx.fillStyle = colors.yellow;
+                    ctx.fillRect(5, 7, 6, 4);
+                    ctx.fillRect(6, 6, 4, 6);
+                    ctx.fillRect(7, 12, 3, 1);
+                    
+                    ctx.fillStyle = colors.brightYellow;
+                    ctx.fillRect(6, 7, 3, 3);
+                    ctx.fillRect(7, 6, 2, 1);
+                    
+                    // Brown spots
+                    ctx.fillStyle = colors.brown;
+                    ctx.fillRect(8, 8, 1, 2);
+                    ctx.fillRect(6, 9, 1, 1);
+                    ctx.fillRect(9, 10, 1, 1);
+                    
+                    // Stem area
+                    ctx.fillStyle = colors.brown;
+                    ctx.fillRect(7, 4, 2, 2);
+                    ctx.fillStyle = colors.lightBrown;
+                    ctx.fillRect(7, 4, 1, 1);
+                }
+            },
+            {
+                name: 'Speed Boost',
+                size: '16x16',
+                dsSize: 'SpriteSize_16x16',
+                width: 16,
+                height: 16,
+                draw: (ctx) => {
+                    const colors = {
+                        darkBlue: '#00008b',
+                        blue: '#0000ff',
+                        lightBlue: '#4169e1',
+                        cyan: '#00ffff',
+                        white: '#ffffff',
+                        gold: '#ffd700'
+                    };
+                    
+                    // Arrow shape pointing up/forward
+                    ctx.fillStyle = colors.darkBlue;
+                    // Arrow head
+                    ctx.fillRect(7, 4, 2, 2);
+                    ctx.fillRect(6, 5, 4, 2);
+                    ctx.fillRect(5, 6, 6, 2);
+                    // Arrow shaft
+                    ctx.fillRect(7, 8, 2, 5);
+                    
+                    ctx.fillStyle = colors.blue;
+                    ctx.fillRect(7, 5, 2, 1);
+                    ctx.fillRect(6, 6, 4, 1);
+                    ctx.fillRect(7, 8, 2, 4);
+                    
+                    ctx.fillStyle = colors.lightBlue;
+                    ctx.fillRect(7, 5, 1, 1);
+                    ctx.fillRect(7, 9, 1, 2);
+                    
+                    // Speed lines
+                    ctx.fillStyle = colors.cyan;
+                    ctx.fillRect(4, 7, 2, 1);
+                    ctx.fillRect(3, 9, 3, 1);
+                    ctx.fillRect(10, 7, 2, 1);
+                    ctx.fillRect(10, 9, 3, 1);
+                    
+                    ctx.fillStyle = colors.white;
+                    ctx.fillRect(4, 7, 1, 1);
+                    ctx.fillRect(11, 7, 1, 1);
+                }
+            },
+            {
+                name: 'Missile',
+                size: '16x32',
+                dsSize: 'SpriteSize_16x32',
+                width: 16,
+                height: 32,
+                draw: (ctx) => {
+                    const colors = {
+                        darkGray: '#2f2f2f',
+                        gray: '#5a5a5a',
+                        lightGray: '#8c8c8c',
+                        red: '#dc143c',
+                        brightRed: '#ff1744',
+                        orange: '#ff8c00',
+                        yellow: '#ffd700',
+                        white: '#ffffff'
+                    };
+                    
+                    // Missile body
+                    ctx.fillStyle = colors.darkGray;
+                    ctx.fillRect(5, 10, 6, 14);
+                    ctx.fillRect(6, 9, 4, 16);
+                    
+                    ctx.fillStyle = colors.gray;
+                    ctx.fillRect(6, 10, 4, 14);
+                    
+                    ctx.fillStyle = colors.lightGray;
+                    ctx.fillRect(7, 11, 2, 12);
+                    ctx.fillRect(6, 13, 1, 8);
+                    
+                    // Nose cone (pointed)
+                    ctx.fillStyle = colors.red;
+                    ctx.fillRect(6, 7, 4, 3);
+                    ctx.fillRect(7, 5, 2, 4);
+                    
+                    ctx.fillStyle = colors.brightRed;
+                    ctx.fillRect(7, 6, 2, 3);
+                    ctx.fillRect(8, 5, 1, 1);
+                    
+                    // Fins
+                    ctx.fillStyle = colors.darkGray;
+                    ctx.fillRect(4, 20, 2, 4);
+                    ctx.fillRect(10, 20, 2, 4);
+                    
+                    ctx.fillStyle = colors.red;
+                    ctx.fillRect(4, 20, 1, 3);
+                    ctx.fillRect(11, 20, 1, 3);
+                    
+                    // Exhaust flame
+                    ctx.fillStyle = colors.orange;
+                    ctx.fillRect(6, 24, 4, 3);
+                    ctx.fillRect(7, 27, 2, 2);
+                    
+                    ctx.fillStyle = colors.yellow;
+                    ctx.fillRect(7, 24, 2, 2);
+                    ctx.fillRect(7, 27, 2, 1);
+                    
+                    ctx.fillStyle = colors.white;
+                    ctx.fillRect(7, 24, 1, 1);
+                    ctx.fillRect(7, 28, 2, 1);
+                }
+            },
+            {
+                name: 'Triple Shell',
+                size: '32x16',
+                dsSize: 'SpriteSize_32x16',
+                width: 32,
+                height: 16,
+                draw: (ctx) => {
+                    const drawSmallShell = (x, y, color, brightColor) => {
+                        // Mini shell (6x6)
+                        ctx.fillStyle = color;
+                        ctx.fillRect(x+1, y+1, 4, 4);
+                        ctx.fillRect(x+2, y, 2, 6);
+                        ctx.fillRect(x, y+2, 6, 2);
+                        
+                        ctx.fillStyle = brightColor;
+                        ctx.fillRect(x+2, y+2, 2, 2);
+                    };
+                    
+                    const colors = {
+                        green: '#228b22',
+                        brightGreen: '#32cd32',
+                        darkGray: '#696969'
+                    };
+                    
+                    // Draw three shells in formation
+                    drawSmallShell(3, 5, colors.green, colors.brightGreen);   // Left
+                    drawSmallShell(13, 5, colors.green, colors.brightGreen);  // Center
+                    drawSmallShell(23, 5, colors.green, colors.brightGreen);  // Right
+                    
+                    // Connection indicators (orbital lines)
+                    ctx.fillStyle = colors.darkGray;
+                    ctx.fillRect(9, 7, 3, 1);  // Left to center
+                    ctx.fillRect(19, 7, 3, 1); // Center to right
+                }
+            },
+            {
+                name: 'Star Power',
+                size: '16x16',
+                dsSize: 'SpriteSize_16x16',
+                width: 16,
+                height: 16,
+                draw: (ctx) => {
+                    const colors = {
+                        darkGold: '#b8860b',
+                        gold: '#ffd700',
+                        yellow: '#ffed4e',
+                        white: '#ffffff'
+                    };
+                    
+                    // 5-pointed star
+                    // Center
+                    ctx.fillStyle = colors.gold;
+                    ctx.fillRect(7, 7, 2, 2);
+                    
+                    // Top point
+                    ctx.fillRect(7, 3, 2, 4);
+                    ctx.fillRect(6, 5, 4, 2);
+                    ctx.fillStyle = colors.darkGold;
+                    ctx.fillRect(7, 3, 2, 1);
+                    
+                    // Upper left
+                    ctx.fillStyle = colors.gold;
+                    ctx.fillRect(4, 6, 3, 2);
+                    ctx.fillRect(3, 7, 4, 1);
+                    
+                    // Upper right  
+                    ctx.fillStyle = colors.gold;
+                    ctx.fillRect(9, 6, 3, 2);
+                    ctx.fillRect(9, 7, 4, 1);
+                    
+                    // Lower left
+                    ctx.fillStyle = colors.gold;
+                    ctx.fillRect(5, 9, 2, 3);
+                    ctx.fillRect(4, 11, 3, 1);
+                    
+                    // Lower right
+                    ctx.fillStyle = colors.gold;
+                    ctx.fillRect(9, 9, 2, 3);
+                    ctx.fillRect(9, 11, 3, 1);
+                    
+                    // Highlights
+                    ctx.fillStyle = colors.yellow;
+                    ctx.fillRect(7, 7, 1, 1);
+                    ctx.fillRect(7, 4, 1, 1);
+                    
+                    ctx.fillStyle = colors.white;
+                    ctx.fillRect(7, 7, 1, 1);
+                }
+            },
+            {
+                name: 'Turbo Mushroom',
+                size: '16x16',
+                dsSize: 'SpriteSize_16x16',
+                width: 16,
+                height: 16,
+                draw: (ctx) => {
+                    const colors = {
+                        darkRed: '#8b0000',
+                        red: '#ff0000',
+                        brightRed: '#ff4444',
+                        white: '#ffffff',
+                        cream: '#fffacd',
+                        darkCream: '#f0e68c'
+                    };
+                    
+                    // Cap (red with white spots)
+                    ctx.fillStyle = colors.darkRed;
+                    ctx.fillRect(4, 5, 8, 5);
+                    ctx.fillRect(5, 4, 6, 7);
+                    ctx.fillRect(6, 3, 4, 9);
+                    
+                    ctx.fillStyle = colors.red;
+                    ctx.fillRect(5, 5, 6, 5);
+                    ctx.fillRect(6, 4, 4, 7);
+                    
+                    ctx.fillStyle = colors.brightRed;
+                    ctx.fillRect(6, 5, 3, 4);
+                    
+                    // White spots on cap
+                    ctx.fillStyle = colors.white;
+                    ctx.fillRect(6, 6, 1, 1);
+                    ctx.fillRect(9, 7, 1, 1);
+                    ctx.fillRect(7, 8, 1, 1);
+                    
+                    // Stem (cream colored)
+                    ctx.fillStyle = colors.darkCream;
+                    ctx.fillRect(6, 10, 4, 3);
+                    ctx.fillRect(7, 9, 2, 5);
+                    
+                    ctx.fillStyle = colors.cream;
+                    ctx.fillRect(7, 10, 2, 3);
+                }
+            }
+        ];
+        
+        function createCanvas(width, height) {
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            return canvas;
+        }
+        
+        function renderItems() {
+            const container = document.getElementById('itemsContainer');
+            container.innerHTML = '';
+            
+            items.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                
+                const title = document.createElement('div');
+                title.className = 'item-title';
+                title.textContent = item.name;
+                
+                const size = document.createElement('div');
+                size.className = 'item-size';
+                size.textContent = `${item.size} (${item.dsSize})`;
+                
+                const canvas = createCanvas(item.width, item.height);
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = false;
+                
+                item.draw(ctx);
+                item.canvas = canvas; // Store reference for download
+                
+                if (zoomLevel > 1) {
+                    canvas.style.width = (item.width * zoomLevel) + 'px';
+                    canvas.style.height = (item.height * zoomLevel) + 'px';
+                }
+                
+                const downloadBtn = document.createElement('button');
+                downloadBtn.className = 'download-btn';
+                downloadBtn.textContent = '⬇ Download PNG';
+                downloadBtn.onclick = () => downloadPNG(item);
+                
+                card.appendChild(title);
+                card.appendChild(size);
+                card.appendChild(canvas);
+                card.appendChild(downloadBtn);
+                container.appendChild(card);
+            });
+        }
+        
+        function downloadPNG(item) {
+            const link = document.createElement('a');
+            const filename = item.name.toLowerCase().replace(/\s+/g, '_') + '.png';
+            link.download = filename;
+            link.href = item.canvas.toDataURL('image/png');
+            link.click();
+        }
+        
+        function downloadAllPNGs() {
+            items.forEach((item, index) => {
+                setTimeout(() => {
+                    downloadPNG(item);
+                }, index * 200); // Stagger downloads to avoid browser blocking
+            });
+        }
+        
+        function toggleZoom() {
+            zoomLevel = zoomLevel === 1 ? 4 : 1;
+            renderItems();
+        }
+        
+        function exportAll() {
+            let output = '// Nintendo DS Sprite Data Export\n\n';
+            
+            items.forEach(item => {
+                const canvas = createCanvas(item.width, item.height);
+                const ctx = canvas.getContext('2d');
+                item.draw(ctx);
+                
+                const imageData = ctx.getImageData(0, 0, item.width, item.height);
+                const pixels = imageData.data;
+                
+                output += `// ${item.name} - ${item.size}\n`;
+                output += `// DS Size: ${item.dsSize}\n`;
+                output += `const unsigned char ${item.name.toLowerCase().replace(/\s+/g, '_')}_data[${item.width * item.height}] = {\n`;
+                
+                let palette = new Map();
+                let paletteIndex = 0;
+                let indices = [];
+                
+                for (let i = 0; i < pixels.length; i += 4) {
+                    const r = pixels[i];
+                    const g = pixels[i + 1];
+                    const b = pixels[i + 2];
+                    const a = pixels[i + 3];
+                    
+                    if (a === 0) {
+                        indices.push(0); // Transparent
+                        continue;
+                    }
+                    
+                    const color = `${r},${g},${b}`;
+                    if (!palette.has(color)) {
+                        palette.set(color, ++paletteIndex);
+                    }
+                    indices.push(palette.get(color));
+                }
+                
+                // Output indices
+                for (let i = 0; i < indices.length; i++) {
+                    if (i % 16 === 0) output += '    ';
+                    output += indices[i].toString().padStart(2) + ',';
+                    if ((i + 1) % 16 === 0) output += '\n';
+                }
+                output += '\n};\n\n';
+                
+                // Output palette
+                output += `// Palette for ${item.name} (${palette.size} colors)\n`;
+                output += `const unsigned short ${item.name.toLowerCase().replace(/\s+/g, '_')}_palette[${palette.size + 1}] = {\n`;
+                output += '    RGB15(0,0,0) | BIT(15), // Transparent\n';
+                
+                palette.forEach((idx, colorStr) => {
+                    const [r, g, b] = colorStr.split(',').map(Number);
+                    const r5 = Math.round(r * 31 / 255);
+                    const g5 = Math.round(g * 31 / 255);
+                    const b5 = Math.round(b * 31 / 255);
+                    output += `    RGB15(${r5},${g5},${b5}),\n`;
+                });
+                
+                output += '};\n\n';
+            });
+            
+            const blob = new Blob([output], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'racing_items_sprite_data.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        renderItems();
+    </script>
+</body>
+</html>

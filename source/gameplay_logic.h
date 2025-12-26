@@ -5,6 +5,7 @@
 #include "wall_collision.h"
 #include "Car.h"
 #include "game_types.h"
+#include "Items.h"   
 
 //=============================================================================
 // Constants
@@ -65,5 +66,6 @@ int Race_GetLapCount(void);            // Get total laps for current map
 bool Race_CheckFinishLineCross(const Car* car);
 void init_pause_interrupt(void);
 void PauseISR(void);
+void Race_SetCarGfx(int index, u16* gfx);
 
 #endif  // GAMEPLAY_LOGIC_H
