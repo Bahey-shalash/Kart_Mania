@@ -308,26 +308,9 @@ static void handlePlayerInput(Car* player, int carIndex) {
         // Forward acceleration (blocked during lockout)
         Car_Accelerate(player);
     } else if (pressingB) {
-        // Braking / Reverse
         if (player->speed > 0) {
-            // Braking from forward motion
             Car_Brake(player);
-        } else {
-            // Going into reverse or accelerating in reverse
-            // Reduce acceleration to half for reverse
-            Q16_8 oldAccel = player->accelRate;
-            player->accelRate = REVERSE_ACCEL_50CC;
-            
-            // Add reverse speed (negative)
-            player->speed -= player->accelRate;
-            
-            // Clamp to max reverse speed
-            if (player->speed < REVERSE_SPEED_50CC) {
-                player->speed = REVERSE_SPEED_50CC;
-            }
-            
-            player->accelRate = oldAccel;
-        }
+        } 
     }
 }
 
