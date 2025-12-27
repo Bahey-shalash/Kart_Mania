@@ -260,8 +260,8 @@ void Gameplay_OnVBlank(void) {
     int dsAngle = -(player->angle512 << 6);
     oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
 
-    int screenX = carX - scrollX - 32;
-    int screenY = carY - scrollY - 32;
+    int screenX = carX - scrollX - 16;
+    int screenY = carY - scrollY - 16;
 
     oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
            SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,

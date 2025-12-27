@@ -17,6 +17,7 @@
 #include "missile.h"
 #include "oil_slick.h"
 #include "red_shell.h"
+#include "sound.h"
 
 //=============================================================================
 // Module State
@@ -120,16 +121,47 @@ void Items_Update(void) {
 }
 
 void Items_CheckCollisions(Car* cars, int carCount) {
+    // DEBUG: Track if we're checking item boxes
+    static bool debugItemBoxes = true;
+
     for (int i = 0; i < itemBoxCount; i++) {
         if (!itemBoxSpawns[i].active)
             continue;
 
         for (int c = 0; c < carCount; c++) {
+            // DEBUG: Print distance to item box for player (car 0)
+            if (c == 0 && debugItemBoxes) {
+                Q16_8 dist =
+                    Vec2_Distance(cars[c].position, itemBoxSpawns[i].position);
+                int distInt = FixedToInt(dist);
+
+                // Only print for closest box (avoid spam)
+                if (distInt < 50) {
+                    printf("Box %d: dist=%d (threshold=14)\n", i, distInt);
+                    printf("  Car: %d,%d\n", FixedToInt(cars[c].position.x),
+                           FixedToInt(cars[c].position.y));
+                    printf("  Box: %d,%d\n", FixedToInt(itemBoxSpawns[i].position.x),
+                           FixedToInt(itemBoxSpawns[i].position.y));
+                }
+            }
+
             if (checkItemBoxPickup(&cars[c], &itemBoxSpawns[i])) {
+                // DEBUG: Announce pickup
+                if (c == 0) {
+                    printf("*** ITEM BOX PICKUP! ***\n");
+                }
+
+                // PLAY SOUND - no throttling, every pickup should ding!
+                PlayBoxSFX();
+
                 // Give player random item
                 if (c == 0) {  // Only player car (index 0)
                     if (cars[c].item == ITEM_NONE) {
-                        cars[c].item = Items_GetRandomItem(cars[c].rank);
+                        Item receivedItem = Items_GetRandomItem(cars[c].rank);
+                        cars[c].item = receivedItem;
+
+                        // DEBUG: Print which item was received
+                        printf("  Received item: %d\n", receivedItem);
                     }
                 }
                 // Deactivate box and start respawn timer
@@ -425,52 +457,56 @@ void Items_ApplyOilSlow(Car* player, PlayerItemEffects* effects) {
 // Rendering
 //=============================================================================
 void Items_Render(int scrollX, int scrollY) {
-    // Render item boxes
+    // =========================================================================
+    // ITEM BOXES
+    // =========================================================================
     for (int i = 0; i < itemBoxCount; i++) {
+        int oamSlot = ITEM_BOX_OAM_START + i;
+
         if (!itemBoxSpawns[i].active) {
-            // CRITICAL: Hide the sprite when box is inactive
-            oamSet(&oamMain, ITEM_BOX_OAM_START + i, 0,
-                   192,  // Move offscreen (below visible area)
-                   0, 1, SpriteSize_16x16, SpriteColorFormat_16Color,
-                   itemBoxSpawns[i].gfx, -1, true, false, false, false,
-                   false);  // ← true = HIDE sprite
+            // Hide inactive item boxes
+            oamSet(&oamMain, oamSlot, 0, 192, 0, 1, SpriteSize_8x8,
+                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, -1, true, false,
+                   false, false, false);
             continue;
         }
 
+        // Calculate screen position (centered on hitbox)
         int screenX =
             FixedToInt(itemBoxSpawns[i].position.x) - scrollX - (ITEM_BOX_HITBOX / 2);
         int screenY =
             FixedToInt(itemBoxSpawns[i].position.y) - scrollY - (ITEM_BOX_HITBOX / 2);
 
-        if (screenX >= -16 && screenX < 256 && screenY >= -8 && screenY < 192) {
-            oamSet(&oamMain, ITEM_BOX_OAM_START + i, screenX, screenY, 0, 1,
-                   SpriteSize_8x8, SpriteColorFormat_16Color, itemBoxSpawns[i].gfx,
-                   -1, false, false, false, false, false);  // ← false = SHOW sprite
+        // Render if on-screen, otherwise hide
+        if (screenX >= -16 && screenX < 256 && screenY >= -16 && screenY < 192) {
+            oamSet(&oamMain, oamSlot, screenX, screenY, 0, 1, SpriteSize_8x8,
+                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, -1, false, false,
+                   false, false, false);
         } else {
-            // Also hide if offscreen
-            oamSet(&oamMain, ITEM_BOX_OAM_START + i, 0, 192, 0, 1, SpriteSize_8x8,
+            // Hide offscreen boxes
+            oamSet(&oamMain, oamSlot, 0, 192, 0, 1, SpriteSize_8x8,
                    SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, -1, true, false,
-                   false, false, false);  // ← true = HIDE
+                   false, false, false);
         }
     }
 
-    // Render active track items
-    int oamSlot = TRACK_ITEM_OAM_START;
+    // =========================================================================
+    // TRACK ITEMS (Bananas, Shells, etc.)
+    // =========================================================================
 
-    // STEP 1: Clear all track item OAM slots first
-    for (int slot = TRACK_ITEM_OAM_START;
-         slot < TRACK_ITEM_OAM_START + MAX_TRACK_ITEMS; slot++) {
-        oamSet(&oamMain, slot, 0, 192, 0, 0, SpriteSize_16x16,
-               SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
-               false);  // Hide all
+    // STEP 1: Clear/hide all track item OAM slots
+    for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
+        int oamSlot = TRACK_ITEM_OAM_START + i;
+        oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_16x16,
+               SpriteColorFormat_16Color, NULL, -1, true, false, false, false, false);
     }
 
-    // STEP 2: Render only active items
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
 
         TrackItem* item = &activeItems[i];
+        int oamSlot = TRACK_ITEM_OAM_START + i;  // STABLE MAPPING
 
         // DEBUG: Print item position each frame
         if (item->type == ITEM_BANANA) {
@@ -478,66 +514,72 @@ void Items_Render(int scrollX, int scrollY) {
                    FixedToInt(item->position.y));
         }
 
+        // Calculate screen position
         int screenX =
             FixedToInt(item->position.x) - scrollX - (item->hitbox_width / 2);
         int screenY =
             FixedToInt(item->position.y) - scrollY - (item->hitbox_height / 2);
 
-        // Only render if on screen
+        // Skip if offscreen (slot already hidden in step 1)
         if (screenX < -32 || screenX > 256 || screenY < -32 || screenY > 192)
             continue;
 
-        // Determine sprite size and palette
+        // Determine sprite size and palette based on item type
         SpriteSize spriteSize;
         int paletteNum;
 
-        if (item->type == ITEM_MISSILE) {
-            spriteSize = SpriteSize_16x32;
-            paletteNum = 6;  // Missile palette
-        } else if (item->type == ITEM_OIL) {
-            spriteSize = SpriteSize_32x32;
-            paletteNum = 7;  // Oil palette
-        } else if (item->type == ITEM_BANANA) {
-            spriteSize = SpriteSize_16x16;
-            paletteNum = 2;  // Banana palette
-        } else if (item->type == ITEM_BOMB) {
-            spriteSize = SpriteSize_16x16;
-            paletteNum = 3;  // Bomb palette
-        } else if (item->type == ITEM_GREEN_SHELL) {
-            spriteSize = SpriteSize_16x16;
-            paletteNum = 4;  // Green shell palette
-        } else if (item->type == ITEM_RED_SHELL) {
-            spriteSize = SpriteSize_16x16;
-            paletteNum = 5;  // Red shell palette
-        } else {
-            spriteSize = SpriteSize_16x16;
-            paletteNum = 0;
+        switch (item->type) {
+            case ITEM_MISSILE:
+                spriteSize = SpriteSize_16x32;
+                paletteNum = 6;
+                break;
+            case ITEM_OIL:
+                spriteSize = SpriteSize_32x32;
+                paletteNum = 7;
+                break;
+            case ITEM_BANANA:
+                spriteSize = SpriteSize_16x16;
+                paletteNum = 2;
+                break;
+            case ITEM_BOMB:
+                spriteSize = SpriteSize_16x16;
+                paletteNum = 3;
+                break;
+            case ITEM_GREEN_SHELL:
+                spriteSize = SpriteSize_16x16;
+                paletteNum = 4;
+                break;
+            case ITEM_RED_SHELL:
+                spriteSize = SpriteSize_16x16;
+                paletteNum = 5;
+                break;
+            default:
+                spriteSize = SpriteSize_16x16;
+                paletteNum = 0;
+                break;
         }
 
-        // Render sprite with rotation for projectiles
-        int rotation = 0;
-        bool useRotation = false;
-        if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL ||
-            item->type == ITEM_MISSILE) {
-            rotation = -(item->angle512 << 6);  // Convert to DS angle
-            useRotation = true;
-        }
+        // Determine if sprite needs rotation (projectiles)
+        bool useRotation =
+            (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL ||
+             item->type == ITEM_MISSILE);
 
         if (useRotation) {
-            // Set rotation matrix (reuse affine slot 1)
-            oamRotateScale(&oamMain, 1, rotation, (1 << 8), (1 << 8));
+            // Use separate affine matrix slots for each rotating item
+            // DS has 32 affine matrices, we'll use slots 1-4 rotating
+            int affineSlot = 1 + (i % 4);
+            int rotation = -(item->angle512 << 6);  // Convert to DS angle
+
+            oamRotateScale(&oamMain, affineSlot, rotation, (1 << 8), (1 << 8));
             oamSet(&oamMain, oamSlot, screenX, screenY, 0, paletteNum, spriteSize,
-                   SpriteColorFormat_16Color, item->gfx, 1, false, false, false, false,
-                   false);
+                   SpriteColorFormat_16Color, item->gfx, affineSlot, false, false,
+                   false, false, false);
         } else {
+            // No rotation - static sprites
             oamSet(&oamMain, oamSlot, screenX, screenY, 0, paletteNum, spriteSize,
                    SpriteColorFormat_16Color, item->gfx, -1, false, false, false,
                    false, false);
         }
-
-        oamSlot++;
-        if (oamSlot >= TRACK_ITEM_OAM_START + MAX_TRACK_ITEMS)  // Don't overflow
-            break;
     }
 }
 
@@ -606,12 +648,11 @@ static void initItemBoxSpawns(Map map) {
         return;
     }
 
-    const Vec2 spawnLocations[] = {Vec2_FromInt(805, 891), Vec2_FromInt(807, 934),
-                                   Vec2_FromInt(54, 661),  Vec2_FromInt(97, 661),
-                                   Vec2_FromInt(203, 74),  Vec2_FromInt(906, 427),
-                                   Vec2_FromInt(917, 418), Vec2_FromInt(940, 401)};
+    const Vec2 spawnLocations[] = {Vec2_FromInt(908, 469), Vec2_FromInt(967, 466),
+                                   Vec2_FromInt(474, 211), Vec2_FromInt(493, 167),
+                                   Vec2_FromInt(47, 483),  Vec2_FromInt(117, 483)};
 
-    itemBoxCount = 8;
+    itemBoxCount = 6;  // can add more
 
     for (int i = 0; i < itemBoxCount; i++) {
         itemBoxSpawns[i].position = spawnLocations[i];
@@ -753,7 +794,7 @@ static void explodeBomb(Vec2 position, Car* cars, int carCount) {
 
 static bool checkItemBoxPickup(const Car* car, ItemBoxSpawn* box) {
     Q16_8 dist = Vec2_Distance(car->position, box->position);
-    int pickupRadius = (32 + ITEM_BOX_HITBOX) / 2;
+    int pickupRadius = (CAR_RADIUS + ITEM_BOX_HITBOX);
     return (dist <= IntToFixed(pickupRadius));
 }
 
