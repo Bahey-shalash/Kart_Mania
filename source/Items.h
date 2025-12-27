@@ -61,10 +61,14 @@ typedef struct Car Car;
 #define OIL_SLOW_DISTANCE IntToFixed(64)  // 64 pixels of slowdown
 
 // Speed multipliers (relative to car max speed)
-#define GREEN_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))   // 1.5x
-#define RED_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))     // 1.5x
-#define MISSILE_SPEED_MULT FixedDiv(IntToFixed(17), IntToFixed(10))     // 1.7x
-#define SPEED_BOOST_MULT FixedDiv(IntToFixed(3), IntToFixed(2))         // 1.5x max speed
+#define GREEN_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))  // 1.5x
+#define RED_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))    // 1.5x
+#define MISSILE_SPEED_MULT FixedDiv(IntToFixed(17), IntToFixed(10))    // 1.7x
+#define SPEED_BOOST_MULT \
+    IntToFixed(2)  // x2 //FixedDiv(IntToFixed(3), IntToFixed(2))  // 1.5x max speed
+// Note: Applying a second speed boost while one is active will reset
+// the timer to full duration but maintain the original maxSpeed reference,
+// so multiple boosts extend duration rather than multiply speed further.
 
 // Effect values
 #define BOMB_EXPLOSION_RADIUS IntToFixed(50)  // 50 pixels
@@ -114,6 +118,9 @@ static const ItemProbability ITEM_PROBABILITIES[8] = {
     // 1st place - Defensive items
     {30, 30, 10, 10, 0, 0, 15, 5},  // Banana, oil, bomb dominant
 
+    //{0, 0, 0, 0, 0, 0, 0, 100}, for debugging speed boost
+
+    //{0, 0, 0, 50, 50, 0, 0, 0},
     // 2nd place - Mostly defensive
     {25, 25, 15, 15, 5, 0, 10, 5},
 

@@ -328,7 +328,8 @@ static void handlePlayerInput(Car* player, int carIndex) {
     scanKeys();
     uint32 held = keysHeld();
     // when i had keysDown game was super responsive(like youd have to wait  a second
-    // before being able to place it)
+    // before being able to place it) which is normal bevause it checks buttons that
+    // went from up -> down this frame
 
     bool pressingA = held & KEY_A;
     bool pressingB = held & KEY_B;
