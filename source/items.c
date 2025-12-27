@@ -53,6 +53,17 @@ static int findInactiveItemSlot(void);
 static int findCarAhead(int currentRank, int carCount);
 static QuadrantID getQuadrantFromPos(Vec2 pos);
 
+// Helper functions for item effects
+static void applyShellHitEffect(Car* car);
+static void applyBananaHitEffect(Car* car);
+static void applyOilHitEffect(Car* car, int carIndex);
+static bool checkItemCarCollision(Vec2 itemPos, Vec2 carPos, int itemHitbox);
+static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex);
+static void checkItemBoxCollisions(Car* cars, int carCount);
+static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX, int scrollY);
+static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX, int scrollY);
+static bool isItemNearScreen(Vec2 itemPos, int scrollX, int scrollY);
+
 //=============================================================================
 // Lifecycle
 //=============================================================================
@@ -90,11 +101,13 @@ void Items_Update(void) {
 
         TrackItem* item = &activeItems[i];
 
-        // Update lifetime
-        item->lifetime_ticks--;
-        if (item->lifetime_ticks <= 0) {
-            item->active = false;
-            continue;
+        // Update lifetime (skip items with lifetime_ticks = -1, which means infinite)
+        if (item->lifetime_ticks > 0) {
+            item->lifetime_ticks--;
+            if (item->lifetime_ticks <= 0) {
+                item->active = false;
+                continue;
+            }
         }
 
         // Update projectiles
@@ -120,81 +133,10 @@ void Items_Update(void) {
     }
 }
 
-void Items_CheckCollisions(Car* cars, int carCount) {
-    // DEBUG: Track if we're checking item boxes
-    static bool debugItemBoxes = true;
-
-    for (int i = 0; i < itemBoxCount; i++) {
-        if (!itemBoxSpawns[i].active)
-            continue;
-
-        for (int c = 0; c < carCount; c++) {
-            // DEBUG: Print distance to item box for player (car 0)
-            if (c == 0 && debugItemBoxes) {
-                Q16_8 dist =
-                    Vec2_Distance(cars[c].position, itemBoxSpawns[i].position);
-                int distInt = FixedToInt(dist);
-
-                // Only print for closest box (avoid spam)
-                if (distInt < 50) {
-                    printf("Box %d: dist=%d (threshold=14)\n", i, distInt);
-                    printf("  Car: %d,%d\n", FixedToInt(cars[c].position.x),
-                           FixedToInt(cars[c].position.y));
-                    printf("  Box: %d,%d\n", FixedToInt(itemBoxSpawns[i].position.x),
-                           FixedToInt(itemBoxSpawns[i].position.y));
-                }
-            }
-
-            if (checkItemBoxPickup(&cars[c], &itemBoxSpawns[i])) {
-                // DEBUG: Announce pickup
-                if (c == 0) {
-                    printf("*** ITEM BOX PICKUP! ***\n");
-                }
-
-                // PLAY SOUND - no throttling, every pickup should ding!
-                PlayBoxSFX();
-
-                // Give player random item
-                if (c == 0) {  // Only player car (index 0)
-                    if (cars[c].item == ITEM_NONE) {
-                        Item receivedItem = Items_GetRandomItem(cars[c].rank);
-                        cars[c].item = receivedItem;
-
-                        // DEBUG: Print which item was received
-                        printf("  Received item: %d\n", receivedItem);
-                    }
-                }
-                // Deactivate box and start respawn timer
-                itemBoxSpawns[i].active = false;
-                itemBoxSpawns[i].respawnTimer = ITEM_BOX_RESPAWN_TICKS;
-                break;
-            }
-        }
-    }
-
-    for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
-        if (!activeItems[i].active)
-            continue;
-
-        TrackItem* item = &activeItems[i];
-
-        if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL ||
-            item->type == ITEM_MISSILE) {
-            checkProjectileCollision(item, cars, carCount);
-        }
-    }
-
-    for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
-        if (!activeItems[i].active)
-            continue;
-
-        TrackItem* item = &activeItems[i];
-
-        if (item->type == ITEM_BANANA || item->type == ITEM_OIL ||
-            item->type == ITEM_BOMB) {
-            checkHazardCollision(item, cars, carCount);
-        }
-    }
+void Items_CheckCollisions(Car* cars, int carCount, int scrollX, int scrollY) {
+    checkItemBoxCollisions(cars, carCount);
+    checkAllProjectileCollisions(cars, carCount, scrollX, scrollY);
+    checkAllHazardCollisions(cars, carCount, scrollX, scrollY);
 }
 
 void Items_UsePlayerItem(Car* player, bool fireForward) {
@@ -402,7 +344,7 @@ void Items_PlaceHazard(Item type, Vec2 pos) {
             break;
 
         case ITEM_BANANA:
-            item->lifetime_ticks = 15 * RACE_TICK_FREQ;  // 15 seconds
+            item->lifetime_ticks = -1;  // Never expire - only despawn on hit
             item->hitbox_width = BANANA_HITBOX;
             item->hitbox_height = BANANA_HITBOX;
             item->gfx = bananaGfx;
@@ -519,7 +461,7 @@ void Items_Render(int scrollX, int scrollY) {
     // TRACK ITEMS (Bananas, Shells, etc.)
     // =========================================================================
 
-    // STEP 1: Clear/hide all track item OAM slots
+    // Clear/hide all track item OAM slots
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         int oamSlot = TRACK_ITEM_OAM_START + i;
         oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_16x16,
@@ -741,18 +683,11 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
 
 static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
     for (int i = 0; i < carCount; i++) {
-        Q16_8 dist = Vec2_Distance(item->position, cars[i].position);
-        int hitRadius = (item->hitbox_width + 32) / 2;  // 32 = car size
-
-        if (dist <= IntToFixed(hitRadius)) {
-            // Hit car - apply effect based on projectile type
+        if (checkItemCarCollision(item->position, cars[i].position, item->hitbox_width)) {
+            // Apply effect based on projectile type
             if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL) {
-                // Stop car and spin it 45° in random direction
-                cars[i].speed = 0;
-                int spinDirection = (rand() % 2 == 0) ? 64 : -64;  // +45° or -45°
-                cars[i].angle512 = (cars[i].angle512 + spinDirection) & ANGLE_MASK;
+                applyShellHitEffect(&cars[i]);
             } else if (item->type == ITEM_MISSILE) {
-                // Missile hit - bigger impact
                 cars[i].speed = 0;
             }
 
@@ -764,31 +699,20 @@ static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
 
 static void checkHazardCollision(TrackItem* item, Car* cars, int carCount) {
     for (int i = 0; i < carCount; i++) {
-        Q16_8 dist = Vec2_Distance(item->position, cars[i].position);
-        int hitRadius = (item->hitbox_width + 32) / 2;
-
-        if (dist <= IntToFixed(hitRadius)) {
-            // Apply hazard effect
+        if (checkItemCarCollision(item->position, cars[i].position, item->hitbox_width)) {
+            // Apply hazard effect based on item type
             switch (item->type) {
                 case ITEM_BANANA:
-                    // Spin car 180° and keep speed reduction
-                    cars[i].speed = cars[i].speed / 3;
-                    cars[i].angle512 = (cars[i].angle512 + ANGLE_HALF) & ANGLE_MASK;  // 180° turn
-                    item->active = false;  // Despawn on hit
+                    applyBananaHitEffect(&cars[i]);
+                    item->active = false;
                     break;
 
                 case ITEM_OIL:
-                    // Apply oil slow to player only
-                    if (i == 0) {
-                        Items_ApplyOilSlow(&cars[i], &playerEffects);
-                    } else {
-                        cars[i].speed = cars[i].speed / 2;
-                    }
+                    applyOilHitEffect(&cars[i], i);
                     // Oil persists
                     break;
 
                 case ITEM_BOMB:
-                    // Explode on contact or timer expiration
                     explodeBomb(item->position, cars, carCount);
                     item->active = false;
                     break;
@@ -821,7 +745,7 @@ static void explodeBomb(Vec2 position, Car* cars, int carCount) {
             Vec2 knockbackDir = Vec2_Sub(cars[i].position, position);
             if (!Vec2_IsZero(knockbackDir)) {
                 knockbackDir = Vec2_Normalize(knockbackDir);
-                Vec2 knockback = Vec2_Scale(knockbackDir, IntToFixed(10));  // 10 pixels
+                Vec2 knockback = Vec2_Scale(knockbackDir, IntToFixed(40));  // 40 pixels
                 cars[i].position = Vec2_Add(cars[i].position, knockback);
             }
         }
@@ -868,4 +792,143 @@ static QuadrantID getQuadrantFromPos(Vec2 pos) {
     int row = (y < 256) ? 0 : (y < 512) ? 1 : 2;
 
     return (QuadrantID)(row * 3 + col);
+}
+
+//=============================================================================
+// Helper Functions for Item Effects
+//=============================================================================
+
+static bool checkItemCarCollision(Vec2 itemPos, Vec2 carPos, int itemHitbox) {
+    Q16_8 dist = Vec2_Distance(itemPos, carPos);
+    int hitRadius = (itemHitbox + 32) / 2;  // 32 = car size
+    return (dist <= IntToFixed(hitRadius));
+}
+
+static void applyShellHitEffect(Car* car) {
+    // Stop car and spin it 45° in random direction
+    car->speed = 0;
+    int spinDirection = (rand() % 2 == 0) ? 64 : -64;  // +45° or -45°
+    car->angle512 = (car->angle512 + spinDirection) & ANGLE_MASK;
+}
+
+static void applyBananaHitEffect(Car* car) {
+    // Spin car 180° and keep speed reduction
+    car->speed = car->speed / 3;
+    car->angle512 = (car->angle512 + ANGLE_HALF) & ANGLE_MASK;  // 180° turn
+}
+
+static void applyOilHitEffect(Car* car, int carIndex) {
+    // Apply oil slow to player only
+    if (carIndex == 0) {
+        Items_ApplyOilSlow(car, &playerEffects);
+    } else {
+        car->speed = car->speed / 2;
+    }
+}
+
+static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex) {
+    // DEBUG: Announce pickup
+    if (carIndex == 0) {
+        printf("*** ITEM BOX PICKUP! ***\n");
+    }
+
+    // PLAY SOUND - no throttling, every pickup should ding!
+    PlayBoxSFX();
+
+    // Give player random item
+    if (carIndex == 0) {  // Only player car (index 0)
+        if (car->item == ITEM_NONE) {
+            Item receivedItem = Items_GetRandomItem(car->rank);
+            car->item = receivedItem;
+
+            // DEBUG: Print which item was received
+            printf("  Received item: %d\n", receivedItem);
+        }
+    }
+    // Deactivate box and start respawn timer
+    box->active = false;
+    box->respawnTimer = ITEM_BOX_RESPAWN_TICKS;
+}
+
+static void checkItemBoxCollisions(Car* cars, int carCount) {
+    // DEBUG: Track if we're checking item boxes
+    static bool debugItemBoxes = true;
+
+    for (int i = 0; i < itemBoxCount; i++) {
+        if (!itemBoxSpawns[i].active)
+            continue;
+
+        for (int c = 0; c < carCount; c++) {
+            // DEBUG: Print distance to item box for player (car 0)
+            if (c == 0 && debugItemBoxes) {
+                Q16_8 dist =
+                    Vec2_Distance(cars[c].position, itemBoxSpawns[i].position);
+                int distInt = FixedToInt(dist);
+
+                // Only print for closest box (avoid spam)
+                if (distInt < 50) {
+                    printf("Box %d: dist=%d (threshold=14)\n", i, distInt);
+                    printf("  Car: %d,%d\n", FixedToInt(cars[c].position.x),
+                           FixedToInt(cars[c].position.y));
+                    printf("  Box: %d,%d\n", FixedToInt(itemBoxSpawns[i].position.x),
+                           FixedToInt(itemBoxSpawns[i].position.y));
+                }
+            }
+
+            if (checkItemBoxPickup(&cars[c], &itemBoxSpawns[i])) {
+                handleItemBoxPickup(&cars[c], &itemBoxSpawns[i], c);
+                break;
+            }
+        }
+    }
+}
+
+static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX, int scrollY) {
+    for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
+        if (!activeItems[i].active)
+            continue;
+
+        TrackItem* item = &activeItems[i];
+
+        if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL ||
+            item->type == ITEM_MISSILE) {
+            // Only check collision if item is near the screen
+            if (isItemNearScreen(item->position, scrollX, scrollY)) {
+                checkProjectileCollision(item, cars, carCount);
+            }
+        }
+    }
+}
+
+static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX, int scrollY) {
+    for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
+        if (!activeItems[i].active)
+            continue;
+
+        TrackItem* item = &activeItems[i];
+
+        if (item->type == ITEM_BANANA || item->type == ITEM_OIL ||
+            item->type == ITEM_BOMB) {
+            // Only check collision if item is near the screen
+            if (isItemNearScreen(item->position, scrollX, scrollY)) {
+                checkHazardCollision(item, cars, carCount);
+            }
+        }
+    }
+}
+
+static bool isItemNearScreen(Vec2 itemPos, int scrollX, int scrollY) {
+    // Add buffer zone around screen for collision detection (64 pixels on each side)
+    const int BUFFER = 64;
+
+    int itemX = FixedToInt(itemPos.x);
+    int itemY = FixedToInt(itemPos.y);
+
+    int screenLeft = scrollX - BUFFER;
+    int screenRight = scrollX + SCREEN_WIDTH + BUFFER;
+    int screenTop = scrollY - BUFFER;
+    int screenBottom = scrollY + SCREEN_HEIGHT + BUFFER;
+
+    return (itemX >= screenLeft && itemX <= screenRight &&
+            itemY >= screenTop && itemY <= screenBottom);
 }

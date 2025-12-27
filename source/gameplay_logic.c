@@ -10,6 +10,12 @@
 //=============================================================================
 // Constants
 //=============================================================================
+#define SCREEN_WIDTH 256
+#define SCREEN_HEIGHT 192
+#define MAP_SIZE 1024
+#define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
+#define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
+
 #define TURN_STEP_50CC 3
 
 // Physics tuning (50cc class, Q16.8 format, 60Hz)
@@ -197,7 +203,16 @@ void Race_Tick(void) {
     applyTerrainEffects(player);
 
     Items_Update();
-    Items_CheckCollisions(KartMania.cars, KartMania.carCount);
+
+    // Calculate scroll position for collision detection (same as in gameplay.c)
+    int scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
+    int scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
+    if (scrollX < 0) scrollX = 0;
+    if (scrollY < 0) scrollY = 0;
+    if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
+    if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+
+    Items_CheckCollisions(KartMania.cars, KartMania.carCount, scrollX, scrollY);
     Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
 
     Car_Update(player);

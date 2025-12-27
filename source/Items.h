@@ -213,8 +213,13 @@ void Items_Update(void);
  * - Item box pickups
  * - Hazard hits (banana, oil, bomb)
  * - Projectile hits (shells, missile)
+ *
+ * @param cars - Array of cars to check
+ * @param carCount - Number of cars
+ * @param scrollX - Camera scroll X position
+ * @param scrollY - Camera scroll Y position
  */
-void Items_CheckCollisions(Car* cars, int carCount);
+void Items_CheckCollisions(Car* cars, int carCount, int scrollX, int scrollY);
 
 /**
  * Spawn/respawn item boxes
