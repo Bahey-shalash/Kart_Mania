@@ -61,10 +61,10 @@ typedef struct Car Car;
 #define OIL_SLOW_DISTANCE IntToFixed(64)  // 64 pixels of slowdown
 
 // Speed multipliers (relative to car max speed)
-#define GREEN_SHELL_SPEED_MULT FixedMul(IntToFixed(15), IntToFixed(1)) / 10  // 1.5x
-#define RED_SHELL_SPEED_MULT FixedMul(IntToFixed(15), IntToFixed(1)) / 10    // 1.5x
-#define MISSILE_SPEED_MULT FixedMul(IntToFixed(17), IntToFixed(1)) / 10      // 1.7x
-#define SPEED_BOOST_MULT IntToFixed(2)  // 2x max speed
+#define GREEN_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))   // 1.5x
+#define RED_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))     // 1.5x
+#define MISSILE_SPEED_MULT FixedDiv(IntToFixed(17), IntToFixed(10))     // 1.7x
+#define SPEED_BOOST_MULT FixedDiv(IntToFixed(3), IntToFixed(2))         // 1.5x max speed
 
 // Effect values
 #define BOMB_EXPLOSION_RADIUS IntToFixed(50)  // 50 pixels
@@ -112,7 +112,7 @@ typedef struct {
 // Probability distributions by rank
 static const ItemProbability ITEM_PROBABILITIES[8] = {
     // 1st place - Defensive items
-    {30, 30, 10, 10, 0, 0, 10, 10},  // Banana, oil, bomb dominant
+    {30, 30, 10, 10, 0, 0, 15, 5},  // Banana, oil, bomb dominant
 
     // 2nd place - Mostly defensive
     {25, 25, 15, 15, 5, 0, 10, 5},
@@ -127,13 +127,13 @@ static const ItemProbability ITEM_PROBABILITIES[8] = {
     {10, 10, 10, 15, 25, 10, 10, 10},
 
     // 6th place - More offensive
-    {5, 5, 5, 15, 30, 15, 15, 10},
+    {5, 5, 5, 15, 30, 15, 10, 15},
 
     // 7th place - Very offensive
-    {5, 5, 5, 10, 25, 20, 15, 15},
+    {5, 5, 5, 10, 25, 25, 5, 20},
 
     // 8th+ place - Maximum offense
-    {5, 5, 5, 10, 20, 25, 15, 15}};
+    {5, 5, 5, 15, 25, 25, 0, 20}};
 
 //=============================================================================
 // Data Structures
@@ -271,9 +271,9 @@ void Items_UpdatePlayerEffects(Car* player, PlayerItemEffects* effects);
 
 /**
  * Get player's effect state
- * @return Pointer to player effects (read-only)
+ * @return Pointer to player effects
  */
-const PlayerItemEffects* Items_GetPlayerEffects(void);
+PlayerItemEffects* Items_GetPlayerEffects(void);
 
 /**
  * Apply confusion effect (mushroom)

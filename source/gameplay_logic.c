@@ -75,11 +75,10 @@ static CheckpointProgressState cpState[MAX_CARS] = {CP_STATE_START};
 static bool wasOnLeftSide[MAX_CARS] = {false};
 static bool wasOnTopSide[MAX_CARS] = {false};
 static bool isPaused = false;
+static bool itemButtonHeldLast = false;  // Track L-button edge ourselves
 
 static int collisionLockoutTimer[MAX_CARS] = {0};
 static QuadrantID loadedQuadrant = QUAD_BR;
-
-static PlayerItemEffects playerItemEffects;
 
 //=============================================================================
 // Private Prototypes
@@ -142,6 +141,7 @@ void Race_Init(Map map, GameMode mode) {
     KartMania.raceFinished = false;
     KartMania.carCount = (mode == SinglePlayer) ? MAX_CARS : 1;
     KartMania.checkpointCount = 0;
+    itemButtonHeldLast = false;
 
     for (int i = 0; i < KartMania.carCount; i++) {
         initCarAtSpawn(&KartMania.cars[i], i);
@@ -150,7 +150,6 @@ void Race_Init(Map map, GameMode mode) {
 
     // Initialize items system
     Items_Init(map);
-    memset(&playerItemEffects, 0, sizeof(PlayerItemEffects));
 
     RaceTick_TimerInit();
 }
@@ -164,10 +163,10 @@ void Race_Reset(void) {
 
     // Reset items
     Items_Reset();
-    memset(&playerItemEffects, 0, sizeof(PlayerItemEffects));
 
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
+    itemButtonHeldLast = false;
 
     for (int i = 0; i < KartMania.carCount; i++) {
         initCarAtSpawn(&KartMania.cars[i], i);
@@ -199,7 +198,7 @@ void Race_Tick(void) {
 
     Items_Update();
     Items_CheckCollisions(KartMania.cars, KartMania.carCount);
-    Items_UpdatePlayerEffects(player, &playerItemEffects);
+    Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
 
     Car_Update(player);
     clampToMapBounds(player, KartMania.playerIndex);
@@ -328,16 +327,20 @@ static void initCarAtSpawn(Car* car, int index) {
 static void handlePlayerInput(Car* player, int carIndex) {
     scanKeys();
     uint32 held = keysHeld();
-    uint32 down = keysDown();
+    // when i had keysDown game was super responsive(like youd have to wait  a second
+    // before being able to place it)
 
     bool pressingA = held & KEY_A;
     bool pressingB = held & KEY_B;
     bool pressingLeft = held & KEY_LEFT;
     bool pressingRight = held & KEY_RIGHT;
     bool pressingDown = held & KEY_DOWN;
+    bool pressingL = held & KEY_L;
+    bool itemPressed = pressingL && !itemButtonHeldLast;
+    itemButtonHeldLast = pressingL;
 
     // Item usage
-    if (down & KEY_R) {
+    if (itemPressed) {
         bool fireForward = !pressingDown;  // Default forward unless DOWN held
         Items_UsePlayerItem(player, fireForward);
     }

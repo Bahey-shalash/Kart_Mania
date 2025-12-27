@@ -426,7 +426,7 @@ void Items_UpdatePlayerEffects(Car* player, PlayerItemEffects* effects) {
     }
 }
 
-const PlayerItemEffects* Items_GetPlayerEffects(void) {
+PlayerItemEffects* Items_GetPlayerEffects(void) {
     return &playerEffects;
 }
 
