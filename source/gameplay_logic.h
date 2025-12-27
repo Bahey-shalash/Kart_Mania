@@ -2,10 +2,11 @@
 #define GAMEPLAY_LOGIC_H
 
 #include <stdbool.h>
-#include "wall_collision.h"
+
 #include "Car.h"
+#include "Items.h"
 #include "game_types.h"
-#include "Items.h"   
+#include "wall_collision.h"
 
 //=============================================================================
 // Constants
@@ -67,5 +68,6 @@ bool Race_CheckFinishLineCross(const Car* car);
 void init_pause_interrupt(void);
 void PauseISR(void);
 void Race_SetCarGfx(int index, u16* gfx);
+void Race_SetLoadedQuadrant(QuadrantID quad);
 
 #endif  // GAMEPLAY_LOGIC_H
