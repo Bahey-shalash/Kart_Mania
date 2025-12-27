@@ -48,11 +48,13 @@ void cleanSound_MapSelection(void) {
 void LoadALLSoundFX(void) {
     LoadClickSoundFX();
     LoadDingSoundFX();
+    LoadBoxSoundFx();
 }
 
 void UnloadALLSoundFX(void) {
     UnloadClickSoundFX();
     UnloadDingSoundFX();
+    UnloadBoxSoundFx();
 }
 
 void SOUNDFX_ON(void) {
@@ -62,6 +64,21 @@ void SOUNDFX_ON(void) {
 void SOUNDFX_OFF(void) {
     mmSetEffectsVolume(0);  // mute
 }
+
+void LoadBoxSoundFx(void) {
+    mmLoadEffect(SFX_BOX);
+}
+void UnloadBoxSoundFx(void) {
+    mmUnloadEffect(SFX_BOX);
+}
+void PlayBoxSFX(void) {
+    mmEffect(SFX_BOX);
+}
+
+void cleanSound_gamePlay(void){
+    UnloadBoxSoundFx();
+}
+
 //=============================================================================
 // MUSIC
 //=============================================================================

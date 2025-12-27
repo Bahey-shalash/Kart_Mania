@@ -85,9 +85,9 @@ Q16_8 Fixed_Cos(int angle) {
  * Returns floor(sqrt(n)).
  *===========================================================================*/
 
-static uint32_t isqrt(uint32_t n) {
-    uint32_t res = 0;
-    uint32_t bit = 1u << 30; /* Highest power of 4 <= 2^32 */
+static uint32_t isqrt(uint64_t n) {
+    uint64_t res = 0;
+    uint64_t bit = 1ull << 62; /* Highest power of 4 <= 2^64 */
 
     /* Find highest bit */
     while (bit > n) {
@@ -105,7 +105,7 @@ static uint32_t isqrt(uint32_t n) {
         bit >>= 2;
     }
 
-    return res;
+    return (uint32_t)res;
 }
 
 /*=============================================================================
@@ -122,10 +122,11 @@ Q16_8 Vec2_Len(Vec2 a) {
      * len2 is Q16.8 (result of two Q16.8 multiplied and shifted)
      * To get correct Q16.8 length:
      *   1. Shift len2 up by FIXED_SHIFT to get Q24.16
-     *   2. Take integer sqrt -> Q12.8 result
+     *   2. Take integer sqrt -> already Q16.8 (no further shift needed)
      */
-    uint32_t len2_shifted = (uint32_t)len2 << FIXED_SHIFT;
-    return (Q16_8)isqrt(len2_shifted);
+    uint64_t len2_shifted = ((uint64_t)len2) << FIXED_SHIFT;
+    uint32_t sqrt_result = isqrt(len2_shifted);  // Q16.8
+    return (Q16_8)sqrt_result;
 }
 
 Vec2 Vec2_Normalize(Vec2 a) {

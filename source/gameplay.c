@@ -3,7 +3,8 @@
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
-#include "wall_collision.h"
+
+#include "Items.h"
 #include "context.h"
 #include "game_types.h"
 #include "gameplay_logic.h"
@@ -18,6 +19,7 @@
 #include "scorching_sands_TC.h"
 #include "scorching_sands_TL.h"
 #include "scorching_sands_TR.h"
+#include "wall_collision.h"
 
 //=============================================================================
 // Private State
@@ -30,8 +32,6 @@ static int currentLap = 1;
 static int scrollX = 0;
 static int scrollY = 0;
 static QuadrantID currentQuadrant = QUAD_BR;
-
-static u16* playerKartGfx = NULL;
 
 //=============================================================================
 // Quadrant Data
@@ -51,8 +51,7 @@ static const QuadrantData quadrantData[9] = {
     {scorching_sands_MRTiles, scorching_sands_MRMap, scorching_sands_MRTilesLen},
     {scorching_sands_BLTiles, scorching_sands_BLMap, scorching_sands_BLTilesLen},
     {scorching_sands_BCTiles, scorching_sands_BCMap, scorching_sands_BCTilesLen},
-    {scorching_sands_BRTiles, scorching_sands_BRMap, scorching_sands_BRTilesLen}
-};
+    {scorching_sands_BRTiles, scorching_sands_BRMap, scorching_sands_BRTilesLen}};
 
 //=============================================================================
 // Private Prototypes
@@ -60,22 +59,23 @@ static const QuadrantData quadrantData[9] = {
 static void configureGraphics(void);
 static void configureBackground(void);
 static void configureSprite(void);
+static void configureConsole(void);
 static void loadQuadrant(QuadrantID quad);
 static QuadrantID determineQuadrant(int x, int y);
 
 //=============================================================================
 // Timer Getters
 //=============================================================================
-int Gameplay_GetRaceMin(void) { 
-    return raceMin; 
+int Gameplay_GetRaceMin(void) {
+    return raceMin;
 }
 
-int Gameplay_GetRaceSec(void) { 
-    return raceSec; 
+int Gameplay_GetRaceSec(void) {
+    return raceSec;
 }
 
-int Gameplay_GetRaceMsec(void) { 
-    return raceMsec; 
+int Gameplay_GetRaceMsec(void) {
+    return raceMsec;
 }
 
 int Gameplay_GetCurrentLap(void) {
@@ -98,8 +98,8 @@ void Gameplay_IncrementTimer(void) {
 void Graphical_Gameplay_initialize(void) {
     configureGraphics();
     configureBackground();
+    configureConsole();  // Debug console on sub BG1
     configureSprite();
-   
     raceMin = 0;
     raceSec = 0;
     raceMsec = 0;
@@ -112,10 +112,14 @@ void Graphical_Gameplay_initialize(void) {
     scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
     scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
 
-    if (scrollX < 0) scrollX = 0;
-    if (scrollY < 0) scrollY = 0;
-    if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
-    if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+    if (scrollX < 0)
+        scrollX = 0;
+    if (scrollY < 0)
+        scrollY = 0;
+    if (scrollX > MAX_SCROLL_X)
+        scrollX = MAX_SCROLL_X;
+    if (scrollY > MAX_SCROLL_Y)
+        scrollY = MAX_SCROLL_Y;
 
     currentQuadrant = determineQuadrant(scrollX, scrollY);
     loadQuadrant(currentQuadrant);
@@ -146,13 +150,17 @@ GameState Gameplay_update(void) {
 // Public API - VBlank (Graphics Update)
 //=============================================================================
 void Gameplay_OnVBlank(void) {
+    consoleClear();
+
     const Car* player = Race_GetPlayerCar();
-    
+    Vec2 velocityVec =
+        Vec2_Scale(Vec2_FromAngle(player->angle512), Car_GetSpeed(player));
+
     if (Race_CheckFinishLineCross(player)) {
         raceMin = 0;
         raceSec = 0;
         raceMsec = 0;
-        
+
         const RaceState* state = Race_GetState();
         if (currentLap < state->totalLaps) {
             currentLap++;
@@ -165,10 +173,14 @@ void Gameplay_OnVBlank(void) {
     scrollX = carX - (SCREEN_WIDTH / 2);
     scrollY = carY - (SCREEN_HEIGHT / 2);
 
-    if (scrollX < 0) scrollX = 0;
-    if (scrollY < 0) scrollY = 0;
-    if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
-    if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+    if (scrollX < 0)
+        scrollX = 0;
+    if (scrollY < 0)
+        scrollY = 0;
+    if (scrollX > MAX_SCROLL_X)
+        scrollX = MAX_SCROLL_X;
+    if (scrollY > MAX_SCROLL_Y)
+        scrollY = MAX_SCROLL_Y;
 
     QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
     if (newQuadrant != currentQuadrant) {
@@ -193,8 +205,8 @@ void Gameplay_OnVBlank(void) {
     printf("=== CAR DEBUG ===\n");
     printf("Facing:   %3d\n", facingAngle);
     printf("Velocity: %3d\n", velocityAngle);
-    printf("Speed:    %d.%02d\n", (int)(speed >> 8), (int)(((speed & 0xFF) * 100) >> 8));
-    printf("Moving:   %s\n", moving ? "YES" : "NO");
+    printf("Speed:    %d.%02d\n", (int)(speed >> 8), (int)(((speed & 0xFF) * 100) >>
+    8)); printf("Moving:   %s\n", moving ? "YES" : "NO");
 
     if (moving) {
         int angleDiff = (velocityAngle - facingAngle) & ANGLE_MASK;
@@ -205,19 +217,57 @@ void Gameplay_OnVBlank(void) {
         }
         printf("\n");
     }
-
+*/
     printf("\nPos: %d,%d\n", carX, carY);
     printf("Vel: %d,%d\n", FixedToInt(velocityVec.x), FixedToInt(velocityVec.y));
-    */
+
+    // Item debug
+    printf("\nItem: ");
+    switch (player->item) {
+        case ITEM_NONE:
+            printf("NONE");
+            break;
+        case ITEM_BANANA:
+            printf("BANANA");
+            break;
+        case ITEM_OIL:
+            printf("OIL");
+            break;
+        case ITEM_BOMB:
+            printf("BOMB");
+            break;
+        case ITEM_GREEN_SHELL:
+            printf("GREEN_SHELL");
+            break;
+        case ITEM_RED_SHELL:
+            printf("RED_SHELL");
+            break;
+        case ITEM_MISSILE:
+            printf("MISSILE");
+            break;
+        case ITEM_MUSHROOM:
+            printf("MUSHROOM");
+            break;
+        case ITEM_SPEEDBOOST:
+            printf("SPEEDBOOST");
+            break;
+        default:
+            printf("???");
+            break;
+    }
+    printf("\n");
+    //---------------
+
     int dsAngle = -(player->angle512 << 6);
     oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
 
-    int screenX = carX - scrollX - 32;
-    int screenY = carY - scrollY - 32;
+    int screenX = carX - scrollX - 16;
+    int screenY = carY - scrollY - 16;
 
     oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
-           SpriteColorFormat_256Color, playerKartGfx, 0, true, false, false, false, false);
-
+           SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
+           false);
+    Items_Render(scrollX, scrollY);
     oamUpdate(&oamMain);
 }
 
@@ -229,8 +279,11 @@ static void configureGraphics(void) {
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
 
-    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE;
+    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG1_ACTIVE;  // Sub: console only
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
+
+    // Enable a second sub BG (BG1) for the debug console
+    REG_DISPCNT_SUB |= DISPLAY_BG1_ACTIVE;
 }
 
 static void configureBackground(void) {
@@ -241,31 +294,45 @@ static void configureBackground(void) {
     BGCTRL[0] = BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
     dmaCopy(scorching_sands_TLPal, BG_PALETTE, scorching_sands_TLPalLen);
 
-    BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
-    swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
-    swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
-    BG_PALETTE_SUB[0] = ARGB16(1, 31, 31, 0);
-    BG_PALETTE_SUB[1] = ARGB16(1, 0, 0, 0);
-    memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
-    updateChronoDisp_Sub(-1, -1, -1);
+    // Sub screen graphics disabled in gameplay; console uses BG1 instead.
+    // BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
+    // swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
+    // swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
+    // BG_PALETTE_SUB[0] = ARGB16(1, 31, 31, 0);
+    // BG_PALETTE_SUB[1] = ARGB16(1, 0, 0, 0);
+    // memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
+    // updateChronoDisp_Sub(-1, -1, -1);
+
+    // Reserve BG1 on sub for console (4bpp, separate tile/map blocks)
+    BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(31) | BG_TILE_BASE(2);
 }
 
 static void configureSprite(void) {
     oamInit(&oamMain, SpriteMapping_1D_32, false);
-    playerKartGfx = oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_256Color);
 
-    swiCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen / 2);
-    swiCopy(kart_spriteTiles, playerKartGfx, kart_spriteTilesLen / 2);
+    // Allocate sprite graphics for player kart (16-color)
+    u16* kartGfx =
+        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
+
+    // Load kart palette to slot 0
+    dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
+    dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
+
+    // Set the graphics pointer on the player car
+    Race_SetCarGfx(0, kartGfx);
+
+    // Load item graphics (palettes 1-7)
+    Items_LoadGraphics();
 }
 
-/* DEBUG Console setup (unused)
+// DEBUG Console setup (active for gameplay debug)
 static void configureConsole(void) {
-    consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 30, 0, false, true);
+    // Use sub screen BG1 so we don't clobber gameplay BGs/palettes
+    consoleInit(NULL, 1, BgType_Text4bpp, BgSize_T_256x256, 31, 2, false, true);
     printf("\x1b[2J");
     printf("=== KART DEBUG ===\n");
     printf("SELECT = exit\n\n");
 }
-*/
 
 //=============================================================================
 // Private Functions - Quadrant Management
@@ -297,7 +364,8 @@ void printDigit(u16* map, int number, int x, int y) {
     if (number < 10) {
         for (i = 0; i < 8; i++)
             for (j = 0; j < 4; j++)
-                map[(i + y) * 32 + j + x] = (number >= 0) ? (u16)(i * 4 + j) + 32 * number : 32;
+                map[(i + y) * 32 + j + x] =
+                    (number >= 0) ? (u16)(i * 4 + j) + 32 * number : 32;
     }
     if (number == 10) {
         for (i = 0; i < 8; i++)
@@ -317,45 +385,64 @@ void updateChronoDisp(u16* map, int min, int sec, int msec) {
 
     // Minutes
     number = min;
-    if (min > 59) min = number = -1;
-    x = 0; y = 8;
-    if (min >= 0) number = min / 10;
+    if (min > 59)
+        min = number = -1;
+    x = 0;
+    y = 8;
+    if (min >= 0)
+        number = min / 10;
     printDigit(map, number, x, y);
-    x = 4; y = 8;
-    if (min >= 0) number = min % 10;
+    x = 4;
+    y = 8;
+    if (min >= 0)
+        number = min % 10;
     printDigit(map, number, x, y);
 
     // Separator ":"
-    x = 8; y = 8;
+    x = 8;
+    y = 8;
     number = 10;
     printDigit(map, number, x, y);
 
     // Seconds
     number = sec;
-    if (sec > 59) sec = number = -1;
-    x = 10; y = 8;
-    if (sec >= 0) number = sec / 10;
+    if (sec > 59)
+        sec = number = -1;
+    x = 10;
+    y = 8;
+    if (sec >= 0)
+        number = sec / 10;
     printDigit(map, number, x, y);
-    x = 14; y = 8;
-    if (sec >= 0) number = sec % 10;
+    x = 14;
+    y = 8;
+    if (sec >= 0)
+        number = sec % 10;
     printDigit(map, number, x, y);
 
     // Separator "."
-    x = 18; y = 8;
+    x = 18;
+    y = 8;
     number = 11;
     printDigit(map, number, x, y);
 
     // Milliseconds
     number = msec;
-    if (msec > 999) msec = number = -1;
-    x = 20; y = 8;
-    if (msec >= 0) number = msec / 100;
+    if (msec > 999)
+        msec = number = -1;
+    x = 20;
+    y = 8;
+    if (msec >= 0)
+        number = msec / 100;
     printDigit(map, number, x, y);
-    x = 24; y = 8;
-    if (msec >= 0) number = (msec % 100) / 10;
+    x = 24;
+    y = 8;
+    if (msec >= 0)
+        number = (msec % 100) / 10;
     printDigit(map, number, x, y);
-    x = 28; y = 8;
-    if (msec >= 0) number = (msec % 10) % 10;
+    x = 28;
+    y = 8;
+    if (msec >= 0)
+        number = (msec % 10) % 10;
     printDigit(map, number, x, y);
 }
 
@@ -369,20 +456,24 @@ void changeColorDisp_Sub(uint16 c) {
 
 void updateLapDisp_Sub(int currentLap, int totalLaps) {
     int x, y;
-    
-    x = 0; y = 0;
+
+    x = 0;
+    y = 0;
     if (currentLap >= 0 && currentLap <= 9) {
         printDigit(BG_MAP_RAM_SUB(0), currentLap, x, y);
     }
-    
-    x = 4; y = 0;
-    
-    x = 6; y = 0;
+
+    x = 4;
+    y = 0;
+
+    x = 6;
+    y = 0;
     if (totalLaps >= 0 && totalLaps <= 9) {
         printDigit(BG_MAP_RAM_SUB(0), totalLaps, x, y);
     } else if (totalLaps >= 10) {
         printDigit(BG_MAP_RAM_SUB(0), totalLaps / 10, x, y);
-        x = 10; y = 0;
+        x = 10;
+        y = 0;
         printDigit(BG_MAP_RAM_SUB(0), totalLaps % 10, x, y);
     }
 }

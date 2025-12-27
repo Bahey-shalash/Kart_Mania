@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include "Items.h"
 #include "vect2.h"
 
 //=============================================================================
@@ -16,9 +17,7 @@
 // CONCURRENCY: Single-threaded only (DS hardware limitation)
 //=============================================================================
 
-typedef enum { ITEM_NONE = 0, ITEM_OIL, ITEM_BOMB } Item;
-
-typedef struct {
+typedef struct Car {
     Vec2 position;
     Q16_8 speed;  // Magnitude of movement; direction comes from angle512
 
@@ -32,7 +31,9 @@ typedef struct {
 
     Item item;
     char carname[32];
-    bool isReversing;  // NEW: Track if moving backward
+
+    u16* gfx;  // Sprite graphics pointer
+
 } Car;
 //=============================================================================
 // Constructors (inline helpers)

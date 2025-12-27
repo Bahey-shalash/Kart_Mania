@@ -32,4 +32,7 @@ void updateLapDisp_Sub(int currentLap, int totalLaps);
 void updateChronoDisp_Sub(int min, int sec, int msec);
 void changeColorDisp_Sub(uint16 c);
 
+// Item rendering
+void Gameplay_RenderItems(int scrollX, int scrollY);
+
 #endif  // GAMEPLAY_H

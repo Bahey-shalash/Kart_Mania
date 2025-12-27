@@ -15,16 +15,20 @@ void initSoundLibrary(void);
 //=============================================================================
 void LoadClickSoundFX(void);
 void UnloadClickSoundFX(void);
-
 void PlayCLICKSFX(void);
 
 void LoadDingSoundFX(void);
 void UnloadDingSoundFX(void);
 void PlayDingSFX(void);
 
+void LoadBoxSoundFx(void);
+void UnloadBoxSoundFx(void);
+void PlayBoxSFX(void);
+
 void cleanSound_home_page(void);
 void cleanSound_settings(void);
 void cleanSound_MapSelection(void);
+void cleanSound_gamePlay(void);
 
 void LoadALLSoundFX(void);
 void UnloadALLSoundFX(void);

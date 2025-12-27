@@ -1,8 +1,11 @@
 #include "gameplay_logic.h"
+
 #include <nds.h>
-#include "wall_collision.h"
-#include "timer.h"
+
+#include "Items.h"
 #include "terrain_detection.h"
+#include "timer.h"
+#include "wall_collision.h"
 
 //=============================================================================
 // Constants
@@ -10,16 +13,17 @@
 #define TURN_STEP_50CC 3
 
 // Physics tuning (50cc class, Q16.8 format, 60Hz)
-#define SPEED_50CC ((FIXED_ONE * 3))      // Max forward speedm
-#define ACCEL_50CC IntToFixed(1)          // 1.0 px/frame
-#define FRICTION_50CC 240                 // 240/256 = 0.9375
+
+#define SPEED_50CC (FIXED_ONE * 3)  // 3.0 px/frame
+#define ACCEL_50CC IntToFixed(1)    // 1.0 px/frame
+#define FRICTION_50CC 240           // 240/256 = 0.9375
 
 // Sand Physics - SEVERE PENALTIES
-#define SAND_FRICTION 150           // Much higher friction (150/256 = 0.586 - very draggy!)
+#define SAND_FRICTION 150  // Much higher friction (150/256 = 0.586 - very draggy!)
 #define SAND_MAX_SPEED (SPEED_50CC / 2)  // Only 50% max speed on sand (was 75%)
 
 // Collision state
-#define COLLISION_LOCKOUT_FRAMES 60       // Frames to disable acceleration after wall hit
+#define COLLISION_LOCKOUT_FRAMES 60  // Frames to disable acceleration after wall hit
 
 // World directions (0-511 binary angle)
 #define ANGLE_RIGHT 0        // 0°
@@ -71,13 +75,15 @@ static CheckpointProgressState cpState[MAX_CARS] = {CP_STATE_START};
 static bool wasOnLeftSide[MAX_CARS] = {false};
 static bool wasOnTopSide[MAX_CARS] = {false};
 static bool isPaused = false;
+
 static int collisionLockoutTimer[MAX_CARS] = {0};
 static QuadrantID loadedQuadrant = QUAD_BR;
+
+static PlayerItemEffects playerItemEffects;
 
 //=============================================================================
 // Private Prototypes
 //=============================================================================
-static inline int AngleDiff512(int target, int current);
 static void initCarAtSpawn(Car* car, int index);
 static void handlePlayerInput(Car* player, int carIndex);
 static void clampToMapBounds(Car* car, int carIndex);
@@ -111,6 +117,14 @@ bool Race_CheckFinishLineCross(const Car* car) {
 void Race_SetLoadedQuadrant(QuadrantID quad) {
     loadedQuadrant = quad;
 }
+
+void Race_SetCarGfx(int index, u16* gfx) {
+    if (index < 0 || index >= KartMania.carCount) {
+        return;
+    }
+    KartMania.cars[index].gfx = gfx;
+}
+
 //=============================================================================
 // Public API - Lifecycle
 //=============================================================================
@@ -134,6 +148,10 @@ void Race_Init(Map map, GameMode mode) {
         collisionLockoutTimer[i] = 0;
     }
 
+    // Initialize items system
+    Items_Init(map);
+    memset(&playerItemEffects, 0, sizeof(PlayerItemEffects));
+
     RaceTick_TimerInit();
 }
 
@@ -143,6 +161,10 @@ void Race_Reset(void) {
     }
 
     RaceTick_TimerStop();
+
+    // Reset items
+    Items_Reset();
+    memset(&playerItemEffects, 0, sizeof(PlayerItemEffects));
 
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
@@ -173,11 +195,16 @@ void Race_Tick(void) {
     Car* player = &KartMania.cars[KartMania.playerIndex];
 
     handlePlayerInput(player, KartMania.playerIndex);
-    applyTerrainEffects(player); 
+    applyTerrainEffects(player);
+
+    Items_Update();
+    Items_CheckCollisions(KartMania.cars, KartMania.carCount);
+    Items_UpdatePlayerEffects(player, &playerItemEffects);
+
     Car_Update(player);
     clampToMapBounds(player, KartMania.playerIndex);
     checkCheckpointProgression(player, KartMania.playerIndex);
-    
+
     if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
         collisionLockoutTimer[KartMania.playerIndex]--;
     }
@@ -189,39 +216,39 @@ void Race_Tick(void) {
 static void checkCheckpointProgression(const Car* car, int carIndex) {
     int carX = FixedToInt(car->position.x);
     int carY = FixedToInt(car->position.y);
-    
+
     bool isOnLeftSide = (carX < CHECKPOINT_DIVIDE_X);
     bool isOnTopSide = (carY < CHECKPOINT_DIVIDE_Y);
-    
+
     switch (cpState[carIndex]) {
         case CP_STATE_START:
             if (!wasOnTopSide[carIndex] && isOnTopSide) {
                 cpState[carIndex] = CP_STATE_NEED_LEFT;
             }
             break;
-            
+
         case CP_STATE_NEED_LEFT:
             if (!wasOnLeftSide[carIndex] && isOnLeftSide) {
                 cpState[carIndex] = CP_STATE_NEED_DOWN;
             }
             break;
-            
+
         case CP_STATE_NEED_DOWN:
             if (wasOnTopSide[carIndex] && !isOnTopSide) {
                 cpState[carIndex] = CP_STATE_NEED_RIGHT;
             }
             break;
-            
+
         case CP_STATE_NEED_RIGHT:
             if (wasOnLeftSide[carIndex] && !isOnLeftSide) {
                 cpState[carIndex] = CP_STATE_READY_FOR_LAP;
             }
             break;
-            
+
         case CP_STATE_READY_FOR_LAP:
             break;
     }
-    
+
     wasOnLeftSide[carIndex] = isOnLeftSide;
     wasOnTopSide[carIndex] = isOnTopSide;
 }
@@ -232,29 +259,29 @@ static void checkCheckpointProgression(const Car* car, int carIndex) {
 static bool checkFinishLineCross(const Car* car, int carIndex) {
     int carX = FixedToInt(car->position.x);
     int carY = FixedToInt(car->position.y);
-    
+
     bool inXRange = (carX >= FINISH_LINE_X_MIN && carX <= FINISH_LINE_X_MAX);
-    
+
     if (!inXRange) {
         wasAboveFinishLine[carIndex] = (carY < FINISH_LINE_Y);
         return false;
     }
-    
+
     bool isNowAbove = (carY < FINISH_LINE_Y);
     bool crossedLine = !wasAboveFinishLine[carIndex] && isNowAbove;
-    
+
     wasAboveFinishLine[carIndex] = isNowAbove;
-    
+
     if (crossedLine && !hasCompletedFirstCrossing[carIndex]) {
         hasCompletedFirstCrossing[carIndex] = true;
         return false;
     }
-    
+
     if (crossedLine && cpState[carIndex] == CP_STATE_READY_FOR_LAP) {
         cpState[carIndex] = CP_STATE_START;
         return true;
     }
-    
+
     return false;
 }
 //=============================================================================
@@ -277,17 +304,9 @@ static void applyTerrainEffects(Car* car) {
 //=============================================================================
 // Private Implementation
 //=============================================================================
-static inline int AngleDiff512(int target, int current) {
-    int d = (target - current) & ANGLE_MASK;
-    if (d > ANGLE_HALF) {
-        d -= ANGLE_FULL;
-    }
-    return d;
-}
-
 static void initCarAtSpawn(Car* car, int index) {
     Vec2 spawnPos = Vec2_FromInt(START_LINE_X, START_LINE_Y + (index * CAR_SPACING));
-    
+
     car->position = spawnPos;
     car->speed = 0;
     car->angle512 = START_FACING_ANGLE;
@@ -298,7 +317,7 @@ static void initCarAtSpawn(Car* car, int index) {
     car->maxSpeed = SPEED_50CC;
     car->accelRate = ACCEL_50CC;
     car->friction = FRICTION_50CC;
-    
+
     wasAboveFinishLine[index] = false;
     hasCompletedFirstCrossing[index] = false;
     cpState[index] = CP_STATE_START;
@@ -309,38 +328,50 @@ static void initCarAtSpawn(Car* car, int index) {
 static void handlePlayerInput(Car* player, int carIndex) {
     scanKeys();
     uint32 held = keysHeld();
+    uint32 down = keysDown();
 
     bool pressingA = held & KEY_A;
     bool pressingB = held & KEY_B;
     bool pressingLeft = held & KEY_LEFT;
     bool pressingRight = held & KEY_RIGHT;
+    bool pressingDown = held & KEY_DOWN;
+
+    // Item usage
+    if (down & KEY_R) {
+        bool fireForward = !pressingDown;  // Default forward unless DOWN held
+        Items_UsePlayerItem(player, fireForward);
+    }
+
+    // Steering (potentially inverted by mushroom confusion)
+    const PlayerItemEffects* effects = Items_GetPlayerEffects();
+    bool invertControls = effects->confusionActive;
 
     // Steering (only when accelerating forward)
     if (pressingA && player->speed >= 0) {
         if (pressingLeft && !pressingRight) {
-            Car_Steer(player, -TURN_STEP_50CC);
+            int turnAmount = invertControls ? TURN_STEP_50CC : -TURN_STEP_50CC;
+            Car_Steer(player, turnAmount);
         } else if (pressingRight && !pressingLeft) {
-            Car_Steer(player, TURN_STEP_50CC);
+            int turnAmount = invertControls ? -TURN_STEP_50CC : TURN_STEP_50CC;
+            Car_Steer(player, turnAmount);
         }
     }
+
     bool isLockedOut = (collisionLockoutTimer[carIndex] > 0);
-    
+
     if (pressingA && !pressingB && !isLockedOut) {
-        // Forward acceleration (blocked during lockout)
-        Car_Accelerate(player);
-    } else if (pressingB) {
-        if (player->speed > 0) {
-            Car_Brake(player);
-        } 
+        Car_Accelerate(player);  // Forward acceleration (blocked during lockout)
+    } else if (pressingB && player->speed > 0) {
+        Car_Brake(player);
     }
 }
 
 static void clampToMapBounds(Car* car, int carIndex) {
     int carX = FixedToInt(car->position.x);
     int carY = FixedToInt(car->position.y);
-    
+
     QuadrantID quad = determineCarQuadrant(carX, carY);
-    
+
     if (Wall_CheckCollision(carX, carY, CAR_RADIUS, quad)) {
         int nx, ny;
         Wall_GetCollisionNormal(carX, carY, quad, &nx, &ny);
@@ -350,10 +381,10 @@ static void clampToMapBounds(Car* car, int carIndex) {
             int pushDistance = CAR_RADIUS + 2;
             car->position.x += IntToFixed(nx * pushDistance);
             car->position.y += IntToFixed(ny * pushDistance);
-            
+
             // FULL STOP on collision
             car->speed = 0;
-            
+
             // Enable collision lockout to prevent immediate re-acceleration
             collisionLockoutTimer[carIndex] = COLLISION_LOCKOUT_FRAMES;
         }
@@ -364,10 +395,14 @@ static void clampToMapBounds(Car* car, int carIndex) {
     Q16_8 maxPosX = IntToFixed(1024 - 32);
     Q16_8 maxPosY = IntToFixed(1024 - 32);
 
-    if (car->position.x < minPos) car->position.x = minPos;
-    if (car->position.y < minPos) car->position.y = minPos;
-    if (car->position.x > maxPosX) car->position.x = maxPosX;
-    if (car->position.y > maxPosY) car->position.y = maxPosY;
+    if (car->position.x < minPos)
+        car->position.x = minPos;
+    if (car->position.y < minPos)
+        car->position.y = minPos;
+    if (car->position.x > maxPosX)
+        car->position.x = maxPosX;
+    if (car->position.y > maxPosY)
+        car->position.y = maxPosY;
 }
 
 static QuadrantID determineCarQuadrant(int x, int y) {
