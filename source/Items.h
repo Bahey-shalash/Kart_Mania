@@ -34,9 +34,9 @@
 #include <nds.h>
 #include <stdbool.h>
 
+#include "fixedmath2d.h"
 #include "game_types.h"
 #include "timer.h"
-#include "vect2.h"
 
 // Forward declaration to avoid circular include with Car.h
 typedef struct Car Car;

@@ -1,5 +1,11 @@
 #include "sound.h"
 
+#include <maxmod9.h>
+
+#include "game_constants.h"
+#include "soundbank.h"
+#include "soundbank_bin.h"
+
 void initSoundLibrary(void) {
     // Init the sound library
     mmInitDefaultMem((mm_addr)soundbank_bin);
@@ -58,11 +64,11 @@ void UnloadALLSoundFX(void) {
 }
 
 void SOUNDFX_ON(void) {
-    mmSetEffectsVolume(1024);  // 100%
+    mmSetEffectsVolume(VOLUME_MAX);
 }
 
 void SOUNDFX_OFF(void) {
-    mmSetEffectsVolume(0);  // mute
+    mmSetEffectsVolume(VOLUME_MUTE);
 }
 
 void LoadBoxSoundFx(void) {
@@ -75,7 +81,7 @@ void PlayBoxSFX(void) {
     mmEffect(SFX_BOX);
 }
 
-void cleanSound_gamePlay(void){
+void cleanSound_gamePlay(void) {
     UnloadBoxSoundFx();
 }
 

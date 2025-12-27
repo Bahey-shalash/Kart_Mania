@@ -1,5 +1,5 @@
 /*
- * vect2.c - Implementation of heavy vector operations
+ * fixedmath2d.c - Implementation of heavy vector operations
  *
  * Contains:
  *   - Quarter-wave sin LUT (129 entries)
@@ -10,7 +10,7 @@
  *   - Mat2_Scale, Mat2_Rotate
  */
 
-#include "vect2.h"
+#include "fixedmath2d.h"
 
 /*=============================================================================
  * SIN/COS LOOKUP TABLE

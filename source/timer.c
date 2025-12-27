@@ -1,4 +1,7 @@
 #include "timer.h"
+
+#include <nds.h>
+
 #include "context.h"
 #include "game_types.h"
 #include "gameplay.h"
@@ -18,7 +21,7 @@ static void ChronoTick_ISR(void);
 void initTimer(void) {
     GameContext* ctx = GameContext_Get();
     GameState state = ctx->currentGameState;
-    
+
     if (state == HOME_PAGE || state == MAPSELECTION || state == GAMEPLAY) {
         irqSet(IRQ_VBLANK, &timerISRVblank);
         irqEnable(IRQ_VBLANK);
@@ -27,31 +30,28 @@ void initTimer(void) {
 
 void timerISRVblank(void) {
     GameContext* ctx = GameContext_Get();
-    
+
     switch (ctx->currentGameState) {
         case HOME_PAGE:
             HomePage_OnVBlank();
             break;
-            
+
         case MAPSELECTION:
             Map_selection_OnVBlank();
             break;
-            
+
         case GAMEPLAY: {
             Gameplay_OnVBlank();
-            
+
             // Update sub-screen displays
-            updateChronoDisp_Sub(
-                Gameplay_GetRaceMin(), 
-                Gameplay_GetRaceSec(), 
-                Gameplay_GetRaceMsec()
-            );
-            
+            updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
+                                 Gameplay_GetRaceMsec());
+
             const RaceState* state = Race_GetState();
             updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
             break;
         }
-            
+
         default:
             break;
     }
@@ -66,7 +66,7 @@ void RaceTick_TimerInit(void) {
     TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024 | TIMER_IRQ_REQ;
     irqSet(IRQ_TIMER0, RaceTick_ISR);
     irqEnable(IRQ_TIMER0);
-    
+
     // TIMER1: Chronometer at 1000 Hz (1ms intervals)
     TIMER_DATA(1) = TIMER_FREQ_1024(1000);
     TIMER1_CR = TIMER_ENABLE | TIMER_DIV_1024 | TIMER_IRQ_REQ;

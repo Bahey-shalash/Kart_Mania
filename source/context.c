@@ -37,9 +37,9 @@ void GameContext_SetWifiEnabled(bool enabled) {
     // later: actually enable/disable wifi here
 }
 
-void GameContext_SetMap(Map SelectedMap){
+void GameContext_SetMap(Map SelectedMap) {
     gGameContext.SelectedMap = SelectedMap;
 }
-Map GameContext_GetMap(void){
+Map GameContext_GetMap(void) {
     return gGameContext.SelectedMap;
 }

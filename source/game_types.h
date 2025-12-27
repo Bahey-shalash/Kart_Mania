@@ -3,7 +3,7 @@
 #include <nds.h>
 #include <stdbool.h>
 
-#include "vect2.h"
+#include "fixedmath2d.h"
 typedef enum { HOME_PAGE, SETTINGS, MAPSELECTION, GAMEPLAY } GameState;
 
 typedef struct {
@@ -57,7 +57,6 @@ typedef enum {
 } SettingsTileIndex;
 
 typedef enum { NONEMAP, ScorchingSands, AlpinRush, NeonCircuit } Map;
-
 
 typedef enum {
     TILE_SEL_MAP1 = 0,

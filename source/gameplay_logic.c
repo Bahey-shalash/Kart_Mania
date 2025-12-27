@@ -3,6 +3,7 @@
 #include <nds.h>
 
 #include "Items.h"
+#include "game_constants.h"
 #include "terrain_detection.h"
 #include "timer.h"
 #include "wall_collision.h"
@@ -26,7 +27,7 @@
 
 // Sand Physics - SEVERE PENALTIES
 #define SAND_FRICTION 150  // Much higher friction (150/256 = 0.586 - very draggy!)
-#define SAND_MAX_SPEED (SPEED_50CC / 2)  // Only 50% max speed on sand (was 75%)
+#define SAND_MAX_SPEED (SPEED_50CC / SAND_SPEED_DIVISOR)  // Only 50% max speed on sand
 
 // Collision state
 #define COLLISION_LOCKOUT_FRAMES 60  // Frames to disable acceleration after wall hit
@@ -207,10 +208,14 @@ void Race_Tick(void) {
     // Calculate scroll position for collision detection (same as in gameplay.c)
     int scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
     int scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
-    if (scrollX < 0) scrollX = 0;
-    if (scrollY < 0) scrollY = 0;
-    if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
-    if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+    if (scrollX < 0)
+        scrollX = 0;
+    if (scrollY < 0)
+        scrollY = 0;
+    if (scrollX > MAX_SCROLL_X)
+        scrollX = MAX_SCROLL_X;
+    if (scrollY > MAX_SCROLL_Y)
+        scrollY = MAX_SCROLL_Y;
 
     Items_CheckCollisions(KartMania.cars, KartMania.carCount, scrollX, scrollY);
     Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
@@ -309,7 +314,7 @@ static void applyTerrainEffects(Car* car) {
         car->friction = SAND_FRICTION;
         if (car->speed > SAND_MAX_SPEED) {
             Q16_8 excessSpeed = car->speed - SAND_MAX_SPEED;
-            car->speed -= (excessSpeed / 2);
+            car->speed -= (excessSpeed / SAND_SPEED_DIVISOR);
         }
     } else {
         car->friction = FRICTION_50CC;
@@ -427,7 +432,7 @@ static void clampToMapBounds(Car* car, int carIndex) {
 static QuadrantID determineCarQuadrant(int x, int y) {
     int col = (x < QUAD_OFFSET) ? 0 : (x < 2 * QUAD_OFFSET) ? 1 : 2;
     int row = (y < QUAD_OFFSET) ? 0 : (y < 2 * QUAD_OFFSET) ? 1 : 2;
-    return (QuadrantID)(row * 3 + col);
+    return (QuadrantID)(row * QUADRANT_GRID_SIZE + col);
 }
 
 //=============================================================================

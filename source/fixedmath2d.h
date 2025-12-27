@@ -1,5 +1,5 @@
 /*
- * vect2.h - Fixed-point 2D vector math for Nintendo DS
+ * fixedmath2d.h - Fixed-point 2D vector math for Nintendo DS
  *
  * =============================================================================
  * FIXED-POINT FORMAT: Q16.8

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "game_constants.h"
 #include "gameplay_logic.h"
 #include "wall_collision.h"
 
@@ -60,8 +61,10 @@ static void applyOilHitEffect(Car* car, int carIndex);
 static bool checkItemCarCollision(Vec2 itemPos, Vec2 carPos, int itemHitbox);
 static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex);
 static void checkItemBoxCollisions(Car* cars, int carCount);
-static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX, int scrollY);
-static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX, int scrollY);
+static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX,
+                                         int scrollY);
+static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX,
+                                     int scrollY);
 static bool isItemNearScreen(Vec2 itemPos, int scrollX, int scrollY);
 
 //=============================================================================
@@ -153,7 +156,7 @@ void Items_UsePlayerItem(Car* player, bool fireForward) {
             // Calculate backward direction (180° from facing direction)
             int backwardAngle = (player->angle512 + ANGLE_HALF) & ANGLE_MASK;  // +180°
             Vec2 backward = Vec2_FromAngle(backwardAngle);
-            Vec2 offset = Vec2_Scale(backward, IntToFixed(40));  // 40 pixels back
+            Vec2 offset = Vec2_Scale(backward, IntToFixed(HAZARD_DROP_OFFSET));
             Vec2 dropPos = Vec2_Add(player->position, offset);
             Items_PlaceHazard(itemType, dropPos);
             break;
@@ -167,12 +170,12 @@ void Items_UsePlayerItem(Car* player, bool fireForward) {
 
             // Spawn shell slightly ahead of player to avoid immediate collision
             Vec2 forward = Vec2_FromAngle(fireAngle);
-            Vec2 offset = Vec2_Scale(forward, IntToFixed(30));  // 30 pixels ahead
+            Vec2 offset = Vec2_Scale(forward, IntToFixed(PROJECTILE_SPAWN_OFFSET));
             Vec2 spawnPos = Vec2_Add(player->position, offset);
 
             Q16_8 shellSpeed = FixedMul(player->maxSpeed, GREEN_SHELL_SPEED_MULT);
-            Items_FireProjectile(ITEM_GREEN_SHELL, spawnPos, fireAngle,
-                                 shellSpeed, -1);
+            Items_FireProjectile(ITEM_GREEN_SHELL, spawnPos, fireAngle, shellSpeed,
+                                 INVALID_CAR_INDEX);
             break;
         }
 
@@ -185,12 +188,12 @@ void Items_UsePlayerItem(Car* player, bool fireForward) {
 
             // Spawn shell slightly ahead of player to avoid immediate collision
             Vec2 forward = Vec2_FromAngle(fireAngle);
-            Vec2 offset = Vec2_Scale(forward, IntToFixed(30));  // 30 pixels ahead
+            Vec2 offset = Vec2_Scale(forward, IntToFixed(PROJECTILE_SPAWN_OFFSET));
             Vec2 spawnPos = Vec2_Add(player->position, offset);
 
             Q16_8 shellSpeed = FixedMul(player->maxSpeed, RED_SHELL_SPEED_MULT);
-            Items_FireProjectile(ITEM_RED_SHELL, spawnPos, fireAngle,
-                                 shellSpeed, targetIndex);
+            Items_FireProjectile(ITEM_RED_SHELL, spawnPos, fireAngle, shellSpeed,
+                                 targetIndex);
             break;
         }
 
@@ -290,14 +293,14 @@ void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
     item->angle512 = angle512;
     item->targetCarIndex = targetCarIndex;
     item->active = true;
-    item->lifetime_ticks = 10 * RACE_TICK_FREQ;  // 10 seconds max
+    item->lifetime_ticks = PROJECTILE_LIFETIME_SECONDS * RACE_TICK_FREQ;
 
     // DEBUG: Print projectile firing info
     printf("Fired %s at %d,%d angle=%d speed=%d\n",
-           type == ITEM_GREEN_SHELL ? "GREEN_SHELL" :
-           type == ITEM_RED_SHELL ? "RED_SHELL" : "MISSILE",
-           FixedToInt(pos.x), FixedToInt(pos.y),
-           angle512, FixedToInt(speed));
+           type == ITEM_GREEN_SHELL ? "GREEN_SHELL"
+           : type == ITEM_RED_SHELL ? "RED_SHELL"
+                                    : "MISSILE",
+           FixedToInt(pos.x), FixedToInt(pos.y), angle512, FixedToInt(speed));
 
     // Set hitbox and graphics based on type
     if (type == ITEM_MISSILE) {
@@ -337,14 +340,14 @@ void Items_PlaceHazard(Item type, Vec2 pos) {
             break;
 
         case ITEM_BOMB:
-            item->lifetime_ticks = 5 * RACE_TICK_FREQ;  // 5 seconds until explosion
+            item->lifetime_ticks = BOMB_LIFETIME_SECONDS * RACE_TICK_FREQ;
             item->hitbox_width = BOMB_HITBOX;
             item->hitbox_height = BOMB_HITBOX;
             item->gfx = bombGfx;
             break;
 
         case ITEM_BANANA:
-            item->lifetime_ticks = -1;  // Never expire - only despawn on hit
+            item->lifetime_ticks = ITEM_LIFETIME_INFINITE;
             item->hitbox_width = BANANA_HITBOX;
             item->hitbox_height = BANANA_HITBOX;
             item->gfx = bananaGfx;
@@ -388,7 +391,8 @@ void Items_UpdatePlayerEffects(Car* player, PlayerItemEffects* effects) {
         Q16_8 distTraveled = Vec2_Distance(player->position, effects->oilSlowStart);
         if (distTraveled >= OIL_SLOW_DISTANCE) {
             effects->oilSlowActive = false;
-            // Note: Friction/accel recovery is handled automatically by applyTerrainEffects()
+            // Note: Friction/accel recovery is handled automatically by
+            // applyTerrainEffects()
         }
     }
 }
@@ -413,7 +417,7 @@ void Items_ApplySpeedBoost(Car* player, PlayerItemEffects* effects) {
 
 void Items_ApplyOilSlow(Car* player, PlayerItemEffects* effects) {
     // Instant speed reduction
-    player->speed = player->speed / 2;
+    player->speed = player->speed / OIL_SPEED_DIVISOR;
 
     // Mark oil slow as active for distance tracking
     effects->oilSlowActive = true;
@@ -479,8 +483,7 @@ void Items_Render(int scrollX, int scrollY) {
         if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL) {
             printf("%s pos: %d,%d active=%d\n",
                    item->type == ITEM_GREEN_SHELL ? "Green" : "Red",
-                   FixedToInt(item->position.x),
-                   FixedToInt(item->position.y),
+                   FixedToInt(item->position.x), FixedToInt(item->position.y),
                    item->active);
         }
 
@@ -667,23 +670,23 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
     // Get angle to target
     int targetAngle = Vec2_ToAngle(toTarget);
 
-    // Smoothly rotate toward target (max 5 degrees per frame)
+    // Smoothly rotate toward target
     int angleDiff = (targetAngle - item->angle512) & ANGLE_MASK;
     if (angleDiff > ANGLE_HALF)
         angleDiff -= ANGLE_FULL;
 
-    int turnRate = 5;  // Max turn per frame
-    if (angleDiff > turnRate)
-        angleDiff = turnRate;
-    if (angleDiff < -turnRate)
-        angleDiff = -turnRate;
+    if (angleDiff > HOMING_TURN_RATE)
+        angleDiff = HOMING_TURN_RATE;
+    if (angleDiff < -HOMING_TURN_RATE)
+        angleDiff = -HOMING_TURN_RATE;
 
     item->angle512 = (item->angle512 + angleDiff) & ANGLE_MASK;
 }
 
 static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
     for (int i = 0; i < carCount; i++) {
-        if (checkItemCarCollision(item->position, cars[i].position, item->hitbox_width)) {
+        if (checkItemCarCollision(item->position, cars[i].position,
+                                  item->hitbox_width)) {
             // Apply effect based on projectile type
             if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL) {
                 applyShellHitEffect(&cars[i]);
@@ -699,7 +702,8 @@ static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
 
 static void checkHazardCollision(TrackItem* item, Car* cars, int carCount) {
     for (int i = 0; i < carCount; i++) {
-        if (checkItemCarCollision(item->position, cars[i].position, item->hitbox_width)) {
+        if (checkItemCarCollision(item->position, cars[i].position,
+                                  item->hitbox_width)) {
             // Apply hazard effect based on item type
             switch (item->type) {
                 case ITEM_BANANA:
@@ -741,11 +745,12 @@ static void explodeBomb(Vec2 position, Car* cars, int carCount) {
             // Stop car completely
             cars[i].speed = 0;
 
-            // Knockback 10 pixels away from bomb
+            // Knockback away from bomb
             Vec2 knockbackDir = Vec2_Sub(cars[i].position, position);
             if (!Vec2_IsZero(knockbackDir)) {
                 knockbackDir = Vec2_Normalize(knockbackDir);
-                Vec2 knockback = Vec2_Scale(knockbackDir, IntToFixed(40));  // 40 pixels
+                Vec2 knockback =
+                    Vec2_Scale(knockbackDir, IntToFixed(BOMB_KNOCKBACK_DISTANCE));
                 cars[i].position = Vec2_Add(cars[i].position, knockback);
             }
         }
@@ -764,7 +769,7 @@ static int findInactiveItemSlot(void) {
             return i;
         }
     }
-    return -1;  // No free slots
+    return INVALID_CAR_INDEX;
 }
 
 static int findCarAhead(int currentRank, int carCount) {
@@ -788,10 +793,10 @@ static QuadrantID getQuadrantFromPos(Vec2 pos) {
     int x = FixedToInt(pos.x);
     int y = FixedToInt(pos.y);
 
-    int col = (x < 256) ? 0 : (x < 512) ? 1 : 2;
-    int row = (y < 256) ? 0 : (y < 512) ? 1 : 2;
+    int col = (x < QUAD_BOUNDARY_LOW) ? 0 : (x < QUAD_BOUNDARY_HIGH) ? 1 : 2;
+    int row = (y < QUAD_BOUNDARY_LOW) ? 0 : (y < QUAD_BOUNDARY_HIGH) ? 1 : 2;
 
-    return (QuadrantID)(row * 3 + col);
+    return (QuadrantID)(row * QUADRANT_GRID_SIZE + col);
 }
 
 //=============================================================================
@@ -800,20 +805,21 @@ static QuadrantID getQuadrantFromPos(Vec2 pos) {
 
 static bool checkItemCarCollision(Vec2 itemPos, Vec2 carPos, int itemHitbox) {
     Q16_8 dist = Vec2_Distance(itemPos, carPos);
-    int hitRadius = (itemHitbox + 32) / 2;  // 32 = car size
+    int hitRadius = (itemHitbox + CAR_COLLISION_SIZE) / 2;
     return (dist <= IntToFixed(hitRadius));
 }
 
 static void applyShellHitEffect(Car* car) {
     // Stop car and spin it 45° in random direction
     car->speed = 0;
-    int spinDirection = (rand() % 2 == 0) ? 64 : -64;  // +45° or -45°
+    int spinDirection =
+        (rand() % 2 == 0) ? SHELL_SPIN_ANGLE_POS : SHELL_SPIN_ANGLE_NEG;
     car->angle512 = (car->angle512 + spinDirection) & ANGLE_MASK;
 }
 
 static void applyBananaHitEffect(Car* car) {
     // Spin car 180° and keep speed reduction
-    car->speed = car->speed / 3;
+    car->speed = car->speed / BANANA_SPEED_DIVISOR;
     car->angle512 = (car->angle512 + ANGLE_HALF) & ANGLE_MASK;  // 180° turn
 }
 
@@ -822,7 +828,7 @@ static void applyOilHitEffect(Car* car, int carIndex) {
     if (carIndex == 0) {
         Items_ApplyOilSlow(car, &playerEffects);
     } else {
-        car->speed = car->speed / 2;
+        car->speed = car->speed / OIL_SPEED_DIVISOR;
     }
 }
 
@@ -866,8 +872,9 @@ static void checkItemBoxCollisions(Car* cars, int carCount) {
                 int distInt = FixedToInt(dist);
 
                 // Only print for closest box (avoid spam)
-                if (distInt < 50) {
-                    printf("Box %d: dist=%d (threshold=14)\n", i, distInt);
+                if (distInt < ITEM_PICKUP_DEBUG_DISTANCE) {
+                    printf("Box %d: dist=%d (threshold=%d)\n", i, distInt,
+                           ITEM_PICKUP_THRESHOLD);
                     printf("  Car: %d,%d\n", FixedToInt(cars[c].position.x),
                            FixedToInt(cars[c].position.y));
                     printf("  Box: %d,%d\n", FixedToInt(itemBoxSpawns[i].position.x),
@@ -883,7 +890,8 @@ static void checkItemBoxCollisions(Car* cars, int carCount) {
     }
 }
 
-static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX, int scrollY) {
+static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX,
+                                         int scrollY) {
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
@@ -900,7 +908,8 @@ static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX, i
     }
 }
 
-static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX, int scrollY) {
+static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX,
+                                     int scrollY) {
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
@@ -918,17 +927,14 @@ static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX, int s
 }
 
 static bool isItemNearScreen(Vec2 itemPos, int scrollX, int scrollY) {
-    // Add buffer zone around screen for collision detection (64 pixels on each side)
-    const int BUFFER = 64;
-
     int itemX = FixedToInt(itemPos.x);
     int itemY = FixedToInt(itemPos.y);
 
-    int screenLeft = scrollX - BUFFER;
-    int screenRight = scrollX + SCREEN_WIDTH + BUFFER;
-    int screenTop = scrollY - BUFFER;
-    int screenBottom = scrollY + SCREEN_HEIGHT + BUFFER;
+    int screenLeft = scrollX - COLLISION_BUFFER_ZONE;
+    int screenRight = scrollX + SCREEN_WIDTH + COLLISION_BUFFER_ZONE;
+    int screenTop = scrollY - COLLISION_BUFFER_ZONE;
+    int screenBottom = scrollY + SCREEN_HEIGHT + COLLISION_BUFFER_ZONE;
 
-    return (itemX >= screenLeft && itemX <= screenRight &&
-            itemY >= screenTop && itemY <= screenBottom);
+    return (itemX >= screenLeft && itemX <= screenRight && itemY >= screenTop &&
+            itemY <= screenBottom);
 }

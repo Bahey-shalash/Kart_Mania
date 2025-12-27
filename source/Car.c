@@ -3,6 +3,8 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "game_constants.h"
+
 //=============================================================================
 // Private Helpers
 //=============================================================================
@@ -12,8 +14,8 @@ static void copy_name(char destination[32], const char* name) {
     if (name == NULL) {
         return;
     }
-    strncpy(destination, name, 31);
-    destination[31] = '\0';
+    strncpy(destination, name, CAR_NAME_MAX_LENGTH);
+    destination[CAR_NAME_MAX_LENGTH] = '\0';
 }
 
 // Clamp friction to [0, FIXED_ONE]
@@ -154,8 +156,7 @@ void Car_Update(Car* car) {
     car->speed = FixedMul(car->speed, car->friction);
 
     // Snap tiny speeds to 0 (prevents endless drifting)
-    // Threshold ~0.02 pixels/frame in Q16.8 = 5
-    if (car->speed <= 5) {
+    if (car->speed <= MIN_SPEED_THRESHOLD) {
         car->speed = 0;
     }
 
@@ -196,8 +197,7 @@ bool Car_IsMoving(const Car* car) {
     if (car == NULL) {
         return false;
     }
-    // Threshold: ~0.1 pixels/frame in Q16.8 = 25
-    return car->speed > 25;
+    return car->speed > MIN_MOVING_SPEED;
 }
 
 // Get current speed (magnitude of velocity)

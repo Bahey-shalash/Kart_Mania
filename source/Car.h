@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "Items.h"
-#include "vect2.h"
+#include "fixedmath2d.h"
 
 //=============================================================================
 // Car - Physics & State

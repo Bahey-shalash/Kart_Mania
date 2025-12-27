@@ -3,7 +3,7 @@
 #include <nds.h>
 #include <string.h>
 
-
+#include "game_constants.h"
 
 void video_nuke(void) {
     // 1) Turn off both displays (prevents seeing garbage during transition)
@@ -15,10 +15,10 @@ void video_nuke(void) {
     oamClear(&oamSub, 0, 128);
 
     // 3) Clear palettes
-    memset(BG_PALETTE, 0, 512);
-    memset(SPRITE_PALETTE, 0, 512);
-    memset(BG_PALETTE_SUB, 0, 512);
-    memset(SPRITE_PALETTE_SUB, 0, 512);
+    memset(BG_PALETTE, 0, PALETTE_SIZE);
+    memset(SPRITE_PALETTE, 0, PALETTE_SIZE);
+    memset(BG_PALETTE_SUB, 0, PALETTE_SIZE);
+    memset(SPRITE_PALETTE_SUB, 0, PALETTE_SIZE);
 
     // 4) Make VRAM banks CPU-visible in a known mapping, then clear them
     // Adjust to the banks you actually use.
@@ -26,9 +26,9 @@ void video_nuke(void) {
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 
-    memset((void*)VRAM_A, 0, 128 * 1024);
-    memset((void*)VRAM_B, 0, 128 * 1024);
-    memset((void*)VRAM_C, 0, 128 * 1024);
+    memset((void*)VRAM_A, 0, VRAM_BANK_SIZE);
+    memset((void*)VRAM_B, 0, VRAM_BANK_SIZE);
+    memset((void*)VRAM_C, 0, VRAM_BANK_SIZE);
 
     // 5) Reset BG control regs (optional but clean)
     for (int i = 0; i < 4; i++) {

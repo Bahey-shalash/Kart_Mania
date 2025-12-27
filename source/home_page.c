@@ -1,8 +1,9 @@
 #include "home_page.h"
 
 #include <string.h>
-#include "context.h"
+
 #include "color.h"
+#include "context.h"
 #include "ds_menu.h"
 #include "home_top.h"
 #include "kart_home.h"

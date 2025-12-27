@@ -5,12 +5,12 @@
 
 #include "color.h"
 #include "combined.h"
+#include "context.h"
 #include "game_types.h"
 #include "map_bottom.h"
 #include "map_top.h"
 #include "map_top_clouds.h"
 #include "sound.h"
-#include "context.h"
 //=============================================================================
 // Private constants / config
 //=============================================================================

@@ -6,6 +6,7 @@
 
 #include "Items.h"
 #include "context.h"
+#include "game_constants.h"
 #include "game_types.h"
 #include "gameplay_logic.h"
 #include "kart_sprite.h"
@@ -83,9 +84,9 @@ int Gameplay_GetCurrentLap(void) {
 }
 
 void Gameplay_IncrementTimer(void) {
-    raceMsec = (raceMsec + 1) % 1000;
+    raceMsec = (raceMsec + 1) % MS_PER_SECOND;
     if (raceMsec == 0) {
-        raceSec = (raceSec + 1) % 60;
+        raceSec = (raceSec + 1) % SECONDS_PER_MINUTE;
         if (raceSec == 0) {
             raceMin++;
         }
@@ -353,7 +354,7 @@ static void loadQuadrant(QuadrantID quad) {
 static QuadrantID determineQuadrant(int x, int y) {
     int col = (x < QUAD_OFFSET) ? 0 : (x < 2 * QUAD_OFFSET) ? 1 : 2;
     int row = (y < QUAD_OFFSET) ? 0 : (y < 2 * QUAD_OFFSET) ? 1 : 2;
-    return (QuadrantID)(row * 3 + col);
+    return (QuadrantID)(row * QUADRANT_GRID_SIZE + col);
 }
 
 //=============================================================================

@@ -1,12 +1,7 @@
 #ifndef SOUND_HH
 #define SOUND_HH
 
-#include <maxmod9.h>
-#include <nds.h>
 #include <stdbool.h>
-
-#include "soundbank.h"
-#include "soundbank_bin.h"
 
 void initSoundLibrary(void);
 
