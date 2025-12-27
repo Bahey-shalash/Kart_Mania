@@ -71,7 +71,7 @@ typedef struct Car Car;
 #define BOMB_KNOCKBACK_IMPULSE IntToFixed(8)  // Impulse strength
 
 // Hitbox sizes (in pixels)
-#define ITEM_BOX_HITBOX 16
+#define ITEM_BOX_HITBOX 8
 #define OIL_SLICK_HITBOX 32
 #define BOMB_HITBOX 16
 #define SHELL_HITBOX 16

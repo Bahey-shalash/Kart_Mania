@@ -7,6 +7,8 @@
 #include "wall_collision.h"
 
 // Sprite graphics includes
+#include <stdio.h>
+
 #include "Car.h"
 #include "banana.h"
 #include "bomb.h"
@@ -118,7 +120,6 @@ void Items_Update(void) {
 }
 
 void Items_CheckCollisions(Car* cars, int carCount) {
-    
     for (int i = 0; i < itemBoxCount; i++) {
         if (!itemBoxSpawns[i].active)
             continue;
@@ -139,7 +140,6 @@ void Items_CheckCollisions(Car* cars, int carCount) {
         }
     }
 
-    
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
@@ -152,7 +152,6 @@ void Items_CheckCollisions(Car* cars, int carCount) {
         }
     }
 
-    
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
@@ -166,10 +165,6 @@ void Items_CheckCollisions(Car* cars, int carCount) {
     }
 }
 
-void Items_SpawnBoxes(void) {
-    // Already handled in Items_Update via respawn timers
-}
-
 void Items_UsePlayerItem(Car* player, bool fireForward) {
     if (player->item == ITEM_NONE)
         return;
@@ -181,10 +176,11 @@ void Items_UsePlayerItem(Car* player, bool fireForward) {
         case ITEM_BANANA:
         case ITEM_BOMB:
         case ITEM_OIL: {
-            // Place behind car
-            Vec2 forward = Vec2_FromAngle(player->angle512);
-            Vec2 backward = Vec2_Scale(forward, IntToFixed(-20));  // 20 pixels behind
-            Vec2 dropPos = Vec2_Add(player->position, backward);
+            // Calculate backward direction (180° from facing direction)
+            int backwardAngle = (player->angle512 + ANGLE_HALF) & ANGLE_MASK;  // +180°
+            Vec2 backward = Vec2_FromAngle(backwardAngle);
+            Vec2 offset = Vec2_Scale(backward, IntToFixed(40));  // 40 pixels back
+            Vec2 dropPos = Vec2_Add(player->position, offset);
             Items_PlaceHazard(itemType, dropPos);
             break;
         }
@@ -333,6 +329,9 @@ void Items_PlaceHazard(Item type, Vec2 pos) {
     item->angle512 = 0;
     item->active = true;
 
+    // DEBUG: Print where item was placed
+    printf("Placed %d at %d,%d\n", type, FixedToInt(pos.x), FixedToInt(pos.y));
+
     // Set lifetime and graphics
     switch (type) {
         case ITEM_OIL:
@@ -425,30 +424,59 @@ void Items_ApplyOilSlow(Car* player, PlayerItemEffects* effects) {
 //=============================================================================
 // Rendering
 //=============================================================================
-
 void Items_Render(int scrollX, int scrollY) {
-    
+    // Render item boxes
     for (int i = 0; i < itemBoxCount; i++) {
-        if (!itemBoxSpawns[i].active)
+        if (!itemBoxSpawns[i].active) {
+            // CRITICAL: Hide the sprite when box is inactive
+            oamSet(&oamMain, ITEM_BOX_OAM_START + i, 0,
+                   192,  // Move offscreen (below visible area)
+                   0, 1, SpriteSize_16x16, SpriteColorFormat_16Color,
+                   itemBoxSpawns[i].gfx, -1, true, false, false, false,
+                   false);  // ← true = HIDE sprite
             continue;
+        }
 
-        int screenX = FixedToInt(itemBoxSpawns[i].position.x) - scrollX - 8;
-        int screenY = FixedToInt(itemBoxSpawns[i].position.y) - scrollY - 8;
+        int screenX =
+            FixedToInt(itemBoxSpawns[i].position.x) - scrollX - (ITEM_BOX_HITBOX / 2);
+        int screenY =
+            FixedToInt(itemBoxSpawns[i].position.y) - scrollY - (ITEM_BOX_HITBOX / 2);
 
-        if (screenX >= -16 && screenX < 256 && screenY >= -16 && screenY < 192) {
-            oamSet(&oamMain, ITEM_BOX_OAM_START + i, screenX, screenY, 0, 0,
-                   SpriteSize_16x16, SpriteColorFormat_256Color, itemBoxSpawns[i].gfx,
-                   -1, false, false, false, false, false);
+        if (screenX >= -16 && screenX < 256 && screenY >= -8 && screenY < 192) {
+            oamSet(&oamMain, ITEM_BOX_OAM_START + i, screenX, screenY, 0, 1,
+                   SpriteSize_8x8, SpriteColorFormat_16Color, itemBoxSpawns[i].gfx,
+                   -1, false, false, false, false, false);  // ← false = SHOW sprite
+        } else {
+            // Also hide if offscreen
+            oamSet(&oamMain, ITEM_BOX_OAM_START + i, 0, 192, 0, 1, SpriteSize_8x8,
+                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, -1, true, false,
+                   false, false, false);  // ← true = HIDE
         }
     }
 
-    
+    // Render active track items
     int oamSlot = TRACK_ITEM_OAM_START;
+
+    // STEP 1: Clear all track item OAM slots first
+    for (int slot = TRACK_ITEM_OAM_START;
+         slot < TRACK_ITEM_OAM_START + MAX_TRACK_ITEMS; slot++) {
+        oamSet(&oamMain, slot, 0, 192, 0, 0, SpriteSize_16x16,
+               SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
+               false);  // Hide all
+    }
+
+    // STEP 2: Render only active items
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
 
         TrackItem* item = &activeItems[i];
+
+        // DEBUG: Print item position each frame
+        if (item->type == ITEM_BANANA) {
+            printf("Banana pos: %d,%d\n", FixedToInt(item->position.x),
+                   FixedToInt(item->position.y));
+        }
 
         int screenX =
             FixedToInt(item->position.x) - scrollX - (item->hitbox_width / 2);
@@ -459,14 +487,31 @@ void Items_Render(int scrollX, int scrollY) {
         if (screenX < -32 || screenX > 256 || screenY < -32 || screenY > 192)
             continue;
 
-        // Determine sprite size
+        // Determine sprite size and palette
         SpriteSize spriteSize;
+        int paletteNum;
+
         if (item->type == ITEM_MISSILE) {
             spriteSize = SpriteSize_16x32;
+            paletteNum = 6;  // Missile palette
         } else if (item->type == ITEM_OIL) {
             spriteSize = SpriteSize_32x32;
+            paletteNum = 7;  // Oil palette
+        } else if (item->type == ITEM_BANANA) {
+            spriteSize = SpriteSize_16x16;
+            paletteNum = 2;  // Banana palette
+        } else if (item->type == ITEM_BOMB) {
+            spriteSize = SpriteSize_16x16;
+            paletteNum = 3;  // Bomb palette
+        } else if (item->type == ITEM_GREEN_SHELL) {
+            spriteSize = SpriteSize_16x16;
+            paletteNum = 4;  // Green shell palette
+        } else if (item->type == ITEM_RED_SHELL) {
+            spriteSize = SpriteSize_16x16;
+            paletteNum = 5;  // Red shell palette
         } else {
             spriteSize = SpriteSize_16x16;
+            paletteNum = 0;
         }
 
         // Render sprite with rotation for projectiles
@@ -481,47 +526,52 @@ void Items_Render(int scrollX, int scrollY) {
         if (useRotation) {
             // Set rotation matrix (reuse affine slot 1)
             oamRotateScale(&oamMain, 1, rotation, (1 << 8), (1 << 8));
-            oamSet(&oamMain, oamSlot, screenX, screenY, 0, 1, spriteSize,
-                   SpriteColorFormat_256Color, item->gfx, -1, false, false, false,
-                   false, false);
+            oamSet(&oamMain, oamSlot, screenX, screenY, 0, paletteNum, spriteSize,
+                   SpriteColorFormat_16Color, item->gfx, 1, false, false, false, false,
+                   false);
         } else {
-            oamSet(&oamMain, oamSlot, screenX, screenY, 0, 0, spriteSize,
-                   SpriteColorFormat_256Color, item->gfx, -1, false, false, false,
+            oamSet(&oamMain, oamSlot, screenX, screenY, 0, paletteNum, spriteSize,
+                   SpriteColorFormat_16Color, item->gfx, -1, false, false, false,
                    false, false);
         }
 
         oamSlot++;
-        if (oamSlot >= 128)  // OAM limit
+        if (oamSlot >= TRACK_ITEM_OAM_START + MAX_TRACK_ITEMS)  // Don't overflow
             break;
     }
 }
 
 void Items_LoadGraphics(void) {
-    // Allocate sprite graphics
-    itemBoxGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_256Color);
-    bananaGfx = oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_256Color);
-    bombGfx = oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_256Color);
+    // Allocate sprite graphics - NOTE: 16-color format!
+    itemBoxGfx = oamAllocateGfx(&oamMain, SpriteSize_8x8, SpriteColorFormat_16Color);
+    bananaGfx = oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_16Color);
+    bombGfx = oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_16Color);
     greenShellGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_256Color);
+        oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_16Color);
     redShellGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_256Color);
-    missileGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_16x32, SpriteColorFormat_256Color);
+        oamAllocateGfx(&oamMain, SpriteSize_16x16, SpriteColorFormat_16Color);
+    missileGfx = oamAllocateGfx(&oamMain, SpriteSize_16x32, SpriteColorFormat_16Color);
     oilSlickGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_256Color);
+        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
 
-    // Copy tile data
-    swiCopy(item_boxTiles, itemBoxGfx, item_boxTilesLen / 2);
-    swiCopy(bananaTiles, bananaGfx, bananaTilesLen / 2);
-    swiCopy(bombTiles, bombGfx, bombTilesLen / 2);
-    swiCopy(green_shellTiles, greenShellGfx, green_shellTilesLen / 2);
-    swiCopy(red_shellTiles, redShellGfx, red_shellTilesLen / 2);
-    swiCopy(missileTiles, missileGfx, missileTilesLen / 2);
-    swiCopy(oil_slickTiles, oilSlickGfx, oil_slickTilesLen / 2);
+    // Copy tile data (note: for 16-color, still divide by 2)
+    dmaCopy(item_boxTiles, itemBoxGfx, item_boxTilesLen);
+    dmaCopy(bananaTiles, bananaGfx, bananaTilesLen);
+    dmaCopy(bombTiles, bombGfx, bombTilesLen);
+    dmaCopy(green_shellTiles, greenShellGfx, green_shellTilesLen);
+    dmaCopy(red_shellTiles, redShellGfx, red_shellTilesLen);
+    dmaCopy(missileTiles, missileGfx, missileTilesLen);
+    dmaCopy(oil_slickTiles, oilSlickGfx, oil_slickTilesLen);
 
-    // Palette: reuse the kart palette already loaded in configureSprite()
-    // (all item art must be encoded against that palette)
+    // Copy palettes to separate palette slots (like the example)
+    // Start at palette slot 1 (slot 0 is for the kart)
+    dmaCopy(item_boxPal, &SPRITE_PALETTE[16], item_boxPalLen);
+    dmaCopy(bananaPal, &SPRITE_PALETTE[32], bananaPalLen);
+    dmaCopy(bombPal, &SPRITE_PALETTE[48], bombPalLen);
+    dmaCopy(green_shellPal, &SPRITE_PALETTE[64], green_shellPalLen);
+    dmaCopy(red_shellPal, &SPRITE_PALETTE[80], red_shellPalLen);
+    dmaCopy(missilePal, &SPRITE_PALETTE[96], missilePalLen);
+    dmaCopy(oil_slickPal, &SPRITE_PALETTE[112], oil_slickPalLen);
 }
 
 //=============================================================================

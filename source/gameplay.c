@@ -150,6 +150,8 @@ GameState Gameplay_update(void) {
 // Public API - VBlank (Graphics Update)
 //=============================================================================
 void Gameplay_OnVBlank(void) {
+    consoleClear();
+
     const Car* player = Race_GetPlayerCar();
     Vec2 velocityVec =
         Vec2_Scale(Vec2_FromAngle(player->angle512), Car_GetSpeed(player));
@@ -262,9 +264,9 @@ void Gameplay_OnVBlank(void) {
     int screenY = carY - scrollY - 32;
 
     oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
-           SpriteColorFormat_256Color, player->gfx, 0, true, false, false, false,
+           SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
            false);
-
+    Items_Render(scrollX, scrollY);
     oamUpdate(&oamMain);
 }
 
@@ -307,17 +309,19 @@ static void configureBackground(void) {
 static void configureSprite(void) {
     oamInit(&oamMain, SpriteMapping_1D_32, false);
 
-    // Allocate sprite graphics for player kart
+    // Allocate sprite graphics for player kart (16-color)
     u16* kartGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_256Color);
+        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
 
-    swiCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen / 2);
-    swiCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen / 2);
+    // Load kart palette to slot 0
+    dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
+    dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
 
     // Set the graphics pointer on the player car
     Race_SetCarGfx(0, kartGfx);
 
-    // Only the kart sprite is loaded; other sprites are disabled for debugging
+    // Load item graphics (palettes 1-7)
+    Items_LoadGraphics();
 }
 
 // DEBUG Console setup (active for gameplay debug)
