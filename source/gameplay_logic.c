@@ -17,46 +17,6 @@
 #define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
 #define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
 
-#define TURN_STEP_50CC 3
-
-// Physics tuning (50cc class, Q16.8 format, 60Hz)
-
-#define SPEED_50CC (FIXED_ONE * 3)  // 3.0 px/frame
-#define ACCEL_50CC IntToFixed(1)    // 1.0 px/frame
-#define FRICTION_50CC 240           // 240/256 = 0.9375
-
-// Sand Physics - SEVERE PENALTIES
-#define SAND_FRICTION 150  // Much higher friction (150/256 = 0.586 - very draggy!)
-#define SAND_MAX_SPEED (SPEED_50CC / SAND_SPEED_DIVISOR)  // Only 50% max speed on sand
-
-// Collision state
-#define COLLISION_LOCKOUT_FRAMES 60  // Frames to disable acceleration after wall hit
-
-// World directions (0-511 binary angle)
-#define ANGLE_RIGHT 0        // 0°
-#define ANGLE_DOWN 128       // 90°
-#define ANGLE_LEFT 256       // 180°
-#define ANGLE_UP 384         // 270°
-#define ANGLE_DOWN_RIGHT 64  // 45°
-#define ANGLE_DOWN_LEFT 192  // 135°
-#define ANGLE_UP_LEFT 320    // 225°
-#define ANGLE_UP_RIGHT 448   // 315°
-
-// Start line position (BR quadrant)
-#define START_LINE_X 920
-#define START_LINE_Y 595
-#define CAR_SPACING 40
-#define START_FACING_ANGLE ANGLE_UP
-
-// Finish line detection
-#define FINISH_LINE_Y 580
-#define FINISH_LINE_X_MIN 900
-#define FINISH_LINE_X_MAX 960
-
-// Checkpoint system
-#define CHECKPOINT_DIVIDE_X 512
-#define CHECKPOINT_DIVIDE_Y 512
-
 typedef enum {
     CP_STATE_START = 0,
     CP_STATE_NEED_LEFT,
@@ -66,10 +26,10 @@ typedef enum {
 } CheckpointProgressState;
 
 static const int MapLaps[] = {
-    [NONEMAP] = 0,
-    [ScorchingSands] = 10,
-    [AlpinRush] = 10,
-    [NeonCircuit] = 10,
+    [NONEMAP] = LAPS_NONE,
+    [ScorchingSands] = LAPS_SCORCHING_SANDS,
+    [AlpinRush] = LAPS_ALPIN_RUSH,
+    [NeonCircuit] = LAPS_NEON_CIRCUIT,
 };
 
 //=============================================================================

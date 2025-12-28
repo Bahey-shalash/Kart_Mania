@@ -1,6 +1,8 @@
 #ifndef GAME_CONSTANTS_H
 #define GAME_CONSTANTS_H
 
+#include "fixedmath2d.h"
+
 /*
  * game_constants.h
  *
@@ -21,6 +23,56 @@
 #define SAND_SPEED_DIVISOR 2    // Speed reduced by /2 on sand
 #define BANANA_SPEED_DIVISOR 3  // Speed reduced by /3 when hit by banana
 #define OIL_SPEED_DIVISOR 2     // Speed reduced by /2 when hit by oil slick
+
+//=============================================================================
+// Race Physics (Q16.8 - see fixedmath2d.h for format)
+//=============================================================================
+
+#define TURN_STEP_50CC 3              // Steering delta per input for 50cc
+#define SPEED_50CC (FIXED_ONE * 3)    // Max speed: 3.0 px/frame in Q16.8
+#define ACCEL_50CC IntToFixed(1)      // Acceleration: 1.0 px/frame^2 in Q16.8
+#define FRICTION_50CC 240             // Base friction (240/256 = 0.9375)
+#define COLLISION_LOCKOUT_FRAMES 60   // Frames to disable accel after wall hit
+
+// Terrain modifiers (Q16.8 where noted)
+#define SAND_FRICTION 150  // Sand friction (150/256 = 0.586)
+#define SAND_MAX_SPEED \
+    (SPEED_50CC / SAND_SPEED_DIVISOR)  // Cap on sand, Q16.8 units
+
+//=============================================================================
+// Angle Helpers (binary angle, 0-511)
+//=============================================================================
+
+#define ANGLE_RIGHT 0                           // 0°
+#define ANGLE_DOWN ANGLE_QUARTER                // 90°
+#define ANGLE_LEFT ANGLE_HALF                   // 180°
+#define ANGLE_UP (ANGLE_HALF + ANGLE_QUARTER)   // 270°
+#define ANGLE_DOWN_RIGHT (ANGLE_QUARTER / 2)    // 45°
+#define ANGLE_DOWN_LEFT (ANGLE_HALF - ANGLE_DOWN_RIGHT)  // 135°
+#define ANGLE_UP_LEFT (ANGLE_HALF + ANGLE_DOWN_RIGHT)    // 225°
+#define ANGLE_UP_RIGHT (ANGLE_FULL - ANGLE_DOWN_RIGHT)   // 315°
+
+//=============================================================================
+// Race Layout (pixel coordinates unless noted)
+//=============================================================================
+
+#define START_LINE_X 920
+#define START_LINE_Y 595
+#define CAR_SPACING 40
+#define START_FACING_ANGLE ANGLE_UP
+
+#define FINISH_LINE_Y 580
+#define FINISH_LINE_X_MIN 900
+#define FINISH_LINE_X_MAX 960
+
+#define CHECKPOINT_DIVIDE_X 512
+#define CHECKPOINT_DIVIDE_Y 512
+
+// Lap counts per map
+#define LAPS_NONE 0
+#define LAPS_SCORCHING_SANDS 10
+#define LAPS_ALPIN_RUSH 10
+#define LAPS_NEON_CIRCUIT 10
 
 //=============================================================================
 // Item Spawn & Placement Constants
