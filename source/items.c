@@ -20,6 +20,15 @@
 #include "red_shell.h"
 #include "sound.h"
 
+// TODO: seperate this into multiple files
+/*
+item_spawning.c for creation/placement
+item_physics.c for  projectile movement/homing
+item_effects.c for player status effects
+item_rendering.c for OAM updates
+because the file is getting a bit out of hand
+*/
+
 //=============================================================================
 // Module State
 //=============================================================================
