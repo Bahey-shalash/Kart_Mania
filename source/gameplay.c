@@ -92,6 +92,7 @@ static QuadrantID determineQuadrant(int x, int y);
 static void renderCountdown(CountdownState state);
 static void clearCountdownDisplay(void);
 static void displayFinalTime(int min, int sec, int msec);
+void printDigit(u16* map, int number, int x, int y);
 
 //=============================================================================
 // Timer Getters

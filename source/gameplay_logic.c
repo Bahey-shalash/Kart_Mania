@@ -337,50 +337,6 @@ static void updateCountdown(void) {
 }
 
 //=============================================================================
-// Countdown System
-//=============================================================================
-static void updateCountdown(void) {
-    countdownTimer++;
-
-    switch (countdownState) {
-        case COUNTDOWN_3:
-            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
-                countdownState = COUNTDOWN_2;
-                countdownTimer = 0;
-            }
-            break;
-
-        case COUNTDOWN_2:
-            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
-                countdownState = COUNTDOWN_1;
-                countdownTimer = 0;
-            }
-            break;
-
-        case COUNTDOWN_1:
-            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
-                countdownState = COUNTDOWN_GO;
-                countdownTimer = 0;
-            }
-            break;
-
-        case COUNTDOWN_GO:
-            if (countdownTimer >= COUNTDOWN_GO_DURATION) {
-                countdownState = COUNTDOWN_FINISHED;
-                countdownTimer = 0;
-                raceCanStart = true;
-                // Start the race timer now
-                RaceTick_TimerInit();
-            }
-            break;
-
-        case COUNTDOWN_FINISHED:
-            // Do nothing - race is running
-            break;
-    }
-}
-
-//=============================================================================
 // Checkpoint System
 //=============================================================================
 static void checkCheckpointProgression(const Car* car, int carIndex) {
