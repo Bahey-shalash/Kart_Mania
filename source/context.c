@@ -17,6 +17,7 @@ void GameContext_InitDefaults(void) {
 
     gGameContext.currentGameState = HOME_PAGE;
     gGameContext.SelectedMap = NONEMAP;
+    gGameContext.isMultiplayerMode = false;  // Default to single player
 }
 
 void GameContext_SetMusicEnabled(bool enabled) {
@@ -42,4 +43,12 @@ void GameContext_SetMap(Map SelectedMap) {
 }
 Map GameContext_GetMap(void) {
     return gGameContext.SelectedMap;
+}
+
+void GameContext_SetMultiplayerMode(bool isMultiplayer) {
+    gGameContext.isMultiplayerMode = isMultiplayer;
+}
+
+bool GameContext_IsMultiplayerMode(void) {
+    return gGameContext.isMultiplayerMode;
 }

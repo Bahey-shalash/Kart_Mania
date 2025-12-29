@@ -60,7 +60,7 @@ static const QuadrantData quadrantData[9] = {
 static void configureGraphics(void);
 static void configureBackground(void);
 static void configureSprite(void);
-//static void configureConsole(void);
+// static void configureConsole(void);
 static void loadQuadrant(QuadrantID quad);
 static QuadrantID determineQuadrant(int x, int y);
 
@@ -99,7 +99,6 @@ void Gameplay_IncrementTimer(void) {
 void Graphical_Gameplay_initialize(void) {
     configureGraphics();
     configureBackground();
-    //configureConsole();  // Debug console on sub BG1
     configureSprite();
     raceMin = 0;
     raceSec = 0;
@@ -107,7 +106,13 @@ void Graphical_Gameplay_initialize(void) {
     currentLap = 1;
 
     Map selectedMap = GameContext_GetMap();
-    Race_Init(selectedMap, SinglePlayer);
+
+    // NEW: Check context to determine game mode
+    GameContext* ctx = GameContext_Get();
+    GameMode mode = ctx->isMultiplayerMode ? MultiPlayer : SinglePlayer;
+
+    // Initialize race with appropriate mode
+    Race_Init(selectedMap, mode);
 
     const Car* player = Race_GetPlayerCar();
     scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
@@ -141,7 +146,7 @@ GameState Gameplay_update(void) {
     const RaceState* state = Race_GetState();
     if (state->raceFinished) {
         Race_Stop();
-        return HOME_PAGE;
+        return GAMEPLAY;  // Pause on finish line instead of exiting to home
     }
 
     return GAMEPLAY;
@@ -150,10 +155,135 @@ GameState Gameplay_update(void) {
 //=============================================================================
 // Public API - VBlank (Graphics Update)
 //=============================================================================
+// void Gameplay_OnVBlank(void) {
+//     // consoleClear();
+
+//     const Car* player = Race_GetPlayerCar();
+//     Vec2 velocityVec =
+//         Vec2_Scale(Vec2_FromAngle(player->angle512), Car_GetSpeed(player));
+
+//     if (Race_CheckFinishLineCross(player)) {
+//         raceMin = 0;
+//         raceSec = 0;
+//         raceMsec = 0;
+
+//         const RaceState* state = Race_GetState();
+//         if (currentLap < state->totalLaps) {
+//             currentLap++;
+//         }
+//     }
+
+//     int carX = FixedToInt(player->position.x);
+//     int carY = FixedToInt(player->position.y);
+
+//     scrollX = carX - (SCREEN_WIDTH / 2);
+//     scrollY = carY - (SCREEN_HEIGHT / 2);
+
+//     if (scrollX < 0)
+//         scrollX = 0;
+//     if (scrollY < 0)
+//         scrollY = 0;
+//     if (scrollX > MAX_SCROLL_X)
+//         scrollX = MAX_SCROLL_X;
+//     if (scrollY > MAX_SCROLL_Y)
+//         scrollY = MAX_SCROLL_Y;
+
+//     QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
+//     if (newQuadrant != currentQuadrant) {
+//         loadQuadrant(newQuadrant);
+//         currentQuadrant = newQuadrant;
+//         Race_SetLoadedQuadrant(newQuadrant);
+//     }
+
+//     int col = currentQuadrant % 3;
+//     int row = currentQuadrant / 3;
+//     BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
+//     BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
+
+//     /* DEBUG: Movement telemetry
+//     int facingAngle = player->angle512;
+//     int velocityAngle = Car_GetVelocityAngle(player);
+//     Q16_8 speed = Car_GetSpeed(player);
+//     bool moving = Car_IsMoving(player);
+//     Vec2 velocityVec = Vec2_Scale(Vec2_FromAngle(player->angle512), speed);
+
+//     consoleClear();
+//     printf("=== CAR DEBUG ===\n");
+//     printf("Facing:   %3d\n", facingAngle);
+//     printf("Velocity: %3d\n", velocityAngle);
+//     printf("Speed:    %d.%02d\n", (int)(speed >> 8), (int)(((speed & 0xFF) * 100) >>
+//     8)); printf("Moving:   %s\n", moving ? "YES" : "NO");
+
+//     if (moving) {
+//         int angleDiff = (velocityAngle - facingAngle) & ANGLE_MASK;
+//         if (angleDiff > 256) angleDiff -= 512;
+//         printf("Diff:     %+4d", angleDiff);
+//         if (angleDiff > 32 || angleDiff < -32) {
+//             iprintf(" <!>");
+//         }
+//         printf("\n");
+//     }
+// */
+//     /*
+//         printf("\nPos: %d,%d\n", carX, carY);
+//         printf("Vel: %d,%d\n", FixedToInt(velocityVec.x),
+//         FixedToInt(velocityVec.y));
+
+//         // Item debug
+//         printf("\nItem: ");
+//         switch (player->item) {
+//             case ITEM_NONE:
+//                 printf("NONE");
+//                 break;
+//             case ITEM_BANANA:
+//                 printf("BANANA");
+//                 break;
+//             case ITEM_OIL:
+//                 printf("OIL");
+//                 break;
+//             case ITEM_BOMB:
+//                 printf("BOMB");
+//                 break;
+//             case ITEM_GREEN_SHELL:
+//                 printf("GREEN_SHELL");
+//                 break;
+//             case ITEM_RED_SHELL:
+//                 printf("RED_SHELL");
+//                 break;
+//             case ITEM_MISSILE:
+//                 printf("MISSILE");
+//                 break;
+//             case ITEM_MUSHROOM:
+//                 printf("MUSHROOM");
+//                 break;
+//             case ITEM_SPEEDBOOST:
+//                 printf("SPEEDBOOST");
+//                 break;
+//             default:
+//                 printf("???");
+//                 break;
+//         }
+//         printf("\n");
+//     */
+//     //---------------
+//     int dsAngle = -(player->angle512 << 6);
+//     oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
+//     // Changed to make the sand interaction better (not too sure why -16 didnt work)
+//     int screenX = carX - scrollX - 32;
+//     int screenY = carY - scrollY - 32;
+
+//     oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
+//            SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
+//            false);
+//     Items_Render(scrollX, scrollY);
+//     oamUpdate(&oamMain);
+// }
 void Gameplay_OnVBlank(void) {
-    //consoleClear();
+    // consoleClear();  // Uncomment if you want debug console
 
     const Car* player = Race_GetPlayerCar();
+    const RaceState* state = Race_GetState();
+
     Vec2 velocityVec =
         Vec2_Scale(Vec2_FromAngle(player->angle512), Car_GetSpeed(player));
 
@@ -162,7 +292,6 @@ void Gameplay_OnVBlank(void) {
         raceSec = 0;
         raceMsec = 0;
 
-        const RaceState* state = Race_GetState();
         if (currentLap < state->totalLaps) {
             currentLap++;
         }
@@ -195,80 +324,62 @@ void Gameplay_OnVBlank(void) {
     BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
     BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
 
-    /* DEBUG: Movement telemetry
-    int facingAngle = player->angle512;
-    int velocityAngle = Car_GetVelocityAngle(player);
-    Q16_8 speed = Car_GetSpeed(player);
-    bool moving = Car_IsMoving(player);
-    Vec2 velocityVec = Vec2_Scale(Vec2_FromAngle(player->angle512), speed);
+    //=========================================================================
+    // Render cars based on game mode
+    //=========================================================================
 
-    consoleClear();
-    printf("=== CAR DEBUG ===\n");
-    printf("Facing:   %3d\n", facingAngle);
-    printf("Velocity: %3d\n", velocityAngle);
-    printf("Speed:    %d.%02d\n", (int)(speed >> 8), (int)(((speed & 0xFF) * 100) >>
-    8)); printf("Moving:   %s\n", moving ? "YES" : "NO");
+    if (state->gameMode == SinglePlayer) {
+        // SINGLE PLAYER: Only render the player's car
+        int screenX = carX - scrollX - 16;
+        int screenY = carY - scrollY - 16;
 
-    if (moving) {
-        int angleDiff = (velocityAngle - facingAngle) & ANGLE_MASK;
-        if (angleDiff > 256) angleDiff -= 512;
-        printf("Diff:     %+4d", angleDiff);
-        if (angleDiff > 32 || angleDiff < -32) {
-            iprintf(" <!>");
+        // Setup rotation for player
+        int dsAngle = -(player->angle512 << 6);
+        oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
+
+        // Render player sprite (OAM slot 0)
+        oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
+               SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
+               false);
+    } else {
+        // MULTIPLAYER: Render ALL cars (player + other players)
+        // Note: Cars use OAM slots 41-48 to avoid conflicts with items (slots 1-40)
+
+        for (int i = 0; i < state->carCount; i++) {
+            const Car* car = &state->cars[i];
+
+            int carWorldX = FixedToInt(car->position.x);
+            int carWorldY = FixedToInt(car->position.y);
+
+            // Convert to screen coordinates
+            int carScreenX = carWorldX - scrollX - 16;
+            int carScreenY = carWorldY - scrollY - 16;
+
+            // OAM slot for this car (offset to avoid item conflicts)
+            int oamSlot = 41 + i;  // Cars use slots 41-48
+
+            // Set rotation for this car (must be done before oamSet)
+            int dsAngle = -(car->angle512 << 6);
+            oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
+
+            // Check if on screen (with margin for smooth enter/exit)
+            bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH + 32 &&
+                             carScreenY >= -32 && carScreenY < SCREEN_HEIGHT + 32);
+
+            if (onScreen) {
+                // Render car sprite on screen
+                oamSet(&oamMain, oamSlot, carScreenX, carScreenY, 0, 0,
+                       SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i, true,
+                       false, false, false, false);
+            } else {
+                // Move off-screen cars way off screen
+                oamSet(&oamMain, oamSlot, -64, -64, 0, 0, SpriteSize_32x32,
+                       SpriteColorFormat_16Color, car->gfx, i, true, false, false,
+                       false, false);
+            }
         }
-        printf("\n");
     }
-*/
-/*
-    printf("\nPos: %d,%d\n", carX, carY);
-    printf("Vel: %d,%d\n", FixedToInt(velocityVec.x), FixedToInt(velocityVec.y));
 
-    // Item debug
-    printf("\nItem: ");
-    switch (player->item) {
-        case ITEM_NONE:
-            printf("NONE");
-            break;
-        case ITEM_BANANA:
-            printf("BANANA");
-            break;
-        case ITEM_OIL:
-            printf("OIL");
-            break;
-        case ITEM_BOMB:
-            printf("BOMB");
-            break;
-        case ITEM_GREEN_SHELL:
-            printf("GREEN_SHELL");
-            break;
-        case ITEM_RED_SHELL:
-            printf("RED_SHELL");
-            break;
-        case ITEM_MISSILE:
-            printf("MISSILE");
-            break;
-        case ITEM_MUSHROOM:
-            printf("MUSHROOM");
-            break;
-        case ITEM_SPEEDBOOST:
-            printf("SPEEDBOOST");
-            break;
-        default:
-            printf("???");
-            break;
-    }
-    printf("\n");
-*/
-    //---------------
-    int dsAngle = -(player->angle512 << 6);
-    oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
-    //Changed to make the sand interaction better (not too sure why -16 didnt work)
-    int screenX = carX - scrollX - 32;
-    int screenY = carY - scrollY - 32;
-
-    oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
-           SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
-           false);
     Items_Render(scrollX, scrollY);
     oamUpdate(&oamMain);
 }
@@ -285,7 +396,7 @@ static void configureGraphics(void) {
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 
     // Enable a second sub BG (BG1) for the debug console
-    //REG_DISPCNT_SUB |= DISPLAY_BG1_ACTIVE;
+    // REG_DISPCNT_SUB |= DISPLAY_BG1_ACTIVE;
 }
 
 static void configureBackground(void) {
@@ -305,22 +416,50 @@ static void configureBackground(void) {
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
     updateChronoDisp_Sub(-1, -1, -1);
     // Reserve BG1 on sub for console (4bpp, separate tile/map blocks)
-    //BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(31) | BG_TILE_BASE(2);
+    // BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(31) | BG_TILE_BASE(2);
 }
+
+// static void configureSprite(void) {
+//     oamInit(&oamMain, SpriteMapping_1D_32, false);
+
+//     /*  // Allocate sprite graphics for player kart (16-color)
+//      u16* kartGfx =
+//          oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
+
+//      // Load kart palette to slot 0
+//      dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
+//      dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
+
+//      // Set the graphics pointer on the player car
+//      Race_SetCarGfx(0, kartGfx); */
+
+//     // Load item graphics (palettes 1-7)
+//     Items_LoadGraphics();
+// }
 
 static void configureSprite(void) {
     oamInit(&oamMain, SpriteMapping_1D_32, false);
 
-    // Allocate sprite graphics for player kart (16-color)
-    u16* kartGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
-
     // Load kart palette to slot 0
     dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
+
+    // Allocate sprite graphics ONCE (all cars share the same graphics)
+    u16* kartGfx =
+        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
     dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
 
-    // Set the graphics pointer on the player car
+    // Only set graphics for the player's car (always car 0)
     Race_SetCarGfx(0, kartGfx);
+
+    // In multiplayer, the other cars' graphics will be set when they join
+    // OR we can set them all now if we're in multiplayer mode:
+    GameContext* ctx = GameContext_Get();
+    if (ctx->isMultiplayerMode) {
+        const RaceState* raceState = Race_GetState();
+        for (int i = 1; i < raceState->carCount; i++) {
+            Race_SetCarGfx(i, kartGfx);
+        }
+    }
 
     // Load item graphics (palettes 1-7)
     Items_LoadGraphics();

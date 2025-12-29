@@ -4,6 +4,7 @@
 
 #include "Items.h"
 #include "game_constants.h"
+#include "multiplayer.h"
 #include "terrain_detection.h"
 #include "timer.h"
 #include "wall_collision.h"
@@ -46,7 +47,8 @@ static bool itemButtonHeldLast = false;  // Track L-button edge ourselves
 
 static int collisionLockoutTimer[MAX_CARS] = {0};
 static QuadrantID loadedQuadrant = QUAD_BR;
-
+static int networkUpdateCounter = 0;
+static bool isMultiplayerRace = false;
 //=============================================================================
 // Private Prototypes
 //=============================================================================
@@ -103,12 +105,24 @@ void Race_Init(Map map, GameMode mode) {
     KartMania.currentMap = map;
     KartMania.totalLaps = MapLaps[map];
     KartMania.gameMode = mode;
-    KartMania.playerIndex = 0;
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
-    KartMania.carCount = (mode == SinglePlayer) ? MAX_CARS : 1;
-    KartMania.checkpointCount = 0;
     itemButtonHeldLast = false;
+
+    // NEW: Check if this is a multiplayer race
+    isMultiplayerRace = (mode == MultiPlayer);
+
+    if (isMultiplayerRace) {
+        // Multiplayer mode
+        KartMania.playerIndex = Multiplayer_GetMyPlayerID();
+        KartMania.carCount = MAX_CARS;  // All 8 slots available for network players
+    } else {
+        // Single player mode
+        KartMania.playerIndex = 0;
+        KartMania.carCount = MAX_CARS;
+    }
+
+    KartMania.checkpointCount = 0;
 
     for (int i = 0; i < KartMania.carCount; i++) {
         initCarAtSpawn(&KartMania.cars[i], i);
@@ -152,7 +166,6 @@ void Race_Stop(void) {
 // Public API - Game Loop
 //=============================================================================
 
-// Modify Race_Tick to include terrain effects
 void Race_Tick(void) {
     if (!Race_IsActive()) {
         return;
@@ -165,7 +178,7 @@ void Race_Tick(void) {
 
     Items_Update();
 
-    // Calculate scroll position for collision detection (same as in gameplay.c)
+    // Calculate scroll position for collision detection
     int scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
     int scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
     if (scrollX < 0)
@@ -186,6 +199,20 @@ void Race_Tick(void) {
 
     if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
         collisionLockoutTimer[KartMania.playerIndex]--;
+    }
+
+    // NEW: Network synchronization for multiplayer
+    if (isMultiplayerRace) {
+        networkUpdateCounter++;
+        if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
+            // Send my car state
+            Multiplayer_SendCarState(player);
+
+            // Receive others' car states
+            Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
+
+            networkUpdateCounter = 0;
+        }
     }
 }
 
@@ -411,5 +438,11 @@ void PauseISR(void) {
         RaceTick_TimerPause();
     } else {
         RaceTick_TimerEnable();
+    }
+}
+
+void Race_SetPlayerIndex(int playerIndex) {
+    if (playerIndex >= 0 && playerIndex < MAX_CARS) {
+        KartMania.playerIndex = playerIndex;
     }
 }

@@ -69,5 +69,6 @@ void init_pause_interrupt(void);
 void PauseISR(void);
 void Race_SetCarGfx(int index, u16* gfx);
 void Race_SetLoadedQuadrant(QuadrantID quad);
+void Race_SetPlayerIndex(int playerIndex);
 
 #endif  // GAMEPLAY_LOGIC_H
