@@ -362,7 +362,7 @@ static void clampToMapBounds(Car* car, int carIndex) {
 
         if (nx != 0 || ny != 0) {
             // Push car out of wall
-            int pushDistance = CAR_RADIUS + 2;
+            int pushDistance = CAR_RADIUS;
             car->position.x += IntToFixed(nx * pushDistance);
             car->position.y += IntToFixed(ny * pushDistance);
 

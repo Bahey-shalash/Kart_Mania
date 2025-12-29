@@ -60,7 +60,7 @@ static const QuadrantData quadrantData[9] = {
 static void configureGraphics(void);
 static void configureBackground(void);
 static void configureSprite(void);
-static void configureConsole(void);
+//static void configureConsole(void);
 static void loadQuadrant(QuadrantID quad);
 static QuadrantID determineQuadrant(int x, int y);
 
@@ -99,7 +99,7 @@ void Gameplay_IncrementTimer(void) {
 void Graphical_Gameplay_initialize(void) {
     configureGraphics();
     configureBackground();
-    configureConsole();  // Debug console on sub BG1
+    //configureConsole();  // Debug console on sub BG1
     configureSprite();
     raceMin = 0;
     raceSec = 0;
@@ -151,7 +151,7 @@ GameState Gameplay_update(void) {
 // Public API - VBlank (Graphics Update)
 //=============================================================================
 void Gameplay_OnVBlank(void) {
-    consoleClear();
+    //consoleClear();
 
     const Car* player = Race_GetPlayerCar();
     Vec2 velocityVec =
@@ -219,6 +219,7 @@ void Gameplay_OnVBlank(void) {
         printf("\n");
     }
 */
+/*
     printf("\nPos: %d,%d\n", carX, carY);
     printf("Vel: %d,%d\n", FixedToInt(velocityVec.x), FixedToInt(velocityVec.y));
 
@@ -257,13 +258,13 @@ void Gameplay_OnVBlank(void) {
             break;
     }
     printf("\n");
+*/
     //---------------
-
     int dsAngle = -(player->angle512 << 6);
     oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
-
-    int screenX = carX - scrollX - 16;
-    int screenY = carY - scrollY - 16;
+    //Changed to make the sand interaction better (not too sure why -16 didnt work)
+    int screenX = carX - scrollX - 32;
+    int screenY = carY - scrollY - 32;
 
     oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
            SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
@@ -280,11 +281,11 @@ static void configureGraphics(void) {
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
 
-    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG1_ACTIVE;  // Sub: console only
+    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE;  // Sub: console only
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 
     // Enable a second sub BG (BG1) for the debug console
-    REG_DISPCNT_SUB |= DISPLAY_BG1_ACTIVE;
+    //REG_DISPCNT_SUB |= DISPLAY_BG1_ACTIVE;
 }
 
 static void configureBackground(void) {
@@ -296,16 +297,15 @@ static void configureBackground(void) {
     dmaCopy(scorching_sands_TLPal, BG_PALETTE, scorching_sands_TLPalLen);
 
     // Sub screen graphics disabled in gameplay; console uses BG1 instead.
-    // BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
-    // swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
-    // swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
-    // BG_PALETTE_SUB[0] = ARGB16(1, 31, 31, 0);
-    // BG_PALETTE_SUB[1] = ARGB16(1, 0, 0, 0);
-    // memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
-    // updateChronoDisp_Sub(-1, -1, -1);
-
+    BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
+    swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
+    swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
+    BG_PALETTE_SUB[0] = ARGB16(1, 31, 31, 0);
+    BG_PALETTE_SUB[1] = ARGB16(1, 0, 0, 0);
+    memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
+    updateChronoDisp_Sub(-1, -1, -1);
     // Reserve BG1 on sub for console (4bpp, separate tile/map blocks)
-    BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(31) | BG_TILE_BASE(2);
+    //BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(31) | BG_TILE_BASE(2);
 }
 
 static void configureSprite(void) {
@@ -326,6 +326,7 @@ static void configureSprite(void) {
     Items_LoadGraphics();
 }
 
+/*
 // DEBUG Console setup (active for gameplay debug)
 static void configureConsole(void) {
     // Use sub screen BG1 so we don't clobber gameplay BGs/palettes
@@ -334,6 +335,7 @@ static void configureConsole(void) {
     printf("=== KART DEBUG ===\n");
     printf("SELECT = exit\n\n");
 }
+*/
 
 //=============================================================================
 // Private Functions - Quadrant Management

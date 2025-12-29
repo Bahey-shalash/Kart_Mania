@@ -291,7 +291,7 @@ void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
                           int targetCarIndex) {
     int slot = findInactiveItemSlot();
     if (slot < 0) {
-        printf("WARNING: No free slots for projectile!\n");
+        //printf("WARNING: No free slots for projectile!\n");
         return;  // No free slots
     }
 
@@ -305,11 +305,13 @@ void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
     item->lifetime_ticks = PROJECTILE_LIFETIME_SECONDS * RACE_TICK_FREQ;
 
     // DEBUG: Print projectile firing info
+    /*
     printf("Fired %s at %d,%d angle=%d speed=%d\n",
            type == ITEM_GREEN_SHELL ? "GREEN_SHELL"
            : type == ITEM_RED_SHELL ? "RED_SHELL"
                                     : "MISSILE",
            FixedToInt(pos.x), FixedToInt(pos.y), angle512, FixedToInt(speed));
+    */
 
     // Set hitbox and graphics based on type
     if (type == ITEM_MISSILE) {
@@ -337,7 +339,7 @@ void Items_PlaceHazard(Item type, Vec2 pos) {
     item->active = true;
 
     // DEBUG: Print where item was placed
-    printf("Placed %d at %d,%d\n", type, FixedToInt(pos.x), FixedToInt(pos.y));
+    //printf("Placed %d at %d,%d\n", type, FixedToInt(pos.x), FixedToInt(pos.y));
 
     // Set lifetime and graphics
     switch (type) {
@@ -490,10 +492,10 @@ void Items_Render(int scrollX, int scrollY) {
 
         // DEBUG: Print item position each frame for projectiles
         if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL) {
-            printf("%s pos: %d,%d active=%d\n",
-                   item->type == ITEM_GREEN_SHELL ? "Green" : "Red",
-                   FixedToInt(item->position.x), FixedToInt(item->position.y),
-                   item->active);
+            //printf("%s pos: %d,%d active=%d\n",
+            //       item->type == ITEM_GREEN_SHELL ? "Green" : "Red",
+            //       FixedToInt(item->position.x), FixedToInt(item->position.y),
+            //       item->active);
         }
 
         // Calculate screen position
@@ -662,7 +664,7 @@ static void updateProjectile(TrackItem* item, const Car* cars, int carCount) {
     QuadrantID quad = getQuadrantFromPos(item->position);
 
     if (Wall_CheckCollision(x, y, item->hitbox_width / 2, quad)) {
-        printf("Projectile hit wall at %d,%d - despawning\n", x, y);
+        //printf("Projectile hit wall at %d,%d - despawning\n", x, y);
         item->active = false;  // Despawn on wall hit
     }
 }
@@ -844,7 +846,7 @@ static void applyOilHitEffect(Car* car, int carIndex) {
 static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex) {
     // DEBUG: Announce pickup
     if (carIndex == 0) {
-        printf("*** ITEM BOX PICKUP! ***\n");
+        //printf("*** ITEM BOX PICKUP! ***\n");
     }
 
     // PLAY SOUND - no throttling, every pickup should ding!
@@ -857,7 +859,7 @@ static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex) {
             car->item = receivedItem;
 
             // DEBUG: Print which item was received
-            printf("  Received item: %d\n", receivedItem);
+            //printf("  Received item: %d\n", receivedItem);
         }
     }
     // Deactivate box and start respawn timer
@@ -881,6 +883,7 @@ static void checkItemBoxCollisions(Car* cars, int carCount) {
                 int distInt = FixedToInt(dist);
 
                 // Only print for closest box (avoid spam)
+                /*
                 if (distInt < ITEM_PICKUP_DEBUG_DISTANCE) {
                     printf("Box %d: dist=%d (threshold=%d)\n", i, distInt,
                            ITEM_PICKUP_THRESHOLD);
@@ -889,6 +892,7 @@ static void checkItemBoxCollisions(Car* cars, int carCount) {
                     printf("  Box: %d,%d\n", FixedToInt(itemBoxSpawns[i].position.x),
                            FixedToInt(itemBoxSpawns[i].position.y));
                 }
+                */
             }
 
             if (checkItemBoxPickup(&cars[c], &itemBoxSpawns[i])) {
