@@ -33,10 +33,8 @@ void updateChronoDisp_Sub(int min, int sec, int msec);
 void changeColorDisp_Sub(uint16 c);
 
 // Play Again screen getters 
-void renderPlayAgainScreen(int min, int sec, int msec, bool yesSelected);
-void clearPlayAgainScreen(void);
 bool Gameplay_IsPlayAgainActive(void);
-bool Gameplay_IsYesSelected(void);
+
 
 // Item rendering
 void Gameplay_RenderItems(int scrollX, int scrollY);

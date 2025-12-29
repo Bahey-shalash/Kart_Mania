@@ -1,13 +1,12 @@
 #include "timer.h"
-
 #include <nds.h>
-
 #include "context.h"
 #include "game_types.h"
 #include "gameplay.h"
 #include "gameplay_logic.h"
 #include "home_page.h"
 #include "map_selection.h"
+#include "play_again.h"  // ADD THIS
 
 //=============================================================================
 // Private Prototypes
@@ -21,8 +20,7 @@ static void ChronoTick_ISR(void);
 void initTimer(void) {
     GameContext* ctx = GameContext_Get();
     GameState state = ctx->currentGameState;
-
-    if (state == HOME_PAGE || state == MAPSELECTION || state == GAMEPLAY) {
+    if (state == HOME_PAGE || state == MAPSELECTION || state == GAMEPLAY || state == PLAYAGAIN) {
         irqSet(IRQ_VBLANK, &timerISRVblank);
         irqEnable(IRQ_VBLANK);
     }
@@ -34,9 +32,15 @@ void timerISRVblank(void) {
         case HOME_PAGE:
             HomePage_OnVBlank();
             break;
+            
         case MAPSELECTION:
             Map_selection_OnVBlank();
             break;
+            
+        case PLAYAGAIN:  // ADD THIS CASE
+            PlayAgain_OnVBlank();
+            break;
+            
         case GAMEPLAY: 
             Gameplay_OnVBlank();
             
@@ -47,43 +51,34 @@ void timerISRVblank(void) {
             } else if (state->raceFinished) {
                 // Race has finished
                 if (state->finishDelayTimer > 0) {
-                    // Still in delay period - show FINAL TOTAL TIME (not lap time)
+                    // Still in delay period - show FINAL TOTAL TIME
                     int min, sec, msec;
                     Race_GetFinalTime(&min, &sec, &msec);
                     updateChronoDisp_Sub(min, sec, msec);
                     updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
-                } else {
-                    // Delay expired - show Play Again screen
-                    if (Gameplay_IsPlayAgainActive()) {
-                        int min, sec, msec;
-                        Race_GetFinalTime(&min, &sec, &msec);
-                        renderPlayAgainScreen(min, sec, msec, Gameplay_IsYesSelected());
-                    }
-                }
+                } 
             } else {
                 // Normal race - show current lap timer
                 updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
                                     Gameplay_GetRaceMsec());
                 updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
             }
-            
             break;
         
         default:
             break;
     }
 }
+
 //=============================================================================
 // Race Tick Timers
 //=============================================================================
 void RaceTick_TimerInit(void) {
-    // TIMER0: Physics at RACE_TICK_FREQ Hz
     TIMER_DATA(0) = TIMER_FREQ_1024(RACE_TICK_FREQ);
     TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024 | TIMER_IRQ_REQ;
     irqSet(IRQ_TIMER0, RaceTick_ISR);
     irqEnable(IRQ_TIMER0);
-
-    // TIMER1: Chronometer at 1000 Hz (1ms intervals)
+    
     TIMER_DATA(1) = TIMER_FREQ_1024(1000);
     TIMER1_CR = TIMER_ENABLE | TIMER_DIV_1024 | TIMER_IRQ_REQ;
     irqSet(IRQ_TIMER1, ChronoTick_ISR);

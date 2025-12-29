@@ -2,7 +2,6 @@
  * Kart Mania - Main Source File
  */
 #include <nds.h>
-
 #include "context.h"
 #include "game_types.h"
 #include "gameplay.h"
@@ -13,11 +12,11 @@
 #include "settings.h"
 #include "sound.h"
 #include "storage.h"
+#include "play_again.h"
 
 //=============================================================================
 // PROTOTYPES
 //=============================================================================
-
 static GameState update_state(GameState state);
 static void init_state(GameState state);
 static void cleanup_state(GameState state);
@@ -25,50 +24,48 @@ static void cleanup_state(GameState state);
 //=============================================================================
 // MAIN
 //=============================================================================
-
 int main(void) {
     // Initialize storage first (includes fatInitDefault)
     bool storageAvailable = Storage_Init();
-
+    
     // Initialize context with hardcoded defaults
     GameContext_InitDefaults();
     GameContext* ctx = GameContext_Get();
-
+    
     // If storage available, load saved settings (overwrites defaults)
     if (storageAvailable) {
         Storage_LoadSettings();
     }
-
+    
     initSoundLibrary();
     LoadALLSoundFX();
     loadMUSIC();
-
+    
     // enables Music because default sound effect is true
     GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
+    
     init_state(ctx->currentGameState);
-
+    
     while (true) {
         GameState nextState = update_state(ctx->currentGameState);
-
+        
         if (nextState != ctx->currentGameState) {
             cleanup_state(ctx->currentGameState);
             ctx->currentGameState = nextState;
             video_nuke();
             init_state(nextState);
         }
-
+        
         swiWaitForVBlank();
     }
-
+    
     UnloadALLSoundFX();
-
     return 0;
 }
 
 //=============================================================================
 // IMPLEMENTATION
 //=============================================================================
-
 static GameState update_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
@@ -78,9 +75,12 @@ static GameState update_state(GameState state) {
         case MAPSELECTION:
             return Map_selection_update();
         case GAMEPLAY:
-            return Gameplay_update();  // placeholder
+            return Gameplay_update();
+        case PLAYAGAIN:
+            return PlayAgain_Update();  // FIXED: Use correct function name
+        default:
+            return state;
     }
-    return state;
 }
 
 static void init_state(GameState state) {
@@ -97,23 +97,24 @@ static void init_state(GameState state) {
         case SETTINGS:
             Settings_initialize();
             break;
+        case PLAYAGAIN:
+            PlayAgain_Initialize();
+            break;
     }
 }
 
 static void cleanup_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
-
             break;
         case MAPSELECTION:
-
             break;
         case GAMEPLAY:
-
             Race_Stop();
             break;
         case SETTINGS:
-
+            break;
+        case PLAYAGAIN:
             break;
     }
 }

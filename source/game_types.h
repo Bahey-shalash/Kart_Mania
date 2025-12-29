@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "fixedmath2d.h"
-typedef enum { HOME_PAGE, SETTINGS, MAPSELECTION, GAMEPLAY } GameState;
+typedef enum { HOME_PAGE, SETTINGS, MAPSELECTION, GAMEPLAY, PLAYAGAIN} GameState;
 
 typedef struct {
     u16* gfx;
