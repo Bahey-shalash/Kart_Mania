@@ -40,17 +40,18 @@ void timerISRVblank(void) {
             Map_selection_OnVBlank();
             break;
 
-        case GAMEPLAY: {
+        case GAMEPLAY: 
             Gameplay_OnVBlank();
 
-            // Update sub-screen displays
-            updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
-                                 Gameplay_GetRaceMsec());
+            if (!Race_IsCountdownActive()) {
+                updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
+                                    Gameplay_GetRaceMsec());
 
-            const RaceState* state = Race_GetState();
-            updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
+                const RaceState* state = Race_GetState();
+                updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
+            }
             break;
-        }
+        
 
         default:
             break;

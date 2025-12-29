@@ -266,7 +266,7 @@ static void renderCountdown(CountdownState state) {
     
     // Center position for large countdown numbers
     int centerX = 14;  // Centered horizontally (32 tiles / 2 - 2 for number width)
-    int centerY = 18;  // Lower on screen
+    int centerY = 10;  // Lower on screen
     
     switch (state) {
         case COUNTDOWN_3:
@@ -283,11 +283,9 @@ static void renderCountdown(CountdownState state) {
             // Display large "1"
             printDigit(map, 1, centerX, centerY);
             break;
-            
+    
         case COUNTDOWN_GO:
             // Display "GO!" using custom tiles
-            // You can create custom "G" and "O" tiles, or use creative number combinations
-            // For now, showing "0" as a placeholder for "GO"
             printDigit(map, 0, centerX - 2, centerY);
             // You could add more tiles here for a proper "GO" display
             break;
@@ -336,7 +334,6 @@ static void configureBackground(void) {
     BG_PALETTE_SUB[0] = ARGB16(1, 31, 31, 0);
     BG_PALETTE_SUB[1] = ARGB16(1, 0, 0, 0);
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
-    updateChronoDisp_Sub(-1, -1, -1);
 }
 
 static void configureSprite(void) {
