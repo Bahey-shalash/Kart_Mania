@@ -115,6 +115,7 @@ GameState MultiplayerLobby_Update(void) {
         countdownTimer--;
         if (countdownTimer <= 0) {
             // Countdown finished - start race!
+            GameContext_SetMap(ScorchingSands);// not sure about this 
             return GAMEPLAY;
         }
     }

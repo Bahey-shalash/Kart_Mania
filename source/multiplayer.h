@@ -139,4 +139,50 @@ void Multiplayer_SendCarState(const Car* car);
  */
 void Multiplayer_ReceiveCarStates(Car* cars, int carCount);
 
+/**
+ * Broadcast that an item was placed/thrown on the track
+ * - Call when player uses an item (banana, shell, etc.)
+ * - Sends: item type, position, angle, speed
+ * - Other players will create the same item on their screens
+ *
+ * @param itemType - What item was placed (ITEM_BANANA, ITEM_GREEN_SHELL, etc.)
+ * @param position - Where the item was placed (world coordinates)
+ * @param angle512 - Direction (for projectiles like shells)
+ * @param speed - Initial speed (for projectiles)
+ */
+void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512, Q16_8 speed);
+
+/**
+ * Receive item placements from other players
+ * - Call every frame during race (or when processing network packets)
+ * - Returns item placement data if available, NULL otherwise
+ * - Caller should create the item on their local track
+ */
+typedef struct {
+    bool valid;         // True if data is available
+    uint8_t playerID;   // Which player placed the item
+    Item itemType;      // What item was placed
+    Vec2 position;      // Where it was placed
+    int angle512;       // Direction (for projectiles)
+    Q16_8 speed;        // Initial speed (for projectiles)
+} ItemPlacementData;
+
+ItemPlacementData Multiplayer_ReceiveItemPlacements(void);
+
+/**
+ * Broadcast that an item box was picked up
+ * - Call when any player picks up an item box
+ * - Other players will deactivate the same item box on their screens
+ *
+ * @param boxIndex - Index of the item box that was picked up
+ */
+void Multiplayer_SendItemBoxPickup(int boxIndex);
+
+/**
+ * Receive item box pickups from other players
+ * - Call every frame during race (or when processing network packets)
+ * - Returns box index if available, -1 otherwise
+ */
+int Multiplayer_ReceiveItemBoxPickup(void);
+
 #endif  // MULTIPLAYER_H

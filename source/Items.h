@@ -340,4 +340,10 @@ const ItemBoxSpawn* Items_GetBoxSpawns(int* count);
  */
 const TrackItem* Items_GetActiveItems(int* count);
 
+/**
+ * Deactivate an item box by index (for multiplayer synchronization)
+ * @param boxIndex - Index of the box to deactivate
+ */
+void Items_DeactivateBox(int boxIndex);
+
 #endif  // ITEMS_H

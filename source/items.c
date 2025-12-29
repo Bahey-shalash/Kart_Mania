@@ -5,6 +5,7 @@
 
 #include "game_constants.h"
 #include "gameplay_logic.h"
+#include "multiplayer.h"
 #include "wall_collision.h"
 
 // Sprite graphics includes
@@ -68,13 +69,18 @@ static void applyShellHitEffect(Car* car);
 static void applyBananaHitEffect(Car* car);
 static void applyOilHitEffect(Car* car, int carIndex);
 static bool checkItemCarCollision(Vec2 itemPos, Vec2 carPos, int itemHitbox);
-static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex);
+static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex, int boxIndex);
 static void checkItemBoxCollisions(Car* cars, int carCount);
 static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX,
                                          int scrollY);
 static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX,
                                      int scrollY);
 static bool isItemNearScreen(Vec2 itemPos, int scrollX, int scrollY);
+
+// Internal item placement functions (for network synchronization)
+static void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
+                                   int targetCarIndex, bool sendNetwork);
+static void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork);
 
 //=============================================================================
 // Lifecycle
@@ -105,6 +111,30 @@ void Items_Reset(void) {
 
 void Items_Update(void) {
     const RaceState* raceState = Race_GetState();
+
+    // In multiplayer, receive item placements from other players
+    if (raceState->gameMode == MultiPlayer) {
+        ItemPlacementData itemData;
+        while ((itemData = Multiplayer_ReceiveItemPlacements()).valid) {
+            // Create the item locally that was placed by another player
+            // Use internal functions with sendNetwork=false to avoid re-broadcasting
+            if (itemData.speed > 0) {
+                // It's a projectile
+                fireProjectileInternal(itemData.itemType, itemData.position,
+                                     itemData.angle512, itemData.speed, INVALID_CAR_INDEX, false);
+            } else {
+                // It's a hazard
+                placeHazardInternal(itemData.itemType, itemData.position, false);
+            }
+        }
+
+        // Receive item box pickups from other players
+        int boxIndex;
+        while ((boxIndex = Multiplayer_ReceiveItemBoxPickup()) >= 0) {
+            // Deactivate the box that was picked up by another player
+            Items_DeactivateBox(boxIndex);
+        }
+    }
 
     // Update active track items
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
@@ -287,8 +317,16 @@ Item Items_GetRandomItem(int playerRank) {
 // Item Spawning
 //=============================================================================
 
-void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
-                          int targetCarIndex) {
+static void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
+                                   int targetCarIndex, bool sendNetwork) {
+    // In multiplayer, broadcast item placement to other players
+    if (sendNetwork) {
+        const RaceState* state = Race_GetState();
+        if (state->gameMode == MultiPlayer) {
+            Multiplayer_SendItemPlacement(type, pos, angle512, speed);
+        }
+    }
+
     int slot = findInactiveItemSlot();
     if (slot < 0) {
         //printf("WARNING: No free slots for projectile!\n");
@@ -325,7 +363,67 @@ void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
     }
 }
 
+void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
+                          int targetCarIndex) {
+    fireProjectileInternal(type, pos, angle512, speed, targetCarIndex, true);
+}
+
+static void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork) {
+    // In multiplayer, broadcast item placement to other players
+    if (sendNetwork) {
+        const RaceState* state = Race_GetState();
+        if (state->gameMode == MultiPlayer) {
+            Multiplayer_SendItemPlacement(type, pos, 0, 0);  // Hazards don't move
+        }
+    }
+
+    int slot = findInactiveItemSlot();
+    if (slot < 0)
+        return;
+
+    TrackItem* item = &activeItems[slot];
+    item->type = type;
+    item->position = pos;
+    item->startPosition = pos;
+    item->speed = 0;
+    item->angle512 = 0;
+    item->active = true;
+
+    // Set lifetime and graphics based on item type
+    if (type == ITEM_BOMB) {
+        item->lifetime_ticks = BOMB_LIFETIME_SECONDS * RACE_TICK_FREQ;
+        item->hitbox_width = BOMB_HITBOX;
+        item->hitbox_height = BOMB_HITBOX;
+        item->gfx = bombGfx;
+    } else if (type == ITEM_BANANA) {
+        item->lifetime_ticks = ITEM_LIFETIME_INFINITE;
+        item->hitbox_width = BANANA_HITBOX;
+        item->hitbox_height = BANANA_HITBOX;
+        item->gfx = bananaGfx;
+    } else if (type == ITEM_OIL) {
+        item->lifetime_ticks = OIL_LIFETIME_TICKS;
+        item->hitbox_width = OIL_SLICK_HITBOX;
+        item->hitbox_height = OIL_SLICK_HITBOX;
+        item->gfx = oilSlickGfx;
+    }
+}
+
 void Items_PlaceHazard(Item type, Vec2 pos) {
+    placeHazardInternal(type, pos, true);
+}
+
+//=============================================================================
+// OLD FUNCTION TO REMOVE
+//=============================================================================
+// This old function below should be deleted - it's been replaced by placeHazardInternal
+/*
+static void placeHazardOld_DELETE_ME(Item type, Vec2 pos) {
+    // In multiplayer, broadcast item placement to other players
+    const RaceState* state = Race_GetState();
+    if (state->gameMode == MultiPlayer) {
+        Multiplayer_SendItemPlacement(type, pos, 0, 0);  // Hazards don't move, so angle/speed = 0
+    }
+
     int slot = findInactiveItemSlot();
     if (slot < 0)
         return;
@@ -369,6 +467,10 @@ void Items_PlaceHazard(Item type, Vec2 pos) {
             break;
     }
 }
+
+*/
+// End of old duplicate function that should be removed
+
 
 //=============================================================================
 // Player Effects
@@ -448,7 +550,7 @@ void Items_Render(int scrollX, int scrollY) {
         if (!itemBoxSpawns[i].active) {
             // Hide inactive item boxes
             oamSet(&oamMain, oamSlot, 0, 192, 0, 1, SpriteSize_8x8,
-                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, -1, true, false,
+                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, true, false,
                    false, false, false);
             continue;
         }
@@ -462,12 +564,12 @@ void Items_Render(int scrollX, int scrollY) {
         // Render if on-screen, otherwise hide
         if (screenX >= -16 && screenX < 256 && screenY >= -16 && screenY < 192) {
             oamSet(&oamMain, oamSlot, screenX, screenY, 0, 1, SpriteSize_8x8,
-                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, -1, false, false,
+                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, false, false,
                    false, false, false);
         } else {
             // Hide offscreen boxes
             oamSet(&oamMain, oamSlot, 0, 192, 0, 1, SpriteSize_8x8,
-                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, -1, true, false,
+                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, true, false,
                    false, false, false);
         }
     }
@@ -598,6 +700,13 @@ void Items_LoadGraphics(void) {
     dmaCopy(red_shellPal, &SPRITE_PALETTE[80], red_shellPalLen);
     dmaCopy(missilePal, &SPRITE_PALETTE[96], missilePalLen);
     dmaCopy(oil_slickPal, &SPRITE_PALETTE[112], oil_slickPalLen);
+
+    // CRITICAL FIX: Update item box spawns with the newly allocated graphics pointer
+    // This is necessary because initItemBoxSpawns() is called BEFORE Items_LoadGraphics()
+    // in the initialization sequence, so the spawns were initially assigned NULL
+    for (int i = 0; i < itemBoxCount; i++) {
+        itemBoxSpawns[i].gfx = itemBoxGfx;
+    }
 }
 
 //=============================================================================
@@ -695,7 +804,16 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
 }
 
 static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
+    // Get race state to check if we're in multiplayer mode
+    const RaceState* state = Race_GetState();
+    bool isMultiplayer = (state->gameMode == MultiPlayer);
+
     for (int i = 0; i < carCount; i++) {
+        // In multiplayer, only check collision for connected players
+        if (isMultiplayer && !Multiplayer_IsPlayerConnected(i)) {
+            continue;
+        }
+
         if (checkItemCarCollision(item->position, cars[i].position,
                                   item->hitbox_width)) {
             // Apply effect based on projectile type
@@ -712,7 +830,16 @@ static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
 }
 
 static void checkHazardCollision(TrackItem* item, Car* cars, int carCount) {
+    // Get race state to check if we're in multiplayer mode
+    const RaceState* state = Race_GetState();
+    bool isMultiplayer = (state->gameMode == MultiPlayer);
+
     for (int i = 0; i < carCount; i++) {
+        // In multiplayer, only check collision for connected players
+        if (isMultiplayer && !Multiplayer_IsPlayerConnected(i)) {
+            continue;
+        }
+
         if (checkItemCarCollision(item->position, cars[i].position,
                                   item->hitbox_width)) {
             // Apply hazard effect based on item type
@@ -749,7 +876,16 @@ static void checkHazardCollision(TrackItem* item, Car* cars, int carCount) {
 }
 
 static void explodeBomb(Vec2 position, Car* cars, int carCount) {
+    // Get race state to check if we're in multiplayer mode
+    const RaceState* state = Race_GetState();
+    bool isMultiplayer = (state->gameMode == MultiPlayer);
+
     for (int i = 0; i < carCount; i++) {
+        // In multiplayer, only check collision for connected players
+        if (isMultiplayer && !Multiplayer_IsPlayerConnected(i)) {
+            continue;
+        }
+
         Q16_8 dist = Vec2_Distance(position, cars[i].position);
 
         if (dist <= BOMB_EXPLOSION_RADIUS) {
@@ -835,31 +971,39 @@ static void applyBananaHitEffect(Car* car) {
 }
 
 static void applyOilHitEffect(Car* car, int carIndex) {
+    // Get race state to determine player index
+    const RaceState* state = Race_GetState();
+    int playerIndex = state->playerIndex;
+
     // Apply oil slow to player only
-    if (carIndex == 0) {
+    if (carIndex == playerIndex) {
         Items_ApplyOilSlow(car, &playerEffects);
     } else {
         car->speed = car->speed / OIL_SPEED_DIVISOR;
     }
 }
 
-static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex) {
-    // DEBUG: Announce pickup
-    if (carIndex == 0) {
-        //printf("*** ITEM BOX PICKUP! ***\n");
-    }
+static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex, int boxIndex) {
+    // Get race state to determine player index
+    const RaceState* state = Race_GetState();
+    int playerIndex = state->playerIndex;
 
-    // PLAY SOUND - no throttling, every pickup should ding!
-    PlayBoxSFX();
+    // Give item to the local player only (not AI or remote players)
+    if (carIndex == playerIndex) {
+        // PLAY SOUND - only for the local player who picked up the box
+        PlayBoxSFX();
 
-    // Give player random item
-    if (carIndex == 0) {  // Only player car (index 0)
         if (car->item == ITEM_NONE) {
             Item receivedItem = Items_GetRandomItem(car->rank);
             car->item = receivedItem;
 
             // DEBUG: Print which item was received
             //printf("  Received item: %d\n", receivedItem);
+        }
+
+        // In multiplayer, broadcast the pickup to other players
+        if (state->gameMode == MultiPlayer) {
+            Multiplayer_SendItemBoxPickup(boxIndex);
         }
     }
     // Deactivate box and start respawn timer
@@ -871,11 +1015,20 @@ static void checkItemBoxCollisions(Car* cars, int carCount) {
     // DEBUG: Track if we're checking item boxes
     static bool debugItemBoxes = true;
 
+    // Get race state to check if we're in multiplayer mode
+    const RaceState* state = Race_GetState();
+    bool isMultiplayer = (state->gameMode == MultiPlayer);
+
     for (int i = 0; i < itemBoxCount; i++) {
         if (!itemBoxSpawns[i].active)
             continue;
 
         for (int c = 0; c < carCount; c++) {
+            // In multiplayer, only check collision for connected players
+            if (isMultiplayer && !Multiplayer_IsPlayerConnected(c)) {
+                continue;
+            }
+
             // DEBUG: Print distance to item box for player (car 0)
             if (c == 0 && debugItemBoxes) {
                 Q16_8 dist =
@@ -896,7 +1049,7 @@ static void checkItemBoxCollisions(Car* cars, int carCount) {
             }
 
             if (checkItemBoxPickup(&cars[c], &itemBoxSpawns[i])) {
-                handleItemBoxPickup(&cars[c], &itemBoxSpawns[i], c);
+                handleItemBoxPickup(&cars[c], &itemBoxSpawns[i], c, i);
                 break;
             }
         }
@@ -950,4 +1103,13 @@ static bool isItemNearScreen(Vec2 itemPos, int scrollX, int scrollY) {
 
     return (itemX >= screenLeft && itemX <= screenRight && itemY >= screenTop &&
             itemY <= screenBottom);
+}
+
+void Items_DeactivateBox(int boxIndex) {
+    if (boxIndex < 0 || boxIndex >= itemBoxCount) {
+        return;
+    }
+
+    itemBoxSpawns[boxIndex].active = false;
+    itemBoxSpawns[boxIndex].respawnTimer = ITEM_BOX_RESPAWN_TICKS;
 }

@@ -79,7 +79,8 @@ int Race_GetLapCount(void) {
 }
 
 bool Race_CheckFinishLineCross(const Car* car) {
-    return checkFinishLineCross(car, 0);
+    // In multiplayer, use the actual player index instead of hardcoded 0
+    return checkFinishLineCross(car, KartMania.playerIndex);
 }
 
 void Race_SetLoadedQuadrant(QuadrantID quad) {

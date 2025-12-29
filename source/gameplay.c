@@ -332,7 +332,7 @@ void Gameplay_OnVBlank(void) {
     //=========================================================================
 
     if (state->gameMode == SinglePlayer) {
-        // SINGLE PLAYER: Only render the player's car
+        // SINGLE PLAYER: Only render the player's car at OAM slot 41 (consistent with multiplayer)
         int screenX = carX - scrollX - 16;
         int screenY = carY - scrollY - 16;
 
@@ -340,15 +340,15 @@ void Gameplay_OnVBlank(void) {
         int dsAngle = -(player->angle512 << 6);
         oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
 
-        // Render player sprite (OAM slot 0, affine matrix 0)
-        oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
+        // Render player sprite (OAM slot 41, affine matrix 0)
+        oamSet(&oamMain, 41, screenX, screenY, 0, 0, SpriteSize_32x32,
                SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
                false);
     } else {
         // MULTIPLAYER: Render only connected players' cars
 
         for (int i = 0; i < state->carCount; i++) {
-            // OAM slot for this car (slots 41-48 for cars in multiplayer)
+            // OAM slot for this car (slots 41-48 for cars)
             int oamSlot = 41 + i;
 
             // Skip rendering if this player is not connected

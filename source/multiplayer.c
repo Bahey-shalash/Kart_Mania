@@ -18,11 +18,13 @@
 //=============================================================================
 
 typedef enum {
-    MSG_LOBBY_JOIN,    // "I'm joining the lobby"
-    MSG_LOBBY_UPDATE,  // "I'm still here" (heartbeat)
-    MSG_READY,         // "I pressed SELECT"
-    MSG_CAR_UPDATE,    // "Here's my car state" (during race)
-    MSG_DISCONNECT     // "I'm leaving"
+    MSG_LOBBY_JOIN,      // "I'm joining the lobby"
+    MSG_LOBBY_UPDATE,    // "I'm still here" (heartbeat)
+    MSG_READY,           // "I pressed SELECT"
+    MSG_CAR_UPDATE,      // "Here's my car state" (during race)
+    MSG_ITEM_PLACED,     // "I placed/threw an item on the track"
+    MSG_ITEM_BOX_PICKUP, // "I picked up an item box"
+    MSG_DISCONNECT       // "I'm leaving"
 } MessageType;
 
 typedef struct {
@@ -48,6 +50,21 @@ typedef struct {
             Item item;      // 4 bytes
             uint8_t reserved[4];
         } carState;
+
+        // For MSG_ITEM_PLACED (item placed on track)
+        struct {
+            Item itemType;      // 4 bytes - what item was placed
+            Vec2 position;      // 8 bytes - where it was placed
+            int angle512;       // 4 bytes - direction (for projectiles)
+            Q16_8 speed;        // 4 bytes - initial speed (for projectiles)
+            uint8_t reserved[8];
+        } itemPlaced;
+
+        // For MSG_ITEM_BOX_PICKUP (item box collected)
+        struct {
+            int boxIndex;       // 4 bytes - which box was picked up
+            uint8_t reserved[24];
+        } itemBoxPickup;
 
         uint8_t raw[28];  // For future message types
     } payload;
@@ -465,31 +482,162 @@ void Multiplayer_SendCarState(const Car* car) {
     sendData((char*)&packet, sizeof(NetworkPacket));
 }
 
+//=============================================================================
+// Packet buffering for item placements
+// (needed because we process car states and items separately)
+//=============================================================================
+
+#define MAX_BUFFERED_ITEM_PACKETS 16
+static NetworkPacket itemPacketBuffer[MAX_BUFFERED_ITEM_PACKETS];
+static int itemPacketCount = 0;
+
+#define MAX_BUFFERED_BOX_PACKETS 16
+static NetworkPacket boxPacketBuffer[MAX_BUFFERED_BOX_PACKETS];
+static int boxPacketCount = 0;
+
 void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
     NetworkPacket packet;
 
     // Receive all pending packets (non-blocking)
     while (receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
-        // Validate packet
+        // Validate packet version
         if (packet.version != PROTOCOL_VERSION)
             continue;
-        if (packet.msgType != MSG_CAR_UPDATE)
-            continue;
-        if (packet.playerID >= carCount)
-            continue;
-        if (packet.playerID == myPlayerID)
-            continue;  // Skip own packets
 
-        // Update the car directly
-        Car* otherCar = &cars[packet.playerID];
-        otherCar->position = packet.payload.carState.position;
-        otherCar->speed = packet.payload.carState.speed;
-        otherCar->angle512 = packet.payload.carState.angle512;
-        otherCar->Lap = packet.payload.carState.lap;
-        otherCar->item = packet.payload.carState.item;
+        // Handle MSG_CAR_UPDATE packets
+        if (packet.msgType == MSG_CAR_UPDATE) {
+            if (packet.playerID >= carCount)
+                continue;
+            if (packet.playerID == myPlayerID)
+                continue;  // Skip own packets
 
-        // Mark as connected (for disconnect detection)
-        players[packet.playerID].connected = true;
-        players[packet.playerID].lastPacketTime = getTimeMs();
+            // Update the car directly
+            Car* otherCar = &cars[packet.playerID];
+            otherCar->position = packet.payload.carState.position;
+            otherCar->speed = packet.payload.carState.speed;
+            otherCar->angle512 = packet.payload.carState.angle512;
+            otherCar->Lap = packet.payload.carState.lap;
+            otherCar->item = packet.payload.carState.item;
+
+            // Mark as connected (for disconnect detection)
+            players[packet.playerID].connected = true;
+            players[packet.playerID].lastPacketTime = getTimeMs();
+        }
+        // Buffer MSG_ITEM_PLACED packets for later processing
+        else if (packet.msgType == MSG_ITEM_PLACED) {
+            if (itemPacketCount < MAX_BUFFERED_ITEM_PACKETS) {
+                itemPacketBuffer[itemPacketCount++] = packet;
+            }
+        }
+        // Buffer MSG_ITEM_BOX_PICKUP packets for later processing
+        else if (packet.msgType == MSG_ITEM_BOX_PICKUP) {
+            if (boxPacketCount < MAX_BUFFERED_BOX_PACKETS) {
+                boxPacketBuffer[boxPacketCount++] = packet;
+            }
+        }
+        // Ignore other packet types
     }
+}
+
+//=============================================================================
+// Public API - Item Synchronization
+//=============================================================================
+
+void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512, Q16_8 speed) {
+    if (!initialized) {
+        return;
+    }
+
+    NetworkPacket packet = {
+        .version = PROTOCOL_VERSION,
+        .msgType = MSG_ITEM_PLACED,
+        .playerID = myPlayerID,
+        .payload.itemPlaced = {
+            .itemType = itemType,
+            .position = position,
+            .angle512 = angle512,
+            .speed = speed
+        }
+    };
+
+    sendData((char*)&packet, sizeof(NetworkPacket));
+}
+
+ItemPlacementData Multiplayer_ReceiveItemPlacements(void) {
+    ItemPlacementData result = {.valid = false};
+
+    // Check buffered item packets (buffered by Multiplayer_ReceiveCarStates)
+    if (itemPacketCount > 0) {
+        // Get the first buffered packet
+        NetworkPacket packet = itemPacketBuffer[0];
+
+        // Validate packet
+        if (packet.version == PROTOCOL_VERSION &&
+            packet.msgType == MSG_ITEM_PLACED &&
+            packet.playerID < MAX_MULTIPLAYER_PLAYERS &&
+            packet.playerID != myPlayerID) {
+
+            // Return the item placement data
+            result.valid = true;
+            result.playerID = packet.playerID;
+            result.itemType = packet.payload.itemPlaced.itemType;
+            result.position = packet.payload.itemPlaced.position;
+            result.angle512 = packet.payload.itemPlaced.angle512;
+            result.speed = packet.payload.itemPlaced.speed;
+        }
+
+        // Remove the packet from buffer (shift array)
+        itemPacketCount--;
+        for (int i = 0; i < itemPacketCount; i++) {
+            itemPacketBuffer[i] = itemPacketBuffer[i + 1];
+        }
+    }
+
+    return result;
+}
+
+void Multiplayer_SendItemBoxPickup(int boxIndex) {
+    if (!initialized) {
+        return;
+    }
+
+    NetworkPacket packet = {
+        .version = PROTOCOL_VERSION,
+        .msgType = MSG_ITEM_BOX_PICKUP,
+        .playerID = myPlayerID,
+        .payload.itemBoxPickup = {
+            .boxIndex = boxIndex
+        }
+    };
+
+    sendData((char*)&packet, sizeof(NetworkPacket));
+}
+
+int Multiplayer_ReceiveItemBoxPickup(void) {
+    // Check buffered item box pickup packets
+    if (boxPacketCount > 0) {
+        // Get the first buffered packet
+        NetworkPacket packet = boxPacketBuffer[0];
+
+        int boxIndex = -1;
+
+        // Validate packet
+        if (packet.version == PROTOCOL_VERSION &&
+            packet.msgType == MSG_ITEM_BOX_PICKUP &&
+            packet.playerID < MAX_MULTIPLAYER_PLAYERS &&
+            packet.playerID != myPlayerID) {
+
+            boxIndex = packet.payload.itemBoxPickup.boxIndex;
+        }
+
+        // Remove the packet from buffer (shift array)
+        boxPacketCount--;
+        for (int i = 0; i < boxPacketCount; i++) {
+            boxPacketBuffer[i] = boxPacketBuffer[i + 1];
+        }
+
+        return boxIndex;
+    }
+
+    return -1;
 }
