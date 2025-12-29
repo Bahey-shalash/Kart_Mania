@@ -709,6 +709,37 @@ void Items_LoadGraphics(void) {
     }
 }
 
+void Items_FreeGraphics(void) {
+    if (itemBoxGfx) {
+        oamFreeGfx(&oamMain, itemBoxGfx);
+        itemBoxGfx = NULL;
+    }
+    if (bananaGfx) {
+        oamFreeGfx(&oamMain, bananaGfx);
+        bananaGfx = NULL;
+    }
+    if (bombGfx) {
+        oamFreeGfx(&oamMain, bombGfx);
+        bombGfx = NULL;
+    }
+    if (greenShellGfx) {
+        oamFreeGfx(&oamMain, greenShellGfx);
+        greenShellGfx = NULL;
+    }
+    if (redShellGfx) {
+        oamFreeGfx(&oamMain, redShellGfx);
+        redShellGfx = NULL;
+    }
+    if (missileGfx) {
+        oamFreeGfx(&oamMain, missileGfx);
+        missileGfx = NULL;
+    }
+    if (oilSlickGfx) {
+        oamFreeGfx(&oamMain, oilSlickGfx);
+        oilSlickGfx = NULL;
+    }
+}
+
 //=============================================================================
 // Debug API
 //=============================================================================

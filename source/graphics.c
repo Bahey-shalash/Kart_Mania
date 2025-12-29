@@ -14,6 +14,10 @@ void video_nuke(void) {
     oamClear(&oamMain, 0, 128);
     oamClear(&oamSub, 0, 128);
 
+    // Reset OAM allocators to prevent memory leaks
+    oamInit(&oamMain, SpriteMapping_1D_32, false);
+    oamInit(&oamSub, SpriteMapping_1D_32, false);
+
     // 3) Clear palettes
     memset(BG_PALETTE, 0, PALETTE_SIZE);
     memset(SPRITE_PALETTE, 0, PALETTE_SIZE);

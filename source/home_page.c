@@ -141,6 +141,13 @@ void HomePage_OnVBlank(void) {
     move_homeKart();
 }
 
+void HomePage_Cleanup(void) {
+    if (homeKart.gfx) {
+        oamFreeGfx(&oamMain, homeKart.gfx);
+        homeKart.gfx = NULL;
+    }
+}
+
 //=============================================================================
 // IMPLEMENTATION: MAIN (top)
 //=============================================================================
