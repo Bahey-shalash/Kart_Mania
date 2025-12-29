@@ -53,6 +53,8 @@ static int bestRaceSec = -1;
 static int bestRaceMsec = -1;
 static bool isNewRecord = false;
 
+static bool hasSavedBestTime = false; 
+
 //=============================================================================
 // Quadrant Data
 //=============================================================================
@@ -144,6 +146,7 @@ void Graphical_Gameplay_initialize(void) {
     currentLap = 1;
     countdownCleared = false;
     finishDisplayCounter = 0;
+    hasSavedBestTime = false;
     
     // Load best time for this map
     Map selectedMap = GameContext_GetMap();
@@ -192,6 +195,19 @@ GameState Gameplay_update(void) {
     }
     
     const RaceState* state = Race_GetState();
+    
+    // Save best time once when race finishes (NOT in VBlank - safe here!)
+    if (state->raceFinished && !hasSavedBestTime) {
+        Map currentMap = GameContext_GetMap();
+        isNewRecord = StoragePB_SaveBestTime(currentMap, totalRaceMin, totalRaceSec, totalRaceMsec);
+        
+        // Always update best time display
+        bestRaceMin = totalRaceMin;
+        bestRaceSec = totalRaceSec;
+        bestRaceMsec = totalRaceMsec;
+        
+        hasSavedBestTime = true;
+    }
     
     // Check if race finished and counting display frames
     if (state->raceFinished && state->finishDelayTimer == 0) {
@@ -273,23 +289,13 @@ void Gameplay_OnVBlank(void) {
             raceMin = 0;
             raceSec = 0;
             raceMsec = 0;
-        } else {
-            // RACE COMPLETED! (finished final lap)
+        } else if (!hasSavedBestTime) {  // Only save ONCE!
+            // RACE COMPLETED!
             Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
-            
-            // Check if this is a new record and save it
-            Map currentMap = GameContext_GetMap();
-            isNewRecord = StoragePB_SaveBestTime(currentMap, totalRaceMin, totalRaceSec, totalRaceMsec);
-            
-            // Update best time display if it's a new record
-            if (isNewRecord) {
-                bestRaceMin = totalRaceMin;
-                bestRaceSec = totalRaceSec;
-                bestRaceMsec = totalRaceMsec;
-            }
-            
             // Start the display counter
             finishDisplayCounter = 0;
+            // Mark that we've saved (prevent multiple saves)
+            hasSavedBestTime = true;
         }
     }
 
