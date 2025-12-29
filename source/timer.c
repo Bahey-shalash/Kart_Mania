@@ -40,20 +40,38 @@ void timerISRVblank(void) {
         case GAMEPLAY: 
             Gameplay_OnVBlank();
             
-            // Only update display if race is active (not in countdown, not completed)
-            if (!Race_IsCountdownActive() && !Race_IsCompleted()) {
+            const RaceState* state = Race_GetState();
+            
+            if (Race_IsCountdownActive()) {
+                // During countdown - don't show anything on sub screen
+            } else if (state->raceFinished) {
+                // Race has finished
+                if (state->finishDelayTimer > 0) {
+                    // Still in delay period - show frozen timer and lap
+                    updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
+                                        Gameplay_GetRaceMsec());
+                    updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
+                } else {
+                    // Delay expired - show Play Again screen
+                    if (Gameplay_IsPlayAgainActive()) {
+                        int min, sec, msec;
+                        Race_GetFinalTime(&min, &sec, &msec);
+                        renderPlayAgainScreen(min, sec, msec, Gameplay_IsYesSelected());
+                    }
+                }
+            } else {
+                // Normal race - show timer and lap
                 updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
                                     Gameplay_GetRaceMsec());
-                const RaceState* state = Race_GetState();
                 updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
             }
+            
             break;
         
         default:
             break;
     }
 }
-
 //=============================================================================
 // Race Tick Timers
 //=============================================================================

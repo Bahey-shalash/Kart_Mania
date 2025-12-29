@@ -1,6 +1,5 @@
 #ifndef GAMEPLAY_H
 #define GAMEPLAY_H
-
 #include "game_types.h"
 
 //=============================================================================
@@ -13,6 +12,7 @@
 #define QUAD_OFFSET 256
 #define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
 #define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
+
 //=============================================================================
 // Public API
 //=============================================================================
@@ -31,6 +31,12 @@ void Gameplay_IncrementTimer(void);
 void updateLapDisp_Sub(int currentLap, int totalLaps);
 void updateChronoDisp_Sub(int min, int sec, int msec);
 void changeColorDisp_Sub(uint16 c);
+
+// Play Again screen getters 
+void renderPlayAgainScreen(int min, int sec, int msec, bool yesSelected);
+void clearPlayAgainScreen(void);
+bool Gameplay_IsPlayAgainActive(void);
+bool Gameplay_IsYesSelected(void);
 
 // Item rendering
 void Gameplay_RenderItems(int scrollX, int scrollY);

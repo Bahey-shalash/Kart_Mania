@@ -33,6 +33,10 @@ static int currentLap = 1;
 static int scrollX = 0;
 static int scrollY = 0;
 static QuadrantID currentQuadrant = QUAD_BR;
+// Play Again screen state
+static bool playAgainScreenActive = false;
+static bool playAgainYesSelected = true;  // Default to YES
+static bool countdownCleared = false; 
 
 //=============================================================================
 // Quadrant Data
@@ -97,6 +101,79 @@ void Gameplay_IncrementTimer(void) {
     }
 }
 
+//=============================================================================
+// Play Again Screen Functions
+//=============================================================================
+
+// Getter functions for Play Again state
+bool Gameplay_IsPlayAgainActive(void) {
+    return playAgainScreenActive;
+}
+
+bool Gameplay_IsYesSelected(void) {
+    return playAgainYesSelected;
+}
+
+// Make these non-static so they can be called from timer.c
+void renderPlayAgainScreen(int min, int sec, int msec, bool yesSelected) {
+    u16* map = BG_MAP_RAM_SUB(0);
+    
+    // Clear entire screen
+    memset(map, 32, 32 * 32 * 2);
+    
+    // Display final time at y=6 (centered)
+    // Format: MM:SS.mmm
+    int x, y;
+    
+    // Minutes
+    x = 8;
+    y = 6;
+    printDigit(map, min / 10, x, y);
+    x = 12;
+    printDigit(map, min % 10, x, y);
+    
+    // Separator ":"
+    x = 16;
+    printDigit(map, 10, x, y);
+    
+    // Seconds
+    x = 18;
+    printDigit(map, sec / 10, x, y);
+    x = 22;
+    printDigit(map, sec % 10, x, y);
+    
+    // Separator "."
+    x = 26;
+    printDigit(map, 11, x, y);
+    
+    // Milliseconds
+    x = 28;
+    printDigit(map, msec / 100, x, y);
+    
+    // Display "YES" and "NO" options at bottom
+    // YES at position (x=6, y=18)
+    x = 6;
+    y = 18;
+    printDigit(map, 1, x, y);  // Placeholder for YES
+    
+    // NO at position (x=22, y=18)
+    x = 22;
+    y = 18;
+    printDigit(map, 0, x, y);  // Placeholder for NO
+    
+    // Highlight selected option by changing background color
+    if (yesSelected) {
+        changeColorDisp_Sub(ARGB16(1, 0, 31, 0));  // Green background
+    } else {
+        changeColorDisp_Sub(ARGB16(1, 31, 0, 0));  // Red background
+    }
+}
+
+void clearPlayAgainScreen(void) {
+    u16* map = BG_MAP_RAM_SUB(0);
+    memset(map, 32, 32 * 32 * 2);
+    changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Reset to yellow
+}
 
 //=============================================================================
 // Public API - Initialization
@@ -109,6 +186,15 @@ void Graphical_Gameplay_initialize(void) {
     raceSec = 0;
     raceMsec = 0;
     currentLap = 1;
+    playAgainScreenActive = false;
+    playAgainYesSelected = true;  
+    countdownCleared = false;  
+
+        // Clear any leftover display from previous race
+    u16* map = BG_MAP_RAM_SUB(0);
+    memset(map, 32, 32 * 32 * 2);
+    changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Reset to yellow
+    
     Map selectedMap = GameContext_GetMap();
     Race_Init(selectedMap, SinglePlayer);
 
@@ -134,22 +220,66 @@ void Graphical_Gameplay_initialize(void) {
 //=============================================================================
 GameState Gameplay_update(void) {
     scanKeys();
-    int keys = keysDown();
+    int keysdown = keysDown();
 
-    if (keys & KEY_SELECT) {
+    // Handle SELECT to exit anytime
+    if (keysdown & KEY_SELECT) {
         Race_Stop();
+        clearPlayAgainScreen();
         return HOME_PAGE;
     }
-    /*
+
     const RaceState* state = Race_GetState();
-    if (state->raceFinished) {
-        Race_Stop();
-        return HOME_PAGE;
+    
+    // Check if race finished and delay expired
+    if (state->raceFinished && state->finishDelayTimer == 0) {
+        playAgainScreenActive = true;
+        
+        // Handle Play Again input
+        if (keysdown & KEY_LEFT) {
+            playAgainYesSelected = true;
+        } else if (keysdown & KEY_RIGHT) {
+            playAgainYesSelected = false;
+        }
+        
+        // Confirm selection with A button
+        if (keysdown & KEY_A) {
+            if (playAgainYesSelected) {
+                // Play Again - Reset race
+                clearPlayAgainScreen();
+                playAgainScreenActive = false;
+                playAgainYesSelected = true;
+                raceMin = 0;
+                raceSec = 0;
+                raceMsec = 0;
+                currentLap = 1;
+                Race_Reset();
+                
+                // Reinitialize graphics
+                const Car* player = Race_GetPlayerCar();
+                scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
+                scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
+                
+                if (scrollX < 0) scrollX = 0;
+                if (scrollY < 0) scrollY = 0;
+                if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
+                if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+                
+                currentQuadrant = determineQuadrant(scrollX, scrollY);
+                loadQuadrant(currentQuadrant);
+                
+                return GAMEPLAY;
+            } else {
+                // Go to Home Page
+                Race_Stop();
+                clearPlayAgainScreen();
+                return HOME_PAGE;
+            }
+        }
     }
-    */
+
     return GAMEPLAY;
 }
-
 //=============================================================================
 // Public API - VBlank (Graphics Update)
 //=============================================================================
@@ -198,8 +328,6 @@ void Gameplay_OnVBlank(void) {
         return;
     }
     
-    // Clear countdown display once race starts
-    static bool countdownCleared = false;
     if (!countdownCleared) {
         clearCountdownDisplay();
         countdownCleared = true;
@@ -505,8 +633,6 @@ void updateLapDisp_Sub(int currentLap, int totalLaps) {
         printDigit(BG_MAP_RAM_SUB(0), totalLaps % 10, x, y);
     }
 }
-
-
 
 #ifdef DEBUG
     DEBUG: Movement telemetry

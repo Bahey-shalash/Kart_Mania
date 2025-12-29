@@ -210,23 +210,25 @@ void Race_MarkAsCompleted(int min, int sec, int msec) {
     KartMania.finalTimeMsec = msec;
     
     // Stop race timer
-    RaceTick_TimerStop();
+    irqDisable(IRQ_TIMER1);
+    irqClear(IRQ_TIMER1);
 }
 
 //=============================================================================
 // Public API - Game Loop
 //=============================================================================
 void Race_Tick(void) {
-    if (!Race_IsActive()) {
-        return;
-    }
-    
-    // If race is finished, just count down the delay timer
+    // Special handling: if race is finished, ONLY count down the delay timer
     if (KartMania.raceFinished) {
         if (KartMania.finishDelayTimer > 0) {
             KartMania.finishDelayTimer--;
         }
         return;  // Don't process any game logic after completion
+    }
+    
+    // Normal race active check
+    if (!Race_IsActive()) {
+        return;
     }
 
     Car* player = &KartMania.cars[KartMania.playerIndex];
