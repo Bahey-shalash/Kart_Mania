@@ -8,7 +8,6 @@
 #include "timer.h"
 #include "wall_collision.h"
 
-
 //=============================================================================
 // Constants
 //=============================================================================
@@ -101,6 +100,16 @@ void Race_SetCarGfx(int index, u16* gfx) {
     KartMania.cars[index].gfx = gfx;
 }
 
+bool Race_IsCompleted(void) {
+    return KartMania.raceFinished;
+}
+
+void Race_GetFinalTime(int* min, int* sec, int* msec) {
+    *min = KartMania.finalTimeMin;
+    *sec = KartMania.finalTimeSec;
+    *msec = KartMania.finalTimeMsec;
+}
+
 // Countdown getters
 CountdownState Race_GetCountdownState(void) {
     return countdownState;
@@ -114,7 +123,7 @@ bool Race_CanRaceStart(void) {
     return raceCanStart;
 }
 
-void Race_UpdateCountdown(void){
+void Race_UpdateCountdown(void) {
     updateCountdown();
 }
 
@@ -136,6 +145,12 @@ void Race_Init(Map map, GameMode mode) {
     KartMania.carCount = (mode == SinglePlayer) ? MAX_CARS : 1;
     KartMania.checkpointCount = 0;
     itemButtonHeldLast = false;
+    
+    // Initialize finish tracking
+    KartMania.finishDelayTimer = 0;
+    KartMania.finalTimeMin = 0;
+    KartMania.finalTimeSec = 0;
+    KartMania.finalTimeMsec = 0;
 
     // Initialize countdown
     countdownState = COUNTDOWN_3;
@@ -164,6 +179,12 @@ void Race_Reset(void) {
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
     itemButtonHeldLast = false;
+    
+    // Reset finish tracking
+    KartMania.finishDelayTimer = 0;
+    KartMania.finalTimeMin = 0;
+    KartMania.finalTimeSec = 0;
+    KartMania.finalTimeMsec = 0;
 
     // Reset countdown
     countdownState = COUNTDOWN_3;
@@ -174,11 +195,21 @@ void Race_Reset(void) {
         initCarAtSpawn(&KartMania.cars[i], i);
         collisionLockoutTimer[i] = 0;
     }
-
 }
 
 void Race_Stop(void) {
     KartMania.raceStarted = false;
+    RaceTick_TimerStop();
+}
+
+void Race_MarkAsCompleted(int min, int sec, int msec) {
+    KartMania.raceFinished = true;
+    KartMania.finishDelayTimer = FINISH_DELAY_FRAMES;
+    KartMania.finalTimeMin = min;
+    KartMania.finalTimeSec = sec;
+    KartMania.finalTimeMsec = msec;
+    
+    // Stop race timer
     RaceTick_TimerStop();
 }
 
@@ -188,6 +219,14 @@ void Race_Stop(void) {
 void Race_Tick(void) {
     if (!Race_IsActive()) {
         return;
+    }
+    
+    // If race is finished, just count down the delay timer
+    if (KartMania.raceFinished) {
+        if (KartMania.finishDelayTimer > 0) {
+            KartMania.finishDelayTimer--;
+        }
+        return;  // Don't process any game logic after completion
     }
 
     Car* player = &KartMania.cars[KartMania.playerIndex];
@@ -381,6 +420,11 @@ static void initCarAtSpawn(Car* car, int index) {
 }
 
 static void handlePlayerInput(Car* player, int carIndex) {
+    // CRITICAL: Block all input if race is finished
+    if (KartMania.raceFinished) {
+        return;
+    }
+    
     scanKeys();
     uint32 held = keysHeld();
 

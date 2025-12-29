@@ -85,6 +85,9 @@ int Gameplay_GetCurrentLap(void) {
 }
 
 void Gameplay_IncrementTimer(void) {
+    if (Race_IsCompleted()) {
+        return;
+    }
     raceMsec = (raceMsec + 1) % MS_PER_SECOND;
     if (raceMsec == 0) {
         raceSec = (raceSec + 1) % SECONDS_PER_MINUTE;
@@ -93,6 +96,7 @@ void Gameplay_IncrementTimer(void) {
         }
     }
 }
+
 
 //=============================================================================
 // Public API - Initialization
@@ -136,13 +140,13 @@ GameState Gameplay_update(void) {
         Race_Stop();
         return HOME_PAGE;
     }
-
+    /*
     const RaceState* state = Race_GetState();
     if (state->raceFinished) {
         Race_Stop();
         return HOME_PAGE;
     }
-
+    */
     return GAMEPLAY;
 }
 
@@ -202,13 +206,17 @@ void Gameplay_OnVBlank(void) {
     }
 
     if (Race_CheckFinishLineCross(player)) {
-        raceMin = 0;
-        raceSec = 0;
-        raceMsec = 0;
-
         const RaceState* state = Race_GetState();
+        
         if (currentLap < state->totalLaps) {
+            // Normal lap completion - reset timer for next lap
             currentLap++;
+            raceMin = 0;
+            raceSec = 0;
+            raceMsec = 0;
+        } else {
+            // RACE COMPLETED! (finished final lap)
+            Race_MarkAsCompleted(raceMin, raceSec, raceMsec);
         }
     }
 

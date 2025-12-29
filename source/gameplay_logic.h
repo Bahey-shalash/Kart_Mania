@@ -15,6 +15,7 @@
 #define MAX_CARS 8
 #define MAX_CHECKPOINTS 16
 #define QUAD_OFFSET 256
+#define FINISH_DELAY_FRAMES (5 * 60)
 //=============================================================================
 // Enums
 //=============================================================================
@@ -41,7 +42,7 @@ typedef struct {
 
 typedef struct {
     bool raceStarted;
-    bool raceFinished;
+
 
     GameMode gameMode;
     Map currentMap;
@@ -54,6 +55,12 @@ typedef struct {
 
     int checkpointCount;
     CheckpointBox checkpoints[MAX_CHECKPOINTS];
+
+    bool raceFinished;
+    int finishDelayTimer;      // NEW: Countdown before showing menu
+    int finalTimeMin;          // NEW: Store final time
+    int finalTimeSec;
+    int finalTimeMsec;
 } RaceState;
 
 //=============================================================================
@@ -69,6 +76,10 @@ void Race_Stop(void);  // Renamed from stop_Race
 void Race_UpdateCountdown(void);
 bool Race_IsCountdownActive(void);
 CountdownState Race_GetCountdownState(void);
+
+bool Race_IsCompleted(void);
+void Race_GetFinalTime(int* min, int* sec, int* msec);
+void Race_MarkAsCompleted(int min, int sec, int msec);
 //=============================================================================
 // State Queries (Read-Only Access)
 //=============================================================================

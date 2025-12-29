@@ -70,7 +70,7 @@
 
 // Lap counts per map
 #define LAPS_NONE 0
-#define LAPS_SCORCHING_SANDS 10
+#define LAPS_SCORCHING_SANDS 2
 #define LAPS_ALPIN_RUSH 10
 #define LAPS_NEON_CIRCUIT 10
 

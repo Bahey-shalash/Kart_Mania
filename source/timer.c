@@ -30,29 +30,25 @@ void initTimer(void) {
 
 void timerISRVblank(void) {
     GameContext* ctx = GameContext_Get();
-
     switch (ctx->currentGameState) {
         case HOME_PAGE:
             HomePage_OnVBlank();
             break;
-
         case MAPSELECTION:
             Map_selection_OnVBlank();
             break;
-
         case GAMEPLAY: 
             Gameplay_OnVBlank();
-
-            if (!Race_IsCountdownActive()) {
+            
+            // Only update display if race is active (not in countdown, not completed)
+            if (!Race_IsCountdownActive() && !Race_IsCompleted()) {
                 updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
                                     Gameplay_GetRaceMsec());
-
                 const RaceState* state = Race_GetState();
                 updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
             }
             break;
         
-
         default:
             break;
     }
