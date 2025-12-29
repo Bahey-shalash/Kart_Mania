@@ -42,29 +42,17 @@ void timerISRVblank(void) {
             break;
             
         case GAMEPLAY: 
-            Gameplay_OnVBlank();
+
+            Gameplay_OnVBlank();  // This handles EVERYTHING including final time display
             
-            const RaceState* state = Race_GetState();
-            
-            if (Race_IsCountdownActive()) {
-                // During countdown - don't show anything on sub screen
-            } else if (state->raceFinished) {
-                // Race has finished
-                if (state->finishDelayTimer > 0) {
-                    // Still in delay period - show FINAL TOTAL TIME
-                    int min, sec, msec;
-                    Race_GetFinalTime(&min, &sec, &msec);
-                    updateChronoDisp_Sub(min, sec, msec);
-                    updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
-                } 
-            } else {
-                // Normal race - show current lap timer
+            // Only update during normal racing (not countdown, not finished)
+            if (!Race_IsCountdownActive() && !Race_IsCompleted()) {
                 updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
                                     Gameplay_GetRaceMsec());
+                const RaceState* state = Race_GetState();
                 updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
             }
             break;
-        
         default:
             break;
     }

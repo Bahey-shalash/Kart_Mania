@@ -17,7 +17,7 @@
 #include "scorching_sands_BR.h"
 #include "scorching_sands_MC.h"
 #include "scorching_sands_ML.h"
-#include "scorching_sands_MR.h"
+#include "scorching_sands_MR.h" 
 #include "scorching_sands_TC.h"
 #include "scorching_sands_TL.h"
 #include "scorching_sands_TR.h"
@@ -41,8 +41,6 @@ static int scrollX = 0;
 static int scrollY = 0;
 static QuadrantID currentQuadrant = QUAD_BR;
 
-// Play Again screen state
-static bool playAgainScreenActive = false;
 static bool countdownCleared = false;
 static int finishDisplayCounter = 0;  // NEW: Count frames showing final time
 
@@ -131,14 +129,6 @@ void Gameplay_IncrementTimer(void) {
 }
 
 //=============================================================================
-// Play Again Screen Functions
-//=============================================================================
-
-bool Gameplay_IsPlayAgainActive(void) {
-    return playAgainScreenActive;
-}
-
-//=============================================================================
 // Public API - Initialization
 //=============================================================================
 void Graphical_Gameplay_initialize(void) {
@@ -220,12 +210,6 @@ GameState Gameplay_update(void) {
 //=============================================================================
 void Gameplay_OnVBlank(void) {
     const Car* player = Race_GetPlayerCar();
-    
-    // If Play Again screen is active, let it handle rendering
-    if (playAgainScreenActive) {
-        PlayAgain_OnVBlank();
-        return;
-    }
     
     // Check if race is finished and showing final time
     const RaceState* state = Race_GetState();
@@ -358,36 +342,61 @@ static void displayFinalTime(int min, int sec, int msec) {
     // Clear screen
     memset(map, 32, 32 * 32 * 2);
     
-    // Display "FINAL TIME" or "NEW RECORD!" message
-    // (You can use your number tiles to spell this out)
-    
-    // Display the time centered on screen
-    int x, y;
+    // Display FINAL TIME at top (y = 8)
+    int x = 0, y = 8;
     
     // Minutes
-    x = 8;
-    y = 10;
     printDigit(map, min / 10, x, y);
-    x = 12;
+    x = 4;
     printDigit(map, min % 10, x, y);
     
     // Separator ":"
-    x = 16;
+    x = 8;
     printDigit(map, 10, x, y);
     
     // Seconds
-    x = 18;
+    x = 10;
     printDigit(map, sec / 10, x, y);
-    x = 22;
+    x = 14;
     printDigit(map, sec % 10, x, y);
     
     // Separator "."
-    x = 26;
+    x = 18;
     printDigit(map, 11, x, y);
     
-    // Milliseconds
-    x = 28;
+    // Milliseconds (only first digit)
+    x = 20;
     printDigit(map, msec / 100, x, y);
+    
+    // Display PERSONAL BEST below (y = 16)
+    if (bestRaceMin >= 0) {
+        // Show the best time
+        x = 0;
+        y = 16;
+        
+        // Minutes
+        printDigit(map, bestRaceMin / 10, x, y);
+        x = 4;
+        printDigit(map, bestRaceMin % 10, x, y);
+        
+        // Separator ":"
+        x = 8;
+        printDigit(map, 10, x, y);
+        
+        // Seconds
+        x = 10;
+        printDigit(map, bestRaceSec / 10, x, y);
+        x = 14;
+        printDigit(map, bestRaceSec % 10, x, y);
+        
+        // Separator "."
+        x = 18;
+        printDigit(map, 11, x, y);
+        
+        // Milliseconds (only first digit)
+        x = 20;
+        printDigit(map, bestRaceMsec / 100, x, y);
+    }
     
     // Set background color based on whether it's a new record
     if (isNewRecord) {
@@ -607,15 +616,19 @@ void changeColorDisp_Sub(uint16 c) {
 void updateLapDisp_Sub(int currentLap, int totalLaps) {
     int x, y;
 
+    // Current lap
     x = 0;
     y = 0;
     if (currentLap >= 0 && currentLap <= 9) {
         printDigit(BG_MAP_RAM_SUB(0), currentLap, x, y);
     }
 
+    // Separator ":" 
     x = 4;
     y = 0;
+    printDigit(BG_MAP_RAM_SUB(0), 10, x, y);  
 
+    // Total laps
     x = 6;
     y = 0;
     if (totalLaps >= 0 && totalLaps <= 9) {
