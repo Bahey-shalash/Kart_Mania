@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 
 #include "context.h"
-
+#include "storage_pb.h"
 // Check if a directory exists
 static bool directoryExists(const char* path) {
     DIR* dir = opendir(path);
@@ -63,7 +63,10 @@ bool Storage_Init(void) {
         if (!writeDefaultsToFile(SETTINGS_FILE))
             return false;
     }
-
+    // Initialize personal best times
+    if (!StoragePB_Init()) {
+        return false;
+    }
     return true;
 }
 

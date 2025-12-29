@@ -21,6 +21,7 @@
 #include "scorching_sands_TL.h"
 #include "scorching_sands_TR.h"
 #include "wall_collision.h"
+#include "storage_pb.h"  // ADD THIS LINE
 
 //=============================================================================
 // Private State
@@ -41,6 +42,11 @@ static bool countdownCleared = false;
 static int totalRaceMin = 0;
 static int totalRaceSec = 0;
 static int totalRaceMsec = 0;
+
+static int bestRaceMin = -1;  // -1 means no best time exists
+static int bestRaceSec = -1;
+static int bestRaceMsec = -1;
+static bool isNewRecord = false;
 //=============================================================================
 // Quadrant Data
 //=============================================================================
@@ -135,13 +141,13 @@ void renderPlayAgainScreen(int min, int sec, int msec, bool yesSelected) {
     // Clear entire screen
     memset(map, 32, 32 * 32 * 2);
     
-    // Display final time at y=6 (centered)
+    // Display final time at y=4 (moved up to make room for best time)
     // Format: MM:SS.mmm
     int x, y;
     
     // Minutes
     x = 8;
-    y = 6;
+    y = 4;
     printDigit(map, min / 10, x, y);
     x = 12;
     printDigit(map, min % 10, x, y);
@@ -164,22 +170,53 @@ void renderPlayAgainScreen(int min, int sec, int msec, bool yesSelected) {
     x = 28;
     printDigit(map, msec / 100, x, y);
     
+    // Display best time at y=12 (if it exists)
+    if (bestRaceMin >= 0) {
+        // Minutes
+        x = 8;
+        y = 16;
+        printDigit(map, bestRaceMin / 10, x, y);
+        x = 12;
+        printDigit(map, bestRaceMin % 10, x, y);
+        
+        // Separator ":"
+        x = 16;
+        printDigit(map, 10, x, y);
+        
+        // Seconds
+        x = 18;
+        printDigit(map, bestRaceSec / 10, x, y);
+        x = 22;
+        printDigit(map, bestRaceSec % 10, x, y);
+        
+        // Separator "."
+        x = 26;
+        printDigit(map, 11, x, y);
+        
+        // Milliseconds
+        x = 28;
+        printDigit(map, bestRaceMsec / 100, x, y);
+    }
+    
     // Display "YES" and "NO" options at bottom
-    // YES at position (x=6, y=18)
+    // YES at position (x=6, y=20)
     x = 6;
-    y = 18;
+    y = 20;
     printDigit(map, 1, x, y);  // Placeholder for YES
     
-    // NO at position (x=22, y=18)
+    // NO at position (x=22, y=20)
     x = 22;
-    y = 18;
+    y = 20;
     printDigit(map, 0, x, y);  // Placeholder for NO
     
     // Highlight selected option by changing background color
-    if (yesSelected) {
-        changeColorDisp_Sub(ARGB16(1, 0, 31, 0));  // Green background
+    // Use green if new record, otherwise use different colors
+    if (isNewRecord) {
+        changeColorDisp_Sub(ARGB16(1, 0, 31, 0));  // Green for new record!
+    } else if (yesSelected) {
+        changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Yellow for YES
     } else {
-        changeColorDisp_Sub(ARGB16(1, 31, 0, 0));  // Red background
+        changeColorDisp_Sub(ARGB16(1, 31, 0, 0));  // Red for NO
     }
 }
 
@@ -203,13 +240,18 @@ void Graphical_Gameplay_initialize(void) {
     playAgainScreenActive = false;
     playAgainYesSelected = true;  
     countdownCleared = false;  
-
+    // Load best time for this map
+    Map selectedMap = GameContext_GetMap();
+    if (!StoragePB_LoadBestTime(selectedMap, &bestRaceMin, &bestRaceSec, &bestRaceMsec)) {
+        bestRaceMin = -1;
+        bestRaceSec = -1;
+        bestRaceMsec = -1;
+    }
+    isNewRecord = false;
         // Clear any leftover display from previous race
     u16* map = BG_MAP_RAM_SUB(0);
     memset(map, 32, 32 * 32 * 2);
     changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Reset to yellow
-
-    Map selectedMap = GameContext_GetMap();
     Race_Init(selectedMap, SinglePlayer);
 
     const Car* player = Race_GetPlayerCar();
@@ -363,6 +405,17 @@ void Gameplay_OnVBlank(void) {
             // RACE COMPLETED! (finished final lap)
             // Pass TOTAL race time, not lap time
             Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
+            
+            // Check if this is a new record and save it
+            Map currentMap = GameContext_GetMap();
+            isNewRecord = StoragePB_SaveBestTime(currentMap, totalRaceMin, totalRaceSec, totalRaceMsec);
+            
+            // Update best time display if it's a new record
+            if (isNewRecord) {
+                bestRaceMin = totalRaceMin;
+                bestRaceSec = totalRaceSec;
+                bestRaceMsec = totalRaceMsec;
+            }
         }
     }
 
