@@ -42,6 +42,9 @@ static int scrollX = 0;
 static int scrollY = 0;
 static QuadrantID currentQuadrant = QUAD_BR;
 
+// Sprite graphics pointer (allocated during configureSprite)
+static u16* kartGfx = NULL;
+
 static bool countdownCleared = false;
 static int finishDisplayCounter = 0;  // NEW: Count frames showing final time
 
@@ -82,6 +85,7 @@ static const QuadrantData quadrantData[9] = {
 static void configureGraphics(void);
 static void configureBackground(void);
 static void configureSprite(void);
+static void freeSprites(void);
 // static void configureConsole(void);
 static void loadQuadrant(QuadrantID quad);
 static QuadrantID determineQuadrant(int x, int y);
@@ -469,7 +473,8 @@ void Gameplay_OnVBlank(void) {
     //=========================================================================
 
     if (state->gameMode == SinglePlayer) {
-        // SINGLE PLAYER: Only render the player's car at OAM slot 41 (consistent with multiplayer)
+        // SINGLE PLAYER: Only render the player's car at OAM slot 41 (consistent with
+        // multiplayer)
         int screenX = carX - scrollX - 16;
         int screenY = carY - scrollY - 16;
 
@@ -492,8 +497,8 @@ void Gameplay_OnVBlank(void) {
             if (!Multiplayer_IsPlayerConnected(i)) {
                 // Hide this OAM slot completely
                 oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_32x32,
-                       SpriteColorFormat_16Color, NULL, -1, true, false, false,
-                       false, false);
+                       SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
+                       false);
                 continue;
             }
 
@@ -530,6 +535,10 @@ void Gameplay_OnVBlank(void) {
 
     Items_Render(scrollX, scrollY);
     oamUpdate(&oamMain);
+}
+
+void Gameplay_Cleanup(void) {
+    freeSprites();
 }
 
 //=============================================================================
@@ -710,17 +719,36 @@ static void configureSprite(void) {
 
     dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
 
-    u16* kartGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
+    kartGfx = oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
     dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
 
-    // Set graphics for ALL cars - use MAX_CARS directly since it's always 8
-    for (int i = 0; i < MAX_CARS; i++) {
+    const RaceState* state = Race_GetState();
+    // Set graphics for ALL cars
+    for (int i = 0; i < (state->carCount); i++) {
         Race_SetCarGfx(i, kartGfx);
     }
 
     Items_LoadGraphics();
 }
+
+static void freeSprites(void) {
+    if (kartGfx) {
+        oamFreeGfx(&oamMain, kartGfx);
+        kartGfx = NULL;
+    }
+    Items_FreeGraphics();
+}
+
+/*
+// DEBUG Console setup (active for gameplay debug)
+static void configureConsole(void) {
+    // Use sub screen BG1 so we don't clobber gameplay BGs/palettes
+    consoleInit(NULL, 1, BgType_Text4bpp, BgSize_T_256x256, 31, 2, false, true);
+    printf("\x1b[2J");
+    printf("=== KART DEBUG ===\n");
+    printf("SELECT = exit\n\n");
+}
+*/
 
 //=============================================================================
 // Private Functions - Quadrant Management

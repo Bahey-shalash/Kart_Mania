@@ -326,6 +326,12 @@ void Items_Render(int scrollX, int scrollY);
  */
 void Items_LoadGraphics(void);
 
+/**
+ * Free item sprite graphics from VRAM
+ * Called during cleanup to prevent memory leaks
+ */
+void Items_FreeGraphics(void);
+
 //=============================================================================
 // Debug/Testing API (optional - can remove for production)
 //=============================================================================

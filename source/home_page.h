@@ -6,5 +6,6 @@
 void HomePage_initialize(void);
 GameState HomePage_update(void);
 void HomePage_OnVBlank(void);
+void HomePage_Cleanup(void);
 
 #endif

@@ -19,6 +19,7 @@
 void Graphical_Gameplay_initialize(void);
 GameState Gameplay_update(void);
 void Gameplay_OnVBlank(void);
+void Gameplay_Cleanup(void);
 
 // Timer getters
 int Gameplay_GetRaceMin(void);

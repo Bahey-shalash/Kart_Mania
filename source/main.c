@@ -113,6 +113,7 @@ static void init_state(GameState state) {
 static void cleanup_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
+            HomePage_Cleanup();
             break;
         case MAPSELECTION:
             break;
@@ -120,6 +121,7 @@ static void cleanup_state(GameState state) {
             // Nothing to cleanup here (Multiplayer_Cleanup called elsewhere if needed)
             break;
         case GAMEPLAY:
+            Gameplay_Cleanup();
             Race_Stop();
             if (GameContext_IsMultiplayerMode()) {
                 Multiplayer_Cleanup();
