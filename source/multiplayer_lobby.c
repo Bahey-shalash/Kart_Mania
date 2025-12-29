@@ -3,6 +3,7 @@
 #include <nds.h>
 #include <stdio.h>
 
+#include "context.h"
 #include "game_types.h"
 #include "multiplayer.h"
 
@@ -28,6 +29,10 @@ void MultiplayerLobby_Init(void) {
 
     // Join the lobby (broadcasts presence to other players)
     Multiplayer_JoinLobby();
+
+    // Set default map for multiplayer (ScorchingSands for now)
+    // TODO: Add map selection for multiplayer later
+    GameContext_SetMap(ScorchingSands);
 
     countdownTimer = 0;
     countdownActive = false;

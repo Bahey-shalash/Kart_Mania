@@ -115,11 +115,13 @@ void Race_Init(Map map, GameMode mode) {
     if (isMultiplayerRace) {
         // Multiplayer mode
         KartMania.playerIndex = Multiplayer_GetMyPlayerID();
-        KartMania.carCount = MAX_CARS;  // All 8 slots available for network players
+        // In multiplayer, we need all 8 car slots because player IDs are 0-7
+        // (a sparse array where only connected players' cars are used)
+        KartMania.carCount = MAX_CARS;
     } else {
         // Single player mode
         KartMania.playerIndex = 0;
-        KartMania.carCount = MAX_CARS;
+        KartMania.carCount = 1;  // Only 1 car in single player
     }
 
     KartMania.checkpointCount = 0;
