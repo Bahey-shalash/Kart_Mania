@@ -47,9 +47,10 @@ void timerISRVblank(void) {
             } else if (state->raceFinished) {
                 // Race has finished
                 if (state->finishDelayTimer > 0) {
-                    // Still in delay period - show frozen timer and lap
-                    updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
-                                        Gameplay_GetRaceMsec());
+                    // Still in delay period - show FINAL TOTAL TIME (not lap time)
+                    int min, sec, msec;
+                    Race_GetFinalTime(&min, &sec, &msec);
+                    updateChronoDisp_Sub(min, sec, msec);
                     updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
                 } else {
                     // Delay expired - show Play Again screen
@@ -60,7 +61,7 @@ void timerISRVblank(void) {
                     }
                 }
             } else {
-                // Normal race - show timer and lap
+                // Normal race - show current lap timer
                 updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
                                     Gameplay_GetRaceMsec());
                 updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);

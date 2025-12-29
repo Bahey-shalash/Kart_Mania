@@ -38,6 +38,9 @@ static bool playAgainScreenActive = false;
 static bool playAgainYesSelected = true;  // Default to YES
 static bool countdownCleared = false; 
 
+static int totalRaceMin = 0;
+static int totalRaceSec = 0;
+static int totalRaceMsec = 0;
 //=============================================================================
 // Quadrant Data
 //=============================================================================
@@ -92,11 +95,22 @@ void Gameplay_IncrementTimer(void) {
     if (Race_IsCompleted()) {
         return;
     }
+    
+    // Increment lap time
     raceMsec = (raceMsec + 1) % MS_PER_SECOND;
     if (raceMsec == 0) {
         raceSec = (raceSec + 1) % SECONDS_PER_MINUTE;
         if (raceSec == 0) {
             raceMin++;
+        }
+    }
+    
+    // Increment total time
+    totalRaceMsec = (totalRaceMsec + 1) % MS_PER_SECOND;
+    if (totalRaceMsec == 0) {
+        totalRaceSec = (totalRaceSec + 1) % SECONDS_PER_MINUTE;
+        if (totalRaceSec == 0) {
+            totalRaceMin++;
         }
     }
 }
@@ -194,7 +208,7 @@ void Graphical_Gameplay_initialize(void) {
     u16* map = BG_MAP_RAM_SUB(0);
     memset(map, 32, 32 * 32 * 2);
     changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Reset to yellow
-    
+
     Map selectedMap = GameContext_GetMap();
     Race_Init(selectedMap, SinglePlayer);
 
@@ -252,6 +266,9 @@ GameState Gameplay_update(void) {
                 raceMin = 0;
                 raceSec = 0;
                 raceMsec = 0;
+                totalRaceMin = 0;      // ADD THIS
+                totalRaceSec = 0;       // ADD THIS
+                totalRaceMsec = 0;      // ADD THIS
                 currentLap = 1;
                 Race_Reset();
                 
@@ -337,14 +354,15 @@ void Gameplay_OnVBlank(void) {
         const RaceState* state = Race_GetState();
         
         if (currentLap < state->totalLaps) {
-            // Normal lap completion - reset timer for next lap
+            // Normal lap completion - reset LAP timer (but total keeps running)
             currentLap++;
             raceMin = 0;
             raceSec = 0;
             raceMsec = 0;
         } else {
             // RACE COMPLETED! (finished final lap)
-            Race_MarkAsCompleted(raceMin, raceSec, raceMsec);
+            // Pass TOTAL race time, not lap time
+            Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
         }
     }
 
