@@ -10,6 +10,7 @@
 #include "game_types.h"
 #include "gameplay_logic.h"
 #include "kart_sprite.h"
+#include "multiplayer.h"
 #include "numbers.h"
 #include "play_again.h"
 #include "scorching_sands_BC.h"
@@ -137,7 +138,9 @@ void Gameplay_IncrementTimer(void) {
 void Graphical_Gameplay_initialize(void) {
     configureGraphics();
     configureBackground();
-    configureSprite();
+    // NOTE: configureSprite() is called from configureBackground() - we need to change
+    // this
+
     raceMin = 0;
     raceSec = 0;
     raceMsec = 0;
@@ -152,7 +155,7 @@ void Graphical_Gameplay_initialize(void) {
     // Load best time for this map
     Map selectedMap = GameContext_GetMap();
 
-    // NEW: Check context to determine game mode
+    // Check context to determine game mode
     GameContext* ctx = GameContext_Get();
     GameMode mode = ctx->isMultiplayerMode ? MultiPlayer : SinglePlayer;
 
@@ -170,6 +173,9 @@ void Graphical_Gameplay_initialize(void) {
     changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Reset to yellow
     
     Race_Init(selectedMap, mode);
+
+    // NOW call configureSprite (remove it from wherever it's being called before)
+    configureSprite();
 
     const Car* player = Race_GetPlayerCar();
     scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
@@ -467,19 +473,30 @@ void Gameplay_OnVBlank(void) {
         int screenX = carX - scrollX - 16;
         int screenY = carY - scrollY - 16;
 
-        // Setup rotation for player
+        // Setup rotation for player (use affine matrix 0)
         int dsAngle = -(player->angle512 << 6);
         oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
 
-        // Render player sprite (OAM slot 0)
+        // Render player sprite (OAM slot 0, affine matrix 0)
         oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
                SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
                false);
     } else {
-        // MULTIPLAYER: Render ALL cars (player + other players)
-        // Note: Cars use OAM slots 41-48 to avoid conflicts with items (slots 1-40)
+        // MULTIPLAYER: Render only connected players' cars
 
         for (int i = 0; i < state->carCount; i++) {
+            // OAM slot for this car (slots 41-48 for cars in multiplayer)
+            int oamSlot = 41 + i;
+
+            // Skip rendering if this player is not connected
+            if (!Multiplayer_IsPlayerConnected(i)) {
+                // Hide this OAM slot completely
+                oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_32x32,
+                       SpriteColorFormat_16Color, NULL, -1, true, false, false,
+                       false, false);
+                continue;
+            }
+
             const Car* car = &state->cars[i];
 
             int carWorldX = FixedToInt(car->position.x);
@@ -489,10 +506,7 @@ void Gameplay_OnVBlank(void) {
             int carScreenX = carWorldX - scrollX - 16;
             int carScreenY = carWorldY - scrollY - 16;
 
-            // OAM slot for this car (offset to avoid item conflicts)
-            int oamSlot = 41 + i;  // Cars use slots 41-48
-
-            // Set rotation for this car (must be done before oamSet)
+            // Set rotation for this car (affine matrices 0-7 for cars)
             int dsAngle = -(car->angle512 << 6);
             oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
 
@@ -501,7 +515,7 @@ void Gameplay_OnVBlank(void) {
                              carScreenY >= -32 && carScreenY < SCREEN_HEIGHT + 32);
 
             if (onScreen) {
-                // Render car sprite on screen
+                // Render car sprite on screen (use affine matrix i)
                 oamSet(&oamMain, oamSlot, carScreenX, carScreenY, 0, 0,
                        SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i, true,
                        false, false, false, false);
@@ -657,7 +671,8 @@ static void configureBackground(void) {
     if (selectedMap != ScorchingSands)
         return;
 
-    BGCTRL[0] = BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
+    BGCTRL[0] =
+        BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
     dmaCopy(scorching_sands_TLPal, BG_PALETTE, scorching_sands_TLPalLen);
 
     // Sub screen setup with numbers tileset
@@ -693,28 +708,17 @@ static void configureBackground(void) {
 static void configureSprite(void) {
     oamInit(&oamMain, SpriteMapping_1D_32, false);
 
-    // Load kart palette to slot 0
     dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
 
-    // Allocate sprite graphics ONCE (all cars share the same graphics)
     u16* kartGfx =
         oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
     dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
 
-    // Only set graphics for the player's car (always car 0)
-    Race_SetCarGfx(0, kartGfx);
-
-    // In multiplayer, the other cars' graphics will be set when they join
-    // OR we can set them all now if we're in multiplayer mode:
-    GameContext* ctx = GameContext_Get();
-    if (ctx->isMultiplayerMode) {
-        const RaceState* raceState = Race_GetState();
-        for (int i = 1; i < raceState->carCount; i++) {
-            Race_SetCarGfx(i, kartGfx);
-        }
+    // Set graphics for ALL cars - use MAX_CARS directly since it's always 8
+    for (int i = 0; i < MAX_CARS; i++) {
+        Race_SetCarGfx(i, kartGfx);
     }
 
-    // Load item graphics (palettes 1-7)
     Items_LoadGraphics();
 }
 
