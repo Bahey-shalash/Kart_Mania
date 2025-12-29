@@ -21,6 +21,15 @@
 
 typedef enum { SinglePlayer, MultiPlayer } GameMode;
 
+
+typedef enum {
+    COUNTDOWN_3 = 0,
+    COUNTDOWN_2,
+    COUNTDOWN_1,
+    COUNTDOWN_GO,
+    COUNTDOWN_FINISHED
+} CountdownState;
+
 //=============================================================================
 // Structs
 //=============================================================================
@@ -56,6 +65,10 @@ void Race_Tick(void);
 void Race_Reset(void);
 void Race_Stop(void);  // Renamed from stop_Race
 
+
+void Race_UpdateCountdown(void);
+bool Race_IsCountdownActive(void);
+CountdownState Race_GetCountdownState(void);
 //=============================================================================
 // State Queries (Read-Only Access)
 //=============================================================================

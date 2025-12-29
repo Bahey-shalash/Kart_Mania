@@ -60,9 +60,10 @@ static const QuadrantData quadrantData[9] = {
 static void configureGraphics(void);
 static void configureBackground(void);
 static void configureSprite(void);
-//static void configureConsole(void);
 static void loadQuadrant(QuadrantID quad);
 static QuadrantID determineQuadrant(int x, int y);
+static void renderCountdown(CountdownState state);
+static void clearCountdownDisplay(void);
 
 //=============================================================================
 // Timer Getters
@@ -99,13 +100,11 @@ void Gameplay_IncrementTimer(void) {
 void Graphical_Gameplay_initialize(void) {
     configureGraphics();
     configureBackground();
-    //configureConsole();  // Debug console on sub BG1
     configureSprite();
     raceMin = 0;
     raceSec = 0;
     raceMsec = 0;
     currentLap = 1;
-
     Map selectedMap = GameContext_GetMap();
     Race_Init(selectedMap, SinglePlayer);
 
@@ -151,11 +150,56 @@ GameState Gameplay_update(void) {
 // Public API - VBlank (Graphics Update)
 //=============================================================================
 void Gameplay_OnVBlank(void) {
-    //consoleClear();
-
     const Car* player = Race_GetPlayerCar();
-    Vec2 velocityVec =
-        Vec2_Scale(Vec2_FromAngle(player->angle512), Car_GetSpeed(player));
+    
+    // Check if countdown is active
+    if (Race_IsCountdownActive()) {
+        Race_UpdateCountdown();
+        renderCountdown(Race_GetCountdownState());
+        
+        // Still update camera position during countdown
+        int carX = FixedToInt(player->position.x);
+        int carY = FixedToInt(player->position.y);
+        
+        scrollX = carX - (SCREEN_WIDTH / 2);
+        scrollY = carY - (SCREEN_HEIGHT / 2);
+        
+        if (scrollX < 0) scrollX = 0;
+        if (scrollY < 0) scrollY = 0;
+        if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
+        if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+        
+        QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
+        if (newQuadrant != currentQuadrant) {
+            loadQuadrant(newQuadrant);
+            currentQuadrant = newQuadrant;
+            Race_SetLoadedQuadrant(newQuadrant);
+        }
+        
+        int col = currentQuadrant % 3;
+        int row = currentQuadrant / 3;
+        BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
+        BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
+        
+        // Render car sprite even during countdown
+        int dsAngle = -(player->angle512 << 6);
+        oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
+        int screenX = carX - scrollX - 32;
+        int screenY = carY - scrollY - 32;
+        
+        oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
+               SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false, false);
+        
+        oamUpdate(&oamMain);
+        return;
+    }
+    
+    // Clear countdown display once race starts
+    static bool countdownCleared = false;
+    if (!countdownCleared) {
+        clearCountdownDisplay();
+        countdownCleared = true;
+    }
 
     if (Race_CheckFinishLineCross(player)) {
         raceMin = 0;
@@ -195,74 +239,8 @@ void Gameplay_OnVBlank(void) {
     BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
     BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
 
-    /* DEBUG: Movement telemetry
-    int facingAngle = player->angle512;
-    int velocityAngle = Car_GetVelocityAngle(player);
-    Q16_8 speed = Car_GetSpeed(player);
-    bool moving = Car_IsMoving(player);
-    Vec2 velocityVec = Vec2_Scale(Vec2_FromAngle(player->angle512), speed);
-
-    consoleClear();
-    printf("=== CAR DEBUG ===\n");
-    printf("Facing:   %3d\n", facingAngle);
-    printf("Velocity: %3d\n", velocityAngle);
-    printf("Speed:    %d.%02d\n", (int)(speed >> 8), (int)(((speed & 0xFF) * 100) >>
-    8)); printf("Moving:   %s\n", moving ? "YES" : "NO");
-
-    if (moving) {
-        int angleDiff = (velocityAngle - facingAngle) & ANGLE_MASK;
-        if (angleDiff > 256) angleDiff -= 512;
-        printf("Diff:     %+4d", angleDiff);
-        if (angleDiff > 32 || angleDiff < -32) {
-            iprintf(" <!>");
-        }
-        printf("\n");
-    }
-*/
-/*
-    printf("\nPos: %d,%d\n", carX, carY);
-    printf("Vel: %d,%d\n", FixedToInt(velocityVec.x), FixedToInt(velocityVec.y));
-
-    // Item debug
-    printf("\nItem: ");
-    switch (player->item) {
-        case ITEM_NONE:
-            printf("NONE");
-            break;
-        case ITEM_BANANA:
-            printf("BANANA");
-            break;
-        case ITEM_OIL:
-            printf("OIL");
-            break;
-        case ITEM_BOMB:
-            printf("BOMB");
-            break;
-        case ITEM_GREEN_SHELL:
-            printf("GREEN_SHELL");
-            break;
-        case ITEM_RED_SHELL:
-            printf("RED_SHELL");
-            break;
-        case ITEM_MISSILE:
-            printf("MISSILE");
-            break;
-        case ITEM_MUSHROOM:
-            printf("MUSHROOM");
-            break;
-        case ITEM_SPEEDBOOST:
-            printf("SPEEDBOOST");
-            break;
-        default:
-            printf("???");
-            break;
-    }
-    printf("\n");
-*/
-    //---------------
     int dsAngle = -(player->angle512 << 6);
     oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
-    //Changed to make the sand interaction better (not too sure why -16 didnt work)
     int screenX = carX - scrollX - 32;
     int screenY = carY - scrollY - 32;
 
@@ -274,6 +252,64 @@ void Gameplay_OnVBlank(void) {
 }
 
 //=============================================================================
+// Countdown Display Functions
+//=============================================================================
+static void renderCountdown(CountdownState state) {
+    u16* map = BG_MAP_RAM_SUB(0);
+    
+    // Clear previous countdown display
+    for (int i = 16; i < 24; i++) {
+        for (int j = 12; j < 20; j++) {
+            map[i * 32 + j] = 32;  // Empty tile
+        }
+    }
+    
+    // Center position for large countdown numbers
+    int centerX = 14;  // Centered horizontally (32 tiles / 2 - 2 for number width)
+    int centerY = 18;  // Lower on screen
+    
+    switch (state) {
+        case COUNTDOWN_3:
+            // Display large "3"
+            printDigit(map, 3, centerX, centerY);
+            break;
+            
+        case COUNTDOWN_2:
+            // Display large "2"
+            printDigit(map, 2, centerX, centerY);
+            break;
+            
+        case COUNTDOWN_1:
+            // Display large "1"
+            printDigit(map, 1, centerX, centerY);
+            break;
+            
+        case COUNTDOWN_GO:
+            // Display "GO!" using custom tiles
+            // You can create custom "G" and "O" tiles, or use creative number combinations
+            // For now, showing "0" as a placeholder for "GO"
+            printDigit(map, 0, centerX - 2, centerY);
+            // You could add more tiles here for a proper "GO" display
+            break;
+            
+        case COUNTDOWN_FINISHED:
+            // Don't display anything
+            break;
+    }
+}
+
+static void clearCountdownDisplay(void) {
+    u16* map = BG_MAP_RAM_SUB(0);
+    
+    // Clear the countdown area
+    for (int i = 16; i < 24; i++) {
+        for (int j = 12; j < 20; j++) {
+            map[i * 32 + j] = 32;  // Empty tile
+        }
+    }
+}
+
+//=============================================================================
 // Private Functions - Setup
 //=============================================================================
 static void configureGraphics(void) {
@@ -281,11 +317,8 @@ static void configureGraphics(void) {
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
 
-    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE;  // Sub: console only
+    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
-
-    // Enable a second sub BG (BG1) for the debug console
-    //REG_DISPCNT_SUB |= DISPLAY_BG1_ACTIVE;
 }
 
 static void configureBackground(void) {
@@ -296,7 +329,7 @@ static void configureBackground(void) {
     BGCTRL[0] = BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
     dmaCopy(scorching_sands_TLPal, BG_PALETTE, scorching_sands_TLPalLen);
 
-    // Sub screen graphics disabled in gameplay; console uses BG1 instead.
+    // Sub screen setup with numbers tileset
     BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
     swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
     swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
@@ -304,8 +337,6 @@ static void configureBackground(void) {
     BG_PALETTE_SUB[1] = ARGB16(1, 0, 0, 0);
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
     updateChronoDisp_Sub(-1, -1, -1);
-    // Reserve BG1 on sub for console (4bpp, separate tile/map blocks)
-    //BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(31) | BG_TILE_BASE(2);
 }
 
 static void configureSprite(void) {
@@ -325,17 +356,6 @@ static void configureSprite(void) {
     // Load item graphics (palettes 1-7)
     Items_LoadGraphics();
 }
-
-/*
-// DEBUG Console setup (active for gameplay debug)
-static void configureConsole(void) {
-    // Use sub screen BG1 so we don't clobber gameplay BGs/palettes
-    consoleInit(NULL, 1, BgType_Text4bpp, BgSize_T_256x256, 31, 2, false, true);
-    printf("\x1b[2J");
-    printf("=== KART DEBUG ===\n");
-    printf("SELECT = exit\n\n");
-}
-*/
 
 //=============================================================================
 // Private Functions - Quadrant Management
@@ -480,3 +500,92 @@ void updateLapDisp_Sub(int currentLap, int totalLaps) {
         printDigit(BG_MAP_RAM_SUB(0), totalLaps % 10, x, y);
     }
 }
+
+
+
+#ifdef DEBUG
+    DEBUG: Movement telemetry
+    int facingAngle = player->angle512;
+    int velocityAngle = Car_GetVelocityAngle(player);
+    Q16_8 speed = Car_GetSpeed(player);
+    bool moving = Car_IsMoving(player);
+    Vec2 velocityVec = Vec2_Scale(Vec2_FromAngle(player->angle512), speed);
+
+    consoleClear();
+    printf("=== CAR DEBUG ===\n");
+    printf("Facing:   %3d\n", facingAngle);
+    printf("Velocity: %3d\n", velocityAngle);
+    printf("Speed:    %d.%02d\n", (int)(speed >> 8), (int)(((speed & 0xFF) * 100) >>
+    8)); printf("Moving:   %s\n", moving ? "YES" : "NO");
+
+    if (moving) {
+        int angleDiff = (velocityAngle - facingAngle) & ANGLE_MASK;
+        if (angleDiff > 256) angleDiff -= 512;
+        printf("Diff:     %+4d", angleDiff);
+        if (angleDiff > 32 || angleDiff < -32) {
+            iprintf(" <!>");
+        }
+        printf("\n");
+    }
+
+    printf("\nPos: %d,%d\n", carX, carY);
+    printf("Vel: %d,%d\n", FixedToInt(velocityVec.x), FixedToInt(velocityVec.y));
+
+    // Item debug
+    printf("\nItem: ");
+    switch (player->item) {
+        case ITEM_NONE:
+            printf("NONE");
+            break;
+        case ITEM_BANANA:
+            printf("BANANA");
+            break;
+        case ITEM_OIL:
+            printf("OIL");
+            break;
+        case ITEM_BOMB:
+            printf("BOMB");
+            break;
+        case ITEM_GREEN_SHELL:
+            printf("GREEN_SHELL");
+            break;
+        case ITEM_RED_SHELL:
+            printf("RED_SHELL");
+            break;
+        case ITEM_MISSILE:
+            printf("MISSILE");
+            break;
+        case ITEM_MUSHROOM:
+            printf("MUSHROOM");
+            break;
+        case ITEM_SPEEDBOOST:
+            printf("SPEEDBOOST");
+            break;
+        default:
+            printf("???");
+            break;
+    }
+    printf("\n");
+    #endif
+
+
+
+
+#ifdef DEBUG
+    //Reserve BG1 on sub for console (4bpp, separate tile/map blocks)
+    BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(31) | BG_TILE_BASE(2);
+#endif
+
+#ifdef DEBUG
+/*
+// DEBUG Console setup (active for gameplay debug)
+static void configureConsole(void) {
+    // Use sub screen BG1 so we don't clobber gameplay BGs/palettes
+    consoleInit(NULL, 1, BgType_Text4bpp, BgSize_T_256x256, 31, 2, false, true);
+    printf("\x1b[2J");
+    printf("=== KART DEBUG ===\n");
+    printf("SELECT = exit\n\n");
+}
+*/
+#endif
+

@@ -8,12 +8,15 @@
 #include "timer.h"
 #include "wall_collision.h"
 
+
 //=============================================================================
 // Constants
 //=============================================================================
 #define SCREEN_WIDTH 256
 #define SCREEN_HEIGHT 192
 #define MAP_SIZE 1024
+#define COUNTDOWN_NUMBER_DURATION 60
+#define COUNTDOWN_GO_DURATION 60
 #define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
 #define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
 
@@ -42,10 +45,15 @@ static CheckpointProgressState cpState[MAX_CARS] = {CP_STATE_START};
 static bool wasOnLeftSide[MAX_CARS] = {false};
 static bool wasOnTopSide[MAX_CARS] = {false};
 static bool isPaused = false;
-static bool itemButtonHeldLast = false;  // Track L-button edge ourselves
+static bool itemButtonHeldLast = false;
 
 static int collisionLockoutTimer[MAX_CARS] = {0};
 static QuadrantID loadedQuadrant = QUAD_BR;
+
+// Countdown state
+static CountdownState countdownState = COUNTDOWN_3;
+static int countdownTimer = 0;
+static bool raceCanStart = false;
 
 //=============================================================================
 // Private Prototypes
@@ -57,6 +65,8 @@ static QuadrantID determineCarQuadrant(int x, int y);
 static void checkCheckpointProgression(const Car* car, int carIndex);
 static bool checkFinishLineCross(const Car* car, int carIndex);
 static void applyTerrainEffects(Car* car);
+static void updateCountdown(void);
+
 //=============================================================================
 // Public API - State Queries
 //=============================================================================
@@ -91,6 +101,23 @@ void Race_SetCarGfx(int index, u16* gfx) {
     KartMania.cars[index].gfx = gfx;
 }
 
+// Countdown getters
+CountdownState Race_GetCountdownState(void) {
+    return countdownState;
+}
+
+bool Race_IsCountdownActive(void) {
+    return countdownState != COUNTDOWN_FINISHED;
+}
+
+bool Race_CanRaceStart(void) {
+    return raceCanStart;
+}
+
+void Race_UpdateCountdown(void){
+    updateCountdown();
+}
+
 //=============================================================================
 // Public API - Lifecycle
 //=============================================================================
@@ -110,6 +137,11 @@ void Race_Init(Map map, GameMode mode) {
     KartMania.checkpointCount = 0;
     itemButtonHeldLast = false;
 
+    // Initialize countdown
+    countdownState = COUNTDOWN_3;
+    countdownTimer = 0;
+    raceCanStart = false;
+
     for (int i = 0; i < KartMania.carCount; i++) {
         initCarAtSpawn(&KartMania.cars[i], i);
         collisionLockoutTimer[i] = 0;
@@ -117,8 +149,6 @@ void Race_Init(Map map, GameMode mode) {
 
     // Initialize items system
     Items_Init(map);
-
-    RaceTick_TimerInit();
 }
 
 void Race_Reset(void) {
@@ -135,12 +165,16 @@ void Race_Reset(void) {
     KartMania.raceFinished = false;
     itemButtonHeldLast = false;
 
+    // Reset countdown
+    countdownState = COUNTDOWN_3;
+    countdownTimer = 0;
+    raceCanStart = false;
+
     for (int i = 0; i < KartMania.carCount; i++) {
         initCarAtSpawn(&KartMania.cars[i], i);
         collisionLockoutTimer[i] = 0;
     }
 
-    RaceTick_TimerInit();
 }
 
 void Race_Stop(void) {
@@ -151,21 +185,18 @@ void Race_Stop(void) {
 //=============================================================================
 // Public API - Game Loop
 //=============================================================================
-
-// Modify Race_Tick to include terrain effects
 void Race_Tick(void) {
     if (!Race_IsActive()) {
         return;
     }
 
     Car* player = &KartMania.cars[KartMania.playerIndex];
-
     handlePlayerInput(player, KartMania.playerIndex);
     applyTerrainEffects(player);
 
     Items_Update();
 
-    // Calculate scroll position for collision detection (same as in gameplay.c)
+    // Calculate scroll position for collision detection
     int scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
     int scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
     if (scrollX < 0)
@@ -186,6 +217,50 @@ void Race_Tick(void) {
 
     if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
         collisionLockoutTimer[KartMania.playerIndex]--;
+    }
+}
+
+//=============================================================================
+// Countdown System
+//=============================================================================
+static void updateCountdown(void) {
+    countdownTimer++;
+
+    switch (countdownState) {
+        case COUNTDOWN_3:
+            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
+                countdownState = COUNTDOWN_2;
+                countdownTimer = 0;
+            }
+            break;
+
+        case COUNTDOWN_2:
+            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
+                countdownState = COUNTDOWN_1;
+                countdownTimer = 0;
+            }
+            break;
+
+        case COUNTDOWN_1:
+            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
+                countdownState = COUNTDOWN_GO;
+                countdownTimer = 0;
+            }
+            break;
+
+        case COUNTDOWN_GO:
+            if (countdownTimer >= COUNTDOWN_GO_DURATION) {
+                countdownState = COUNTDOWN_FINISHED;
+                countdownTimer = 0;
+                raceCanStart = true;
+                // Start the race timer now
+                RaceTick_TimerInit();
+            }
+            break;
+
+        case COUNTDOWN_FINISHED:
+            // Do nothing - race is running
+            break;
     }
 }
 
@@ -263,10 +338,10 @@ static bool checkFinishLineCross(const Car* car, int carIndex) {
 
     return false;
 }
+
 //=============================================================================
 // Terrain Applications
 //=============================================================================
-
 static void applyTerrainEffects(Car* car) {
     int carX = FixedToInt(car->position.x);
     int carY = FixedToInt(car->position.y);
@@ -280,6 +355,7 @@ static void applyTerrainEffects(Car* car) {
         car->friction = FRICTION_50CC;
     }
 }
+
 //=============================================================================
 // Private Implementation
 //=============================================================================
@@ -307,9 +383,6 @@ static void initCarAtSpawn(Car* car, int index) {
 static void handlePlayerInput(Car* player, int carIndex) {
     scanKeys();
     uint32 held = keysHeld();
-    // when i had keysDown game was super responsive(like youd have to wait  a second
-    // before being able to place it) which is normal bevause it checks buttons that
-    // went from up -> down this frame
 
     bool pressingA = held & KEY_A;
     bool pressingB = held & KEY_B;
@@ -322,7 +395,7 @@ static void handlePlayerInput(Car* player, int carIndex) {
 
     // Item usage
     if (itemPressed) {
-        bool fireForward = !pressingDown;  // Default forward unless DOWN held
+        bool fireForward = !pressingDown;
         Items_UsePlayerItem(player, fireForward);
     }
 
@@ -344,7 +417,7 @@ static void handlePlayerInput(Car* player, int carIndex) {
     bool isLockedOut = (collisionLockoutTimer[carIndex] > 0);
 
     if (pressingA && !pressingB && !isLockedOut) {
-        Car_Accelerate(player);  // Forward acceleration (blocked during lockout)
+        Car_Accelerate(player);
     } else if (pressingB && player->speed > 0) {
         Car_Brake(player);
     }
@@ -361,20 +434,15 @@ static void clampToMapBounds(Car* car, int carIndex) {
         Wall_GetCollisionNormal(carX, carY, quad, &nx, &ny);
 
         if (nx != 0 || ny != 0) {
-            // Push car out of wall
             int pushDistance = CAR_RADIUS;
             car->position.x += IntToFixed(nx * pushDistance);
             car->position.y += IntToFixed(ny * pushDistance);
 
-            // FULL STOP on collision
             car->speed = 0;
-
-            // Enable collision lockout to prevent immediate re-acceleration
             collisionLockoutTimer[carIndex] = COLLISION_LOCKOUT_FRAMES;
         }
     }
 
-    // Map boundary clamping
     Q16_8 minPos = IntToFixed(0);
     Q16_8 maxPosX = IntToFixed(1024 - 32);
     Q16_8 maxPosY = IntToFixed(1024 - 32);
