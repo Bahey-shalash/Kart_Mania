@@ -9,6 +9,8 @@
 #include "graphics.h"
 #include "home_page.h"
 #include "map_selection.h"
+#include "multiplayer.h"
+#include "multiplayer_lobby.h"
 #include "settings.h"
 #include "sound.h"
 #include "storage.h"
@@ -74,6 +76,8 @@ static GameState update_state(GameState state) {
             return Settings_update();
         case MAPSELECTION:
             return Map_selection_update();
+        case MULTIPLAYER_LOBBY:  // NEW
+            return MultiplayerLobby_Update();
         case GAMEPLAY:
             return Gameplay_update();
         case PLAYAGAIN:
@@ -90,6 +94,9 @@ static void init_state(GameState state) {
             break;
         case MAPSELECTION:
             Map_Selection_initialize();
+            break;
+        case MULTIPLAYER_LOBBY:
+            MultiplayerLobby_Init();
             break;
         case GAMEPLAY:
             Graphical_Gameplay_initialize();
@@ -109,8 +116,15 @@ static void cleanup_state(GameState state) {
             break;
         case MAPSELECTION:
             break;
+        case MULTIPLAYER_LOBBY:
+            // Nothing to cleanup here (Multiplayer_Cleanup called elsewhere if needed)
+            break;
         case GAMEPLAY:
             Race_Stop();
+            if (GameContext_IsMultiplayerMode()) {
+                Multiplayer_Cleanup();
+                GameContext_SetMultiplayerMode(false);
+            }
             break;
         case SETTINGS:
             break;

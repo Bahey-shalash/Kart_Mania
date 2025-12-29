@@ -11,10 +11,10 @@
 // Values are in VBlank frames (60 frames = 1 second on Nintendo DS).
 
 // Maximum time to search for the access point before giving up
-#define WIFI_SCAN_TIMEOUT_FRAMES 300    // 5 seconds at 60Hz
+#define WIFI_SCAN_TIMEOUT_FRAMES 300  // 5 seconds at 60Hz
 
 // Maximum time to wait for connection to complete before giving up
-#define WIFI_CONNECT_TIMEOUT_FRAMES 600 // 10 seconds at 60Hz
+#define WIFI_CONNECT_TIMEOUT_FRAMES 600  // 10 seconds at 60Hz
 
 //=============================================================================
 // MODULE STATE
@@ -63,7 +63,7 @@ int initWiFi() {
     //   we exit the loop and return an error
     // - swiWaitForVBlank() makes each attempt last exactly 1/60th of a second
     //=========================================================================
-    
+
     int scanAttempts = 0;
     while (found == 0 && scanAttempts < WIFI_SCAN_TIMEOUT_FRAMES) {
         // Get visible APs and check their SSID with our predefined one
@@ -73,21 +73,21 @@ int initWiFi() {
             if (strcmp(SSID, ap.ssid) == 0)
                 found = 1;  // Our predefined AP has been found
         }
-        
+
         // If not found yet, wait one frame and increment counter
         if (!found) {
             swiWaitForVBlank();  // Wait 1/60th second
-            scanAttempts++;       // Increment watchdog counter
+            scanAttempts++;      // Increment watchdog counter
         }
     }
-    
+
     //=========================================================================
     // Check if we timed out during scanning
     //=========================================================================
     // If scanAttempts reached the timeout limit, we never found the AP
     // Return 0 to indicate failure
     if (!found) {
-        return 0; // Timeout - AP not found
+        return 0;  // Timeout - AP not found
     }
 
     //=========================================================================
@@ -114,10 +114,10 @@ int initWiFi() {
     //   b) Connection definitely failed (ASSOCSTATUS_CANNOTCONNECT)
     //   c) Timeout reached (connectAttempts >= WIFI_CONNECT_TIMEOUT_FRAMES)
     //=========================================================================
-    
+
     int status = ASSOCSTATUS_DISCONNECTED;
     int connectAttempts = 0;
-    
+
     // Keep trying to connect while:
     // - Not yet connected AND
     // - Not failed permanently AND
@@ -127,10 +127,10 @@ int initWiFi() {
            (connectAttempts < WIFI_CONNECT_TIMEOUT_FRAMES)) {
         // Check current connection status
         status = Wifi_AssocStatus();
-        
+
         // Wait for a VBlank (1/60th second) before checking again
         swiWaitForVBlank();
-        
+
         // Increment watchdog counter
         connectAttempts++;
     }
@@ -141,7 +141,7 @@ int initWiFi() {
     // WiFi_initialized will be true only if we actually connected
     // (not if we timed out or got CANNOTCONNECT)
     WiFi_initialized = (status == ASSOCSTATUS_ASSOCIATED);
-    
+
     return WiFi_initialized;
 }
 
@@ -241,7 +241,7 @@ int receiveData(char* data_buff, int bytes) {
     received_bytes = recvfrom(socket_id,  // Socket id
                               data_buff,  // Buffer where to put the data
                               bytes,      // Bytes to receive (at most)
-                              ~MSG_PEEK,  // Returned data is marked as read
+                              0,          // Non-blocking handled by ioctl; no flags needed
                               (struct sockaddr*)&sa_in,  // Sender information
                               &info_size);               // Sender info size
 

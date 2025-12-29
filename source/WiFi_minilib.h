@@ -7,21 +7,19 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 
-#define SSID    "MES-NDS"
+#define SSID "MES-NDS"
 
-
-//WiFi initialization
+// WiFi initialization
 int initWiFi();
-//Socket initialization
+// Socket initialization
 int openSocket();
-//Receive data trough the socket
+// Receive data trough the socket
 int receiveData(char* data_buff, int bytes);
-//Send data through the socket
+// Send data through the socket
 int sendData(char* data_buff, int bytes);
-//Close the Socket
+// Close the Socket
 void closeSocket();
-//Disconnect the WiFi
+// Disconnect the WiFi
 void disconnectFromWiFi();
 
-
-#endif // WIFI_MINILIB_H
+#endif  // WIFI_MINILIB_H

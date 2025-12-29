@@ -15,6 +15,7 @@ typedef struct {
 
     GameState currentGameState;
     Map SelectedMap;
+    bool isMultiplayerMode;
 } GameContext;
 
 // Single source of truth access
@@ -26,5 +27,8 @@ void GameContext_SetSoundFxEnabled(bool enabled);
 void GameContext_SetWifiEnabled(bool enabled);
 void GameContext_SetMap(Map SelectedMap);
 Map GameContext_GetMap(void);
+void GameContext_SetMultiplayerMode(bool isMultiplayer);
+bool GameContext_IsMultiplayerMode(void);
+
 
 #endif

@@ -7,6 +7,7 @@
 #include "ds_menu.h"
 #include "home_top.h"
 #include "kart_home.h"
+#include "multiplayer.h"
 #include "sound.h"
 #include "timer.h"
 
@@ -108,9 +109,24 @@ GameState HomePage_update(void) {
         }
         switch (selected) {
             case HOME_BTN_SINGLEPLAYER:
+                GameContext_SetMultiplayerMode(false);
                 return MAPSELECTION;
-            case HOME_BTN_MULTIPLAYER:
-                return MAPSELECTION;
+
+            case HOME_BTN_MULTIPLAYER: {
+                GameContext* ctx = GameContext_Get();
+                if (!ctx->userSettings.wifiEnabled) {
+                    PlayDingSFX();
+                    return HOME_PAGE;
+                }
+                int playerID = Multiplayer_Init();
+                if (playerID < 0) {
+                    // Multiplayer_Init already showed error and waited for B
+                    // Just return to home page
+                    return HOME_PAGE;
+                }
+                GameContext_SetMultiplayerMode(true);
+                return MULTIPLAYER_LOBBY;  // Go to lobby
+            }
             case HOME_BTN_SETTINGS:
                 return SETTINGS;
             default:
