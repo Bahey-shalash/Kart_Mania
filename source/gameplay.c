@@ -259,15 +259,43 @@ void Gameplay_OnVBlank(void) {
     printf("\n");
     //---------------
 
-    int dsAngle = -(player->angle512 << 6);
-    oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
+    // Render all cars (player + bots)
+    // Note: Cars use OAM slots 41-48 to avoid conflicts with items (slots 1-40)
+    const RaceState* raceState = Race_GetState();
+    for (int i = 0; i < raceState->carCount; i++) {
+        const Car* car = &raceState->cars[i];
 
-    int screenX = carX - scrollX - 16;
-    int screenY = carY - scrollY - 16;
+        int carWorldX = FixedToInt(car->position.x);
+        int carWorldY = FixedToInt(car->position.y);
 
-    oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
-           SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
-           false);
+        // Convert to screen coordinates
+        int carScreenX = carWorldX - scrollX - 16;
+        int carScreenY = carWorldY - scrollY - 16;
+
+        // OAM slot for this car (offset to avoid item conflicts)
+        int oamSlot = 41 + i;  // Cars use slots 41-48
+
+        // Set rotation for this car (must be done before oamSet)
+        int dsAngle = -(car->angle512 << 6);
+        oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
+
+        // Check if on screen (with margin for smooth enter/exit)
+        bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH + 32 &&
+                         carScreenY >= -32 && carScreenY < SCREEN_HEIGHT + 32);
+
+        if (onScreen) {
+            // Render car sprite on screen
+            oamSet(&oamMain, oamSlot, carScreenX, carScreenY, 0, 0, SpriteSize_32x32,
+                   SpriteColorFormat_16Color, car->gfx, i, true, false, false, false,
+                   false);
+        } else {
+            // Move off-screen cars way off screen (can't use oamSetHidden on rotated sprites)
+            oamSet(&oamMain, oamSlot, -64, -64, 0, 0, SpriteSize_32x32,
+                   SpriteColorFormat_16Color, car->gfx, i, true, false, false, false,
+                   false);
+        }
+    }
+
     Items_Render(scrollX, scrollY);
     oamUpdate(&oamMain);
 }
@@ -311,16 +339,18 @@ static void configureBackground(void) {
 static void configureSprite(void) {
     oamInit(&oamMain, SpriteMapping_1D_32, false);
 
-    // Allocate sprite graphics for player kart (16-color)
-    u16* kartGfx =
-        oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
-
-    // Load kart palette to slot 0
+    // Load kart palette to slot 0 (shared by all cars)
     dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
+
+    // Allocate sprite graphics ONCE for all cars (they share the same graphics)
+    u16* kartGfx = oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
     dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
 
-    // Set the graphics pointer on the player car
-    Race_SetCarGfx(0, kartGfx);
+    // Set all cars to use the same graphics pointer
+    const RaceState* raceState = Race_GetState();
+    for (int i = 0; i < raceState->carCount; i++) {
+        Race_SetCarGfx(i, kartGfx);
+    }
 
     // Load item graphics (palettes 1-7)
     Items_LoadGraphics();

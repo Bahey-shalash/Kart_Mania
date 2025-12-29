@@ -2,12 +2,14 @@
 
 #include <nds.h>
 
+#include "BotAI.h"
 #include "Items.h"
 #include "game_constants.h"
+#include "racing_line.h"
 #include "terrain_detection.h"
 #include "timer.h"
+#include "track_geometry.h"
 #include "wall_collision.h"
-
 //=============================================================================
 // Constants
 //=============================================================================
@@ -16,6 +18,11 @@
 #define MAP_SIZE 1024
 #define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
 #define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
+#define AI_BOT_COUNT 2  // Number of AI opponents in single-player
+
+#if (AI_BOT_COUNT + 1) > MAX_CARS
+#error "AI_BOT_COUNT exceeds MAX_CARS budget"
+#endif
 
 typedef enum {
     CP_STATE_START = 0,
@@ -106,7 +113,13 @@ void Race_Init(Map map, GameMode mode) {
     KartMania.playerIndex = 0;
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
-    KartMania.carCount = (mode == SinglePlayer) ? MAX_CARS : 1;
+    // Single-player: 1 human + AI_BOT_COUNT. Multiplayer/WiFi not implemented yet,
+    // so default to just the local player to avoid unused slots.
+    int desiredCarCount = (mode == SinglePlayer) ? (1 + AI_BOT_COUNT) : 1;
+    if (desiredCarCount > MAX_CARS) {
+        desiredCarCount = MAX_CARS;
+    }
+    KartMania.carCount = desiredCarCount;
     KartMania.checkpointCount = 0;
     itemButtonHeldLast = false;
 
@@ -117,6 +130,27 @@ void Race_Init(Map map, GameMode mode) {
 
     // Initialize items system
     Items_Init(map);
+
+    // ADD THESE THREE LINES:
+    // Initialize track geometry and racing line
+    TrackGeometry_Init(map);
+    RacingLine_Generate(map);
+
+    // Initialize bot AI system
+    BotAI_Init(map);
+
+    // Assign varied personalities to bots (2 total in single-player)
+    int botNumber = 0;
+    for (int i = 0; i < KartMania.carCount; i++) {
+        if (i == KartMania.playerIndex) {
+            continue;
+        }
+
+        BotSkillLevel skill = (botNumber == 0) ? SKILL_MEDIUM : SKILL_HARD;
+        BotPersonality personality = BotAI_GeneratePersonality(skill);
+        BotAI_SetPersonality(i, personality);
+        botNumber++;
+    }
 
     RaceTick_TimerInit();
 }
@@ -138,6 +172,13 @@ void Race_Reset(void) {
     for (int i = 0; i < KartMania.carCount; i++) {
         initCarAtSpawn(&KartMania.cars[i], i);
         collisionLockoutTimer[i] = 0;
+    }
+
+    // Reset bot AI states
+    for (int i = 0; i < KartMania.carCount; i++) {
+        if (i == KartMania.playerIndex)
+            continue;
+        BotAI_Reset(i);
     }
 
     RaceTick_TimerInit();
@@ -162,6 +203,24 @@ void Race_Tick(void) {
 
     handlePlayerInput(player, KartMania.playerIndex);
     applyTerrainEffects(player);
+
+    // Bot AI update loop
+    for (int i = 0; i < KartMania.carCount; i++) {
+        if (i == KartMania.playerIndex)
+            continue;  // Skip player
+
+        Car* bot = &KartMania.cars[i];
+        BotAI_Update(bot, i, &KartMania);
+        applyTerrainEffects(bot);            // Bots also affected by sand
+        Car_Update(bot);                     // Physics integration
+        clampToMapBounds(bot, i);            // Wall collision
+        checkCheckpointProgression(bot, i);  // Lap tracking
+        BotAI_PostPhysicsUpdate(bot, i);  // Stuck recovery after collision resolution
+
+        if (collisionLockoutTimer[i] > 0) {
+            collisionLockoutTimer[i]--;
+        }
+    }
 
     Items_Update();
 
@@ -268,15 +327,19 @@ static bool checkFinishLineCross(const Car* car, int carIndex) {
 //=============================================================================
 
 static void applyTerrainEffects(Car* car) {
-    int carX = FixedToInt(car->position.x);
-    int carY = FixedToInt(car->position.y);
-    if (Terrain_IsOnSand(carX, carY, loadedQuadrant)) {
+    // Use geometric detection for ALL cars (works off-screen!)
+    bool isOnTrack = TrackGeometry_IsOnTrack(car->position);
+
+    // Apply terrain effects
+    if (!isOnTrack) {
+        // OFF TRACK - apply sand slowdown
         car->friction = SAND_FRICTION;
         if (car->speed > SAND_MAX_SPEED) {
             Q16_8 excessSpeed = car->speed - SAND_MAX_SPEED;
             car->speed -= (excessSpeed / SAND_SPEED_DIVISOR);
         }
     } else {
+        // ON TRACK - normal friction
         car->friction = FRICTION_50CC;
     }
 }
