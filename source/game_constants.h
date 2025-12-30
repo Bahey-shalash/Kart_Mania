@@ -83,6 +83,7 @@
 #define HAZARD_DROP_OFFSET 40       // Distance behind car to drop hazards
 
 // Collision detection
+#define CAR_RADIUS 16             // Collision radius for 32x32 sprite (moved from wall_collision.h)
 #define CAR_COLLISION_SIZE 32     // Car hitbox size for item collision
 #define COLLISION_BUFFER_ZONE 64  // Buffer zone around screen for collision detection
 #define ITEM_PICKUP_THRESHOLD 14  // Debug threshold for item box pickup distance

@@ -29,38 +29,38 @@ static void cleanup_state(GameState state);
 int main(void) {
     // Initialize storage first (includes fatInitDefault)
     bool storageAvailable = Storage_Init();
-    
+
     // Initialize context with hardcoded defaults
     GameContext_InitDefaults();
     GameContext* ctx = GameContext_Get();
-    
+
     // If storage available, load saved settings (overwrites defaults)
     if (storageAvailable) {
         Storage_LoadSettings();
     }
-    
+
     initSoundLibrary();
     LoadALLSoundFX();
     loadMUSIC();
-    
+
     // enables Music because default sound effect is true
     GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
-    
+
     init_state(ctx->currentGameState);
-    
+
     while (true) {
         GameState nextState = update_state(ctx->currentGameState);
-        
+
         if (nextState != ctx->currentGameState) {
             cleanup_state(ctx->currentGameState);
             ctx->currentGameState = nextState;
             video_nuke();
             init_state(nextState);
         }
-        
+
         swiWaitForVBlank();
     }
-    
+
     UnloadALLSoundFX();
     return 0;
 }
@@ -131,6 +131,11 @@ static void cleanup_state(GameState state) {
         case SETTINGS:
             break;
         case PLAYAGAIN:
+            // PLAYAGAIN comes after GAMEPLAY - ensure multiplayer is cleaned up
+            if (GameContext_IsMultiplayerMode()) {
+                Multiplayer_Cleanup();
+                GameContext_SetMultiplayerMode(false);
+            }
             break;
     }
 }

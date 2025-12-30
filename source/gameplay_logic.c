@@ -135,7 +135,7 @@ void Race_UpdateCountdown(void) {
 //=============================================================================
 void Race_Init(Map map, GameMode mode) {
     init_pause_interrupt();
-    if (map == NONEMAP || map > NeonCircuit) {
+    if (map < ScorchingSands || map > NeonCircuit) {
         return;
     }
 
@@ -193,6 +193,10 @@ void Race_Reset(void) {
     // Reset items
     Items_Reset();
 
+    // Reset module state
+    isPaused = false;
+    networkUpdateCounter = 0;
+
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
     itemButtonHeldLast = false;
@@ -217,6 +221,7 @@ void Race_Reset(void) {
 void Race_Stop(void) {
     KartMania.raceStarted = false;
     RaceTick_TimerStop();
+    cleanup_pause_interrupt();
 }
 
 void Race_MarkAsCompleted(int min, int sec, int msec) {
@@ -249,12 +254,27 @@ void Race_Tick(void) {
     }
 
     Car* player = &KartMania.cars[KartMania.playerIndex];
+
+    // Network synchronization BEFORE game logic
+    // This ensures we have the latest car positions before processing items
+    if (isMultiplayerRace) {
+        networkUpdateCounter++;
+        if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
+            // Send my car state
+            Multiplayer_SendCarState(player);
+
+            // Receive others' car states
+            Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
+
+            networkUpdateCounter = 0;
+        }
+    }
+
     handlePlayerInput(player, KartMania.playerIndex);
     applyTerrainEffects(player);
 
     Items_Update();
 
-    // Calculate scroll position for collision detection
     // Calculate scroll position for collision detection
     int scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
     int scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
@@ -276,19 +296,6 @@ void Race_Tick(void) {
 
     if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
         collisionLockoutTimer[KartMania.playerIndex]--;
-    }
-    // NEW: Network synchronization for multiplayer
-    if (isMultiplayerRace) {
-        networkUpdateCounter++;
-        if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
-            // Send my car state
-            Multiplayer_SendCarState(player);
-
-            // Receive others' car states
-            Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
-
-            networkUpdateCounter = 0;
-        }
     }
 }
 
@@ -547,6 +554,11 @@ void init_pause_interrupt(void) {
     REG_KEYCNT = BIT(14) | KEY_START;
     irqSet(IRQ_KEYS, PauseISR);
     irqEnable(IRQ_KEYS);
+}
+
+void cleanup_pause_interrupt(void) {
+    irqDisable(IRQ_KEYS);
+    irqClear(IRQ_KEYS);
 }
 
 void PauseISR(void) {

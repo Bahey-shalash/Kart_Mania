@@ -69,7 +69,8 @@ static void applyShellHitEffect(Car* car);
 static void applyBananaHitEffect(Car* car);
 static void applyOilHitEffect(Car* car, int carIndex);
 static bool checkItemCarCollision(Vec2 itemPos, Vec2 carPos, int itemHitbox);
-static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex, int boxIndex);
+static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex,
+                                int boxIndex);
 static void checkItemBoxCollisions(Car* cars, int carCount);
 static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX,
                                          int scrollY);
@@ -121,7 +122,8 @@ void Items_Update(void) {
             if (itemData.speed > 0) {
                 // It's a projectile
                 fireProjectileInternal(itemData.itemType, itemData.position,
-                                     itemData.angle512, itemData.speed, INVALID_CAR_INDEX, false);
+                                       itemData.angle512, itemData.speed,
+                                       INVALID_CAR_INDEX, false);
             } else {
                 // It's a hazard
                 placeHazardInternal(itemData.itemType, itemData.position, false);
@@ -276,6 +278,10 @@ Item Items_GetRandomItem(int playerRank) {
     int total = prob->banana + prob->oil + prob->bomb + prob->greenShell +
                 prob->redShell + prob->missile + prob->mushroom + prob->speedBoost;
 
+    // Safety: prevent division by zero
+    if (total == 0)
+        total = 1;
+
     // Generate random number
     int roll = rand() % total;
 
@@ -329,7 +335,7 @@ static void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 spee
 
     int slot = findInactiveItemSlot();
     if (slot < 0) {
-        //printf("WARNING: No free slots for projectile!\n");
+        // printf("WARNING: No free slots for projectile!\n");
         return;  // No free slots
     }
 
@@ -415,13 +421,15 @@ void Items_PlaceHazard(Item type, Vec2 pos) {
 //=============================================================================
 // OLD FUNCTION TO REMOVE
 //=============================================================================
-// This old function below should be deleted - it's been replaced by placeHazardInternal
+// This old function below should be deleted - it's been replaced by
+// placeHazardInternal
 /*
 static void placeHazardOld_DELETE_ME(Item type, Vec2 pos) {
     // In multiplayer, broadcast item placement to other players
     const RaceState* state = Race_GetState();
     if (state->gameMode == MultiPlayer) {
-        Multiplayer_SendItemPlacement(type, pos, 0, 0);  // Hazards don't move, so angle/speed = 0
+        Multiplayer_SendItemPlacement(type, pos, 0, 0);  // Hazards don't move, so
+angle/speed = 0
     }
 
     int slot = findInactiveItemSlot();
@@ -470,7 +478,6 @@ static void placeHazardOld_DELETE_ME(Item type, Vec2 pos) {
 
 */
 // End of old duplicate function that should be removed
-
 
 //=============================================================================
 // Player Effects
@@ -594,10 +601,10 @@ void Items_Render(int scrollX, int scrollY) {
 
         // DEBUG: Print item position each frame for projectiles
         if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL) {
-            //printf("%s pos: %d,%d active=%d\n",
-            //       item->type == ITEM_GREEN_SHELL ? "Green" : "Red",
-            //       FixedToInt(item->position.x), FixedToInt(item->position.y),
-            //       item->active);
+            // printf("%s pos: %d,%d active=%d\n",
+            //        item->type == ITEM_GREEN_SHELL ? "Green" : "Red",
+            //        FixedToInt(item->position.x), FixedToInt(item->position.y),
+            //        item->active);
         }
 
         // Calculate screen position
@@ -702,8 +709,9 @@ void Items_LoadGraphics(void) {
     dmaCopy(oil_slickPal, &SPRITE_PALETTE[112], oil_slickPalLen);
 
     // CRITICAL FIX: Update item box spawns with the newly allocated graphics pointer
-    // This is necessary because initItemBoxSpawns() is called BEFORE Items_LoadGraphics()
-    // in the initialization sequence, so the spawns were initially assigned NULL
+    // This is necessary because initItemBoxSpawns() is called BEFORE
+    // Items_LoadGraphics() in the initialization sequence, so the spawns were
+    // initially assigned NULL
     for (int i = 0; i < itemBoxCount; i++) {
         itemBoxSpawns[i].gfx = itemBoxGfx;
     }
@@ -804,7 +812,7 @@ static void updateProjectile(TrackItem* item, const Car* cars, int carCount) {
     QuadrantID quad = getQuadrantFromPos(item->position);
 
     if (Wall_CheckCollision(x, y, item->hitbox_width / 2, quad)) {
-        //printf("Projectile hit wall at %d,%d - despawning\n", x, y);
+        // printf("Projectile hit wall at %d,%d - despawning\n", x, y);
         item->active = false;  // Despawn on wall hit
     }
 }
@@ -1014,7 +1022,8 @@ static void applyOilHitEffect(Car* car, int carIndex) {
     }
 }
 
-static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex, int boxIndex) {
+static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex,
+                                int boxIndex) {
     // Get race state to determine player index
     const RaceState* state = Race_GetState();
     int playerIndex = state->playerIndex;
@@ -1029,7 +1038,7 @@ static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex, int b
             car->item = receivedItem;
 
             // DEBUG: Print which item was received
-            //printf("  Received item: %d\n", receivedItem);
+            // printf("  Received item: %d\n", receivedItem);
         }
 
         // In multiplayer, broadcast the pickup to other players

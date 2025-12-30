@@ -6,9 +6,8 @@
 
 #include <stdbool.h>
 
+#include "game_constants.h"
 #include "game_types.h"
-
-#define CAR_RADIUS 16  // Collision radius for 32x32 sprite
 
 // Wall segment types
 typedef enum {

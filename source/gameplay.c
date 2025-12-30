@@ -18,7 +18,7 @@
 #include "scorching_sands_BR.h"
 #include "scorching_sands_MC.h"
 #include "scorching_sands_ML.h"
-#include "scorching_sands_MR.h" 
+#include "scorching_sands_MR.h"
 #include "scorching_sands_TC.h"
 #include "scorching_sands_TL.h"
 #include "scorching_sands_TR.h"
@@ -57,7 +57,7 @@ static int bestRaceSec = -1;
 static int bestRaceMsec = -1;
 static bool isNewRecord = false;
 
-static bool hasSavedBestTime = false; 
+static bool hasSavedBestTime = false;
 
 //=============================================================================
 // Quadrant Data
@@ -117,7 +117,7 @@ void Gameplay_IncrementTimer(void) {
     if (Race_IsCompleted()) {
         return;
     }
-    
+
     // Increment lap time
     raceMsec = (raceMsec + 1) % MS_PER_SECOND;
     if (raceMsec == 0) {
@@ -126,7 +126,7 @@ void Gameplay_IncrementTimer(void) {
             raceMin++;
         }
     }
-    
+
     // Increment total time
     totalRaceMsec = (totalRaceMsec + 1) % MS_PER_SECOND;
     if (totalRaceMsec == 0) {
@@ -156,7 +156,7 @@ void Graphical_Gameplay_initialize(void) {
     countdownCleared = false;
     finishDisplayCounter = 0;
     hasSavedBestTime = false;
-    
+
     // Load best time for this map
     Map selectedMap = GameContext_GetMap();
 
@@ -165,18 +165,19 @@ void Graphical_Gameplay_initialize(void) {
     GameMode mode = ctx->isMultiplayerMode ? MultiPlayer : SinglePlayer;
 
     // Initialize race with appropriate mode
-    if (!StoragePB_LoadBestTime(selectedMap, &bestRaceMin, &bestRaceSec, &bestRaceMsec)) {
+    if (!StoragePB_LoadBestTime(selectedMap, &bestRaceMin, &bestRaceSec,
+                                &bestRaceMsec)) {
         bestRaceMin = -1;
         bestRaceSec = -1;
         bestRaceMsec = -1;
     }
     isNewRecord = false;
-    
+
     // Clear any leftover display from previous race
     u16* map = BG_MAP_RAM_SUB(0);
     memset(map, 32, 32 * 32 * 2);
     changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Reset to yellow
-    
+
     Race_Init(selectedMap, mode);
 
     // NOW call configureSprite (remove it from wherever it's being called before)
@@ -205,38 +206,43 @@ void Graphical_Gameplay_initialize(void) {
 GameState Gameplay_update(void) {
     scanKeys();
     int keysdown = keysDown();
-    
+
     // Handle SELECT to exit anytime
     if (keysdown & KEY_SELECT) {
         Race_Stop();
+        if (GameContext_IsMultiplayerMode()) {
+            Multiplayer_Cleanup();
+            GameContext_SetMultiplayerMode(false);
+        }
         return HOME_PAGE;
     }
-    
+
     const RaceState* state = Race_GetState();
-    
+
     // Save best time once when race finishes (NOT in VBlank - safe here!)
     if (state->raceFinished && !hasSavedBestTime) {
         Map currentMap = GameContext_GetMap();
-        isNewRecord = StoragePB_SaveBestTime(currentMap, totalRaceMin, totalRaceSec, totalRaceMsec);
-        
+        isNewRecord = StoragePB_SaveBestTime(currentMap, totalRaceMin, totalRaceSec,
+                                             totalRaceMsec);
+
         // Always update best time display
         bestRaceMin = totalRaceMin;
         bestRaceSec = totalRaceSec;
         bestRaceMsec = totalRaceMsec;
-        
+
         hasSavedBestTime = true;
     }
-    
+
     // Check if race finished and counting display frames
     if (state->raceFinished && state->finishDelayTimer == 0) {
         finishDisplayCounter++;
-        
+
         // After 5 seconds, transition to PLAYAGAIN state
         if (finishDisplayCounter >= FINISH_DISPLAY_FRAMES) {
             return PLAYAGAIN;  // Let main.c handle the transition
         }
     }
-    
+
     return GAMEPLAY;
 }
 //=============================================================================
@@ -369,7 +375,7 @@ void Gameplay_OnVBlank(void) {
     // consoleClear();  // Uncomment if you want debug console
 
     const Car* player = Race_GetPlayerCar();
-    
+
     // Check if race is finished and showing final time
     const RaceState* state = Race_GetState();
     if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES) {
@@ -377,52 +383,60 @@ void Gameplay_OnVBlank(void) {
         displayFinalTime(totalRaceMin, totalRaceSec, totalRaceMsec);
         return;
     }
-    
+
     // Check if countdown is active
     if (Race_IsCountdownActive()) {
         Race_UpdateCountdown();
         renderCountdown(Race_GetCountdownState());
-        
+
         // Still update camera position during countdown
         int carX = FixedToInt(player->position.x);
         int carY = FixedToInt(player->position.y);
-        
+
         scrollX = carX - (SCREEN_WIDTH / 2);
         scrollY = carY - (SCREEN_HEIGHT / 2);
-        
-        if (scrollX < 0) scrollX = 0;
-        if (scrollY < 0) scrollY = 0;
-        if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
-        if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
-        
+
+        if (scrollX < 0)
+            scrollX = 0;
+        if (scrollY < 0)
+            scrollY = 0;
+        if (scrollX > MAX_SCROLL_X)
+            scrollX = MAX_SCROLL_X;
+        if (scrollY > MAX_SCROLL_Y)
+            scrollY = MAX_SCROLL_Y;
+
         QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
         if (newQuadrant != currentQuadrant) {
             loadQuadrant(newQuadrant);
             currentQuadrant = newQuadrant;
             Race_SetLoadedQuadrant(newQuadrant);
         }
-        
+
         int col = currentQuadrant % 3;
         int row = currentQuadrant / 3;
         BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
         BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
-        
+
         // Render car sprite even during countdown
         int dsAngle = -(player->angle512 << 6);
         oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
         int screenX = carX - scrollX - 32;
         int screenY = carY - scrollY - 32;
-        
+
         oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
-               SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false, false);
-        
+               SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
+               false);
+
         oamUpdate(&oamMain);
         return;
     }
-    
+
     if (!countdownCleared) {
         clearCountdownDisplay();
         countdownCleared = true;
+        // Hide the countdown car sprite (slot 0) - we'll use slot 41 for gameplay
+        oamSet(&oamMain, 0, 0, 192, 0, 0, SpriteSize_32x32, SpriteColorFormat_16Color,
+               NULL, -1, true, false, false, false, false);
     }
 
     if (Race_CheckFinishLineCross(player)) {
@@ -548,66 +562,66 @@ void Gameplay_Cleanup(void) {
 
 static void displayFinalTime(int min, int sec, int msec) {
     u16* map = BG_MAP_RAM_SUB(0);
-    
+
     // Clear screen
     memset(map, 32, 32 * 32 * 2);
-    
+
     // Display FINAL TIME at top (y = 8)
     int x = 0, y = 8;
-    
+
     // Minutes
     printDigit(map, min / 10, x, y);
     x = 4;
     printDigit(map, min % 10, x, y);
-    
+
     // Separator ":"
     x = 8;
     printDigit(map, 10, x, y);
-    
+
     // Seconds
     x = 10;
     printDigit(map, sec / 10, x, y);
     x = 14;
     printDigit(map, sec % 10, x, y);
-    
+
     // Separator "."
     x = 18;
     printDigit(map, 11, x, y);
-    
+
     // Milliseconds (only first digit)
     x = 20;
     printDigit(map, msec / 100, x, y);
-    
+
     // Display PERSONAL BEST below (y = 16)
     if (bestRaceMin >= 0) {
         // Show the best time
         x = 0;
         y = 16;
-        
+
         // Minutes
         printDigit(map, bestRaceMin / 10, x, y);
         x = 4;
         printDigit(map, bestRaceMin % 10, x, y);
-        
+
         // Separator ":"
         x = 8;
         printDigit(map, 10, x, y);
-        
+
         // Seconds
         x = 10;
         printDigit(map, bestRaceSec / 10, x, y);
         x = 14;
         printDigit(map, bestRaceSec % 10, x, y);
-        
+
         // Separator "."
         x = 18;
         printDigit(map, 11, x, y);
-        
+
         // Milliseconds (only first digit)
         x = 20;
         printDigit(map, bestRaceMsec / 100, x, y);
     }
-    
+
     // Set background color based on whether it's a new record
     if (isNewRecord) {
         changeColorDisp_Sub(ARGB16(1, 0, 31, 0));  // Green for new record!
@@ -621,18 +635,18 @@ static void displayFinalTime(int min, int sec, int msec) {
 //=============================================================================
 static void renderCountdown(CountdownState state) {
     u16* map = BG_MAP_RAM_SUB(0);
-    
+
     // Clear previous countdown display
     for (int i = 16; i < 24; i++) {
         for (int j = 12; j < 20; j++) {
             map[i * 32 + j] = 32;  // Empty tile
         }
     }
-    
+
     // Center position for large countdown numbers
     int centerX = 14;
     int centerY = 10;
-    
+
     switch (state) {
         case COUNTDOWN_3:
             printDigit(map, 3, centerX, centerY);
@@ -653,7 +667,7 @@ static void renderCountdown(CountdownState state) {
 
 static void clearCountdownDisplay(void) {
     u16* map = BG_MAP_RAM_SUB(0);
-    
+
     for (int i = 16; i < 24; i++) {
         for (int j = 12; j < 20; j++) {
             map[i * 32 + j] = 32;
@@ -881,10 +895,10 @@ void updateLapDisp_Sub(int currentLap, int totalLaps) {
         printDigit(BG_MAP_RAM_SUB(0), currentLap, x, y);
     }
 
-    // Separator ":" 
+    // Separator ":"
     x = 4;
     y = 0;
-    printDigit(BG_MAP_RAM_SUB(0), 10, x, y);  
+    printDigit(BG_MAP_RAM_SUB(0), 10, x, y);
 
     // Total laps
     x = 6;
