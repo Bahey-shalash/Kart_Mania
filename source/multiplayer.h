@@ -15,7 +15,7 @@
 //   - Each DS runs the full game independently
 //   - Each DS controls ONE car (the player car)
 //   - Car states are broadcast at 15Hz (every 4 physics frames)
-//   - Player ID is auto-assigned based on IP address
+//   - Player ID is auto-assigned based on MAC address
 //
 // Flow:
 //   1. Home page: Call Multiplayer_Init()

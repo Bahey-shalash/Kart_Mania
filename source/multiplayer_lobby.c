@@ -1,6 +1,7 @@
 #include "multiplayer_lobby.h"
 
 #include <nds.h>
+#include <dswifi9.h>  // to remove after wifi simulator debug
 #include <stdio.h>
 
 #include "context.h"
@@ -59,7 +60,7 @@ GameState MultiplayerLobby_Update(void) {
     // Handle B button to cancel and return to home page
     //=========================================================================
     if (keys & KEY_B && !countdownActive) {
-        Multiplayer_Cleanup();
+        // Multiplayer_Cleanup();
         return HOME_PAGE;
     }
 
@@ -74,6 +75,13 @@ GameState MultiplayerLobby_Update(void) {
     consoleClear();
     printf("=== MULTIPLAYER LOBBY ===\n\n");
 
+    //==============
+    // Show our IP so external simulators can target us
+    unsigned long ip = Wifi_GetIP();
+    printf("Your IP: %lu.%lu.%lu.%lu\n\n", (ip >> 0) & 0xFF, (ip >> 8) & 0xFF,
+           (ip >> 16) & 0xFF, (ip >> 24) & 0xFF);
+
+    //=============
     int myID = Multiplayer_GetMyPlayerID();
     int connectedCount = 0;
     int readyCount = 0;
@@ -115,7 +123,7 @@ GameState MultiplayerLobby_Update(void) {
         countdownTimer--;
         if (countdownTimer <= 0) {
             // Countdown finished - start race!
-            GameContext_SetMap(ScorchingSands);// not sure about this 
+            GameContext_SetMap(ScorchingSands);  // not sure about this
             return GAMEPLAY;
         }
     }
