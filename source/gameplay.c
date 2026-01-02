@@ -366,8 +366,6 @@ GameState Gameplay_update(void) {
 //     oamUpdate(&oamMain);
 // }
 void Gameplay_OnVBlank(void) {
-    // consoleClear();  // Uncomment if you want debug console
-
     const Car* player = Race_GetPlayerCar();
     
     // Check if race is finished and showing final time
@@ -407,13 +405,13 @@ void Gameplay_OnVBlank(void) {
         BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
         BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
         
-        // Render car sprite even during countdown
+        // Render car sprite during countdown (use slot 41, offset -16)
         int dsAngle = -(player->angle512 << 6);
         oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
-        int screenX = carX - scrollX - 32;
-        int screenY = carY - scrollY - 32;
+        int screenX = carX - scrollX - 16;
+        int screenY = carY - scrollY - 16;
         
-        oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
+        oamSet(&oamMain, 41, screenX, screenY, 0, 0, SpriteSize_32x32,
                SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false, false);
         
         oamUpdate(&oamMain);
@@ -432,12 +430,10 @@ void Gameplay_OnVBlank(void) {
             raceMin = 0;
             raceSec = 0;
             raceMsec = 0;
-        } else if (!hasSavedBestTime) {  // Only save ONCE!
+        } else if (!hasSavedBestTime) {
             // RACE COMPLETED!
             Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
-            // Start the display counter
             finishDisplayCounter = 0;
-            // Mark that we've saved (prevent multiple saves)
             hasSavedBestTime = true;
         }
     }
@@ -472,10 +468,8 @@ void Gameplay_OnVBlank(void) {
     //=========================================================================
     // Render cars based on game mode
     //=========================================================================
-
     if (state->gameMode == SinglePlayer) {
-        // SINGLE PLAYER: Only render the player's car at OAM slot 41 (consistent with
-        // multiplayer)
+        // SINGLE PLAYER: Only render the player's car at OAM slot 41
         int screenX = carX - scrollX - 16;
         int screenY = carY - scrollY - 16;
 
@@ -489,7 +483,6 @@ void Gameplay_OnVBlank(void) {
                false);
     } else {
         // MULTIPLAYER: Render only connected players' cars
-
         for (int i = 0; i < state->carCount; i++) {
             // OAM slot for this car (slots 41-48 for cars)
             int oamSlot = 41 + i;
