@@ -177,7 +177,7 @@ void Graphical_Gameplay_initialize(void) {
     // Clear any leftover display from previous race
     u16* map = BG_MAP_RAM_SUB(0);
     memset(map, 32, 32 * 32 * 2);
-    changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Reset to yellow
+    changeColorDisp_Sub(ARGB16(1, 0,0,0));  // Reset to yellow
     
     Race_Init(selectedMap, mode);
 
@@ -615,9 +615,9 @@ static void displayFinalTime(int min, int sec, int msec) {
     
     // Set background color based on whether it's a new record
     if (isNewRecord) {
-        changeColorDisp_Sub(ARGB16(1, 0, 31, 0));  // Green for new record!
+        changeColorDisp_Sub(ARGB16(1, 0, 20, 0));  // Green for new record!
     } else {
-        changeColorDisp_Sub(ARGB16(1, 31, 31, 0));  // Yellow normally
+        changeColorDisp_Sub(ARGB16(1, 0, 0, 0)); 
     }
 }
 
@@ -686,39 +686,17 @@ static void configureBackground(void) {
     if (selectedMap != ScorchingSands)
         return;
 
-    BGCTRL[0] =
-        BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
+    BGCTRL[0] = BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
     
-    // CHANGED: Don't load palette here - it will be loaded in loadQuadrant()
-    // based on currentQuadrant (which is QUAD_BR at start)
-
     // Sub screen setup with numbers tileset
     BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
     swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
     swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
-    BG_PALETTE_SUB[0] = ARGB16(1, 31, 31, 0);
-    BG_PALETTE_SUB[1] = ARGB16(1, 0, 0, 0);
+    BG_PALETTE_SUB[0] = ARGB16(1, 0, 0, 0);
+    BG_PALETTE_SUB[255] = ARGB16(1, 20, 20, 20); // white background
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
     updateChronoDisp_Sub(-1, -1, -1);
 }
-
-// static void configureSprite(void) {
-//     oamInit(&oamMain, SpriteMapping_1D_32, false);
-
-//     /*  // Allocate sprite graphics for player kart (16-color)
-//      u16* kartGfx =
-//          oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
-
-//      // Load kart palette to slot 0
-//      dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
-//      dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
-
-//      // Set the graphics pointer on the player car
-//      Race_SetCarGfx(0, kartGfx); */
-
-//     // Load item graphics (palettes 1-7)
-//     Items_LoadGraphics();
-// }
 
 static void configureSprite(void) {
     oamInit(&oamMain, SpriteMapping_1D_32, false);
