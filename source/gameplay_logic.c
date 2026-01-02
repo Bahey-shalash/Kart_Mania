@@ -260,10 +260,10 @@ void Race_Tick(void) {
     if (isMultiplayerRace) {
         networkUpdateCounter++;
         if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
-            // Send my car state
+            // Send my car state AFTER physics update (so we send current position)
             Multiplayer_SendCarState(player);
 
-            // Receive others' car states
+            // Receive others' car states (updates remote car positions directly)
             Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
 
             networkUpdateCounter = 0;
@@ -279,10 +279,10 @@ void Race_Tick(void) {
     // Calculate scroll position based on car's CENTER (not top-left corner)
     int carCenterX = FixedToInt(player->position.x) + CAR_SPRITE_CENTER_OFFSET;
     int carCenterY = FixedToInt(player->position.y) + CAR_SPRITE_CENTER_OFFSET;
-    
+
     int scrollX = carCenterX - (SCREEN_WIDTH / 2);
     int scrollY = carCenterY - (SCREEN_HEIGHT / 2);
-    
+
     if (scrollX < 0)
         scrollX = 0;
     if (scrollY < 0)
@@ -295,6 +295,8 @@ void Race_Tick(void) {
     Items_CheckCollisions(KartMania.cars, KartMania.carCount, scrollX, scrollY);
     Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
 
+    // Only update physics for the local player
+    // Remote players' positions come directly from network packets
     Car_Update(player);
     clampToMapBounds(player, KartMania.playerIndex);  // This handles wall collision
     checkCheckpointProgression(player, KartMania.playerIndex);
@@ -302,22 +304,6 @@ void Race_Tick(void) {
     if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
         collisionLockoutTimer[KartMania.playerIndex]--;
     }
-
-    
-    // NEW: Network synchronization for multiplayer
-    if (isMultiplayerRace) {
-        networkUpdateCounter++;
-        if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
-            // Send my car state
-            Multiplayer_SendCarState(player);
-
-            // Receive others' car states
-            Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
-
-            networkUpdateCounter = 0;
-        }
-    }
-
 }
 
 //=============================================================================

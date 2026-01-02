@@ -28,18 +28,17 @@ typedef enum {
 } MessageType;
 
 typedef struct {
-    uint8_t version;          // Protocol version (for future compatibility)
-    uint8_t msgType;          // MessageType enum
-    uint8_t playerID;         // 0-7
-    uint8_t padding;          // Alignment
-    uint32_t sequenceNumber;  // Packet sequence number for ordering
+    uint8_t version;   // Protocol version (for future compatibility)
+    uint8_t msgType;   // MessageType enum
+    uint8_t playerID;  // 0-7
+    uint8_t padding;   // Alignment
 
-    // Payload (24 bytes) - content depends on msgType
+    // Payload (28 bytes) - content depends on msgType
     union {
         // For MSG_LOBBY_JOIN, MSG_LOBBY_UPDATE, MSG_READY
         struct {
             bool isReady;          // Has this player pressed SELECT?
-            uint8_t reserved[23];  // Future expansion
+            uint8_t reserved[27];  // Future expansion
         } lobby;
 
         // For MSG_CAR_UPDATE (during race)
@@ -49,6 +48,7 @@ typedef struct {
             int angle512;   // 4 bytes
             int lap;        // 4 bytes
             Item item;      // 4 bytes
+            uint8_t reserved[4];
         } carState;
 
         // For MSG_ITEM_PLACED (item placed on track)
@@ -57,16 +57,16 @@ typedef struct {
             Vec2 position;  // 8 bytes - where it was placed
             int angle512;   // 4 bytes - direction (for projectiles)
             Q16_8 speed;    // 4 bytes - initial speed (for projectiles)
-            uint8_t reserved[4];
+            uint8_t reserved[8];
         } itemPlaced;
 
         // For MSG_ITEM_BOX_PICKUP (item box collected)
         struct {
             int boxIndex;  // 4 bytes - which box was picked up
-            uint8_t reserved[20];
+            uint8_t reserved[24];
         } itemBoxPickup;
 
-        uint8_t raw[24];  // For future message types
+        uint8_t raw[28];  // For future message types
     } payload;
 } NetworkPacket;  // Total: 32 bytes
 
@@ -92,32 +92,17 @@ static bool initialized = false;
 static uint32_t msCounter = 0;
 static uint32_t lastLobbyBroadcastMs = 0;
 
-// Sequence number tracking
-static uint32_t sendSequenceNumber = 0;
-static uint32_t lastReceivedSeq[MAX_MULTIPLAYER_PLAYERS] = {0};
-
-// Packet buffering
-#define MAX_BUFFERED_ITEM_PACKETS 16
-static NetworkPacket itemPacketBuffer[MAX_BUFFERED_ITEM_PACKETS];
-static int itemPacketCount = 0;
-
-#define MAX_BUFFERED_BOX_PACKETS 16
-static NetworkPacket boxPacketBuffer[MAX_BUFFERED_BOX_PACKETS];
-static int boxPacketCount = 0;
-
 //=============================================================================
 // Helper Functions
 //=============================================================================
 
 /**
- * Get current time in milliseconds (using hardware timer)
- * Uses TIMER2 for accurate timing independent of frame rate
+ * Get current time in milliseconds (approximate)
+ * Called once per frame, so just increment by ~16ms per call
  */
 static uint32_t getTimeMs(void) {
-    // TIMER2 runs at 33.514MHz / 1024 prescaler = ~32.7KHz
-    // Each tick is approximately 30.5 microseconds
-    // Convert to milliseconds: ticks * 30 / 1000
-    return (TIMER2_DATA * 30) / 1000;
+    msCounter += 16;  // Approximate: 1 frame at 60Hz = 16.67ms
+    return msCounter;
 }
 
 //=============================================================================
@@ -289,10 +274,6 @@ int Multiplayer_Init(void) {
     players[myPlayerID].lastPacketTime = getTimeMs();
     lastLobbyBroadcastMs = players[myPlayerID].lastPacketTime;
 
-    // Initialize hardware timer for accurate timing (free-running counter)
-    TIMER_DATA(2) = 0;
-    TIMER2_CR = TIMER_ENABLE | TIMER_DIV_1024;
-
     initialized = true;
 
     // Small delay to show success message
@@ -332,23 +313,9 @@ void Multiplayer_Cleanup(void) {
     closeSocket();
     disconnectFromWiFi();
 
-    // Stop hardware timer
-    TIMER2_CR = 0;
-
-    // Clear packet buffers
-    itemPacketCount = 0;
-    boxPacketCount = 0;
-    memset(itemPacketBuffer, 0, sizeof(itemPacketBuffer));
-    memset(boxPacketBuffer, 0, sizeof(boxPacketBuffer));
-
-    // Reset sequence tracking
-    sendSequenceNumber = 0;
-    memset(lastReceivedSeq, 0, sizeof(lastReceivedSeq));
-
     initialized = false;
     lastLobbyBroadcastMs = 0;
     myPlayerID = -1;
-    msCounter = 0;
 }
 
 //=============================================================================
@@ -406,6 +373,7 @@ void Multiplayer_JoinLobby(void) {
 
 bool Multiplayer_UpdateLobby(void) {
     NetworkPacket packet;
+    int bytesReceived;
     uint32_t currentTime = getTimeMs();
 
     // Periodic heartbeat so peers don't time out (every ~1s)
@@ -421,7 +389,11 @@ bool Multiplayer_UpdateLobby(void) {
     }
 
     // Receive all pending packets (non-blocking)
-    while (receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
+    while ((bytesReceived = receiveData((char*)&packet, sizeof(NetworkPacket))) > 0) {
+        // CRITICAL: Validate packet size
+        if (bytesReceived != sizeof(NetworkPacket))
+            continue;
+
         // Validate packet
         if (packet.version != PROTOCOL_VERSION)
             continue;
@@ -506,7 +478,6 @@ void Multiplayer_SendCarState(const Car* car) {
     NetworkPacket packet = {.version = PROTOCOL_VERSION,
                             .msgType = MSG_CAR_UPDATE,
                             .playerID = myPlayerID,
-                            .sequenceNumber = sendSequenceNumber++,
                             .payload.carState = {.position = car->position,
                                                  .speed = car->speed,
                                                  .angle512 = car->angle512,
@@ -521,11 +492,27 @@ void Multiplayer_SendCarState(const Car* car) {
 // (needed because we process car states and items separately)
 //=============================================================================
 
+#define MAX_BUFFERED_ITEM_PACKETS 16
+static NetworkPacket itemPacketBuffer[MAX_BUFFERED_ITEM_PACKETS];
+static int itemPacketCount = 0;
+
+#define MAX_BUFFERED_BOX_PACKETS 16
+static NetworkPacket boxPacketBuffer[MAX_BUFFERED_BOX_PACKETS];
+static int boxPacketCount = 0;
+
 void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
     NetworkPacket packet;
+    int bytesReceived;
 
     // Receive all pending packets (non-blocking)
-    while (receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
+    while ((bytesReceived = receiveData((char*)&packet, sizeof(NetworkPacket))) > 0) {
+        // CRITICAL: Validate packet size (prevent processing truncated packets)
+        if (bytesReceived != sizeof(NetworkPacket)) {
+            // DEBUG: Uncomment to see malformed packets
+            // printf("Recv: bad size %d\n", bytesReceived);
+            continue;
+        }
+
         // Validate packet version
         if (packet.version != PROTOCOL_VERSION)
             continue;
@@ -536,11 +523,6 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
                 continue;
             if (packet.playerID == myPlayerID)
                 continue;  // Skip own packets
-
-            // Check sequence number - ignore old packets
-            if (packet.sequenceNumber <= lastReceivedSeq[packet.playerID])
-                continue;
-            lastReceivedSeq[packet.playerID] = packet.sequenceNumber;
 
             // Update the car directly
             Car* otherCar = &cars[packet.playerID];
@@ -553,27 +535,21 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
             // Mark as connected (for disconnect detection)
             players[packet.playerID].connected = true;
             players[packet.playerID].lastPacketTime = getTimeMs();
+
+            // DEBUG: Uncomment to verify packets are being received
+            // printf("Recv P%d @ %d,%d\n", packet.playerID,
+            //        FixedToInt(otherCar->position.x), FixedToInt(otherCar->position.y));
         }
         // Buffer MSG_ITEM_PLACED packets for later processing
         else if (packet.msgType == MSG_ITEM_PLACED) {
             if (itemPacketCount < MAX_BUFFERED_ITEM_PACKETS) {
                 itemPacketBuffer[itemPacketCount++] = packet;
-            } else {
-                // Ring buffer: drop oldest packet, add newest
-                memmove(&itemPacketBuffer[0], &itemPacketBuffer[1],
-                        sizeof(NetworkPacket) * (MAX_BUFFERED_ITEM_PACKETS - 1));
-                itemPacketBuffer[MAX_BUFFERED_ITEM_PACKETS - 1] = packet;
             }
         }
         // Buffer MSG_ITEM_BOX_PICKUP packets for later processing
         else if (packet.msgType == MSG_ITEM_BOX_PICKUP) {
             if (boxPacketCount < MAX_BUFFERED_BOX_PACKETS) {
                 boxPacketBuffer[boxPacketCount++] = packet;
-            } else {
-                // Ring buffer: drop oldest packet, add newest
-                memmove(&boxPacketBuffer[0], &boxPacketBuffer[1],
-                        sizeof(NetworkPacket) * (MAX_BUFFERED_BOX_PACKETS - 1));
-                boxPacketBuffer[MAX_BUFFERED_BOX_PACKETS - 1] = packet;
             }
         }
         // Ignore other packet types

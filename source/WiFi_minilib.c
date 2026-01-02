@@ -176,6 +176,12 @@ int openSocket() {
     unsigned long ip = Wifi_GetIP();
     unsigned long mask = snmask.s_addr;
 
+    // Validate network configuration (DHCP must have succeeded)
+    if (ip == 0 || mask == 0 || mask == 0xFFFFFFFF) {
+        // DHCP failed or invalid network config
+        return 0;
+    }
+
     // Calculate broadcast address
     unsigned long broadcast_addr = ip | ~mask;
 
