@@ -25,6 +25,13 @@
 #include "wall_collision.h"
 #include "storage_pb.h"
 
+#include "banana.h"
+#include "bomb.h"
+#include "green_shell.h"
+#include "missile.h"
+#include "oil_slick.h"
+#include "red_shell.h"
+
 //=============================================================================
 // Constants
 //=============================================================================
@@ -44,6 +51,7 @@ static QuadrantID currentQuadrant = QUAD_BR;
 
 // Sprite graphics pointer (allocated during configureSprite)
 static u16* kartGfx = NULL;
+static u16* itemDisplayGfx_Sub = NULL; 
 
 static bool countdownCleared = false;
 static int finishDisplayCounter = 0;  // NEW: Count frames showing final time
@@ -95,6 +103,8 @@ static void renderCountdown(CountdownState state);
 static void clearCountdownDisplay(void);
 static void displayFinalTime(int min, int sec, int msec);
 void printDigit(u16* map, int number, int x, int y);
+static void loadItemDisplay_Sub(void);      // NEW
+static void updateItemDisplay_Sub(void);    // NEW
 
 //=============================================================================
 // Timer Getters
@@ -540,12 +550,18 @@ void Gameplay_OnVBlank(void) {
     }
 
     Items_Render(scrollX, scrollY);
+    updateItemDisplay_Sub();
     oamUpdate(&oamMain);
 }
 
 void Gameplay_Cleanup(void) {
     freeSprites();
+    if (itemDisplayGfx_Sub) {
+        oamFreeGfx(&oamSub, itemDisplayGfx_Sub);
+        itemDisplayGfx_Sub = NULL;
+    }
 }
+
 
 //=============================================================================
 // Display Functions
@@ -674,11 +690,10 @@ static void configureGraphics(void) {
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
 
-    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE;
+    // CHANGED: Enable sprites on sub screen
+    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
-
-    // Enable a second sub BG (BG1) for the debug console
-    // REG_DISPCNT_SUB |= DISPLAY_BG1_ACTIVE;
+    VRAM_D_CR = VRAM_ENABLE | VRAM_D_SUB_SPRITE;  // NEW: Sub sprite VRAM
 }
 
 static void configureBackground(void) {
@@ -696,6 +711,7 @@ static void configureBackground(void) {
     BG_PALETTE_SUB[255] = ARGB16(1, 20, 20, 20); // white background
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
     updateChronoDisp_Sub(-1, -1, -1);
+    loadItemDisplay_Sub();
 }
 
 static void configureSprite(void) {
@@ -734,6 +750,104 @@ static void configureConsole(void) {
 }
 */
 
+
+
+//=============================================================================
+// Sub Screen Item Display
+//=============================================================================
+static void loadItemDisplay_Sub(void) {
+    // Initialize sub screen OAM
+    oamInit(&oamSub, SpriteMapping_1D_32, false);
+    
+    // Allocate graphics for item sprite (16x16, 16-color like main screen items)
+    itemDisplayGfx_Sub = oamAllocateGfx(&oamSub, SpriteSize_16x16, SpriteColorFormat_16Color);
+    
+    // Copy all item palettes to sub screen sprite palette
+    // Use the same palette layout as main screen for consistency
+    dmaCopy(bananaPal, &SPRITE_PALETTE_SUB[32], bananaPalLen);
+    dmaCopy(bombPal, &SPRITE_PALETTE_SUB[48], bombPalLen);
+    dmaCopy(green_shellPal, &SPRITE_PALETTE_SUB[64], green_shellPalLen);
+    dmaCopy(red_shellPal, &SPRITE_PALETTE_SUB[80], red_shellPalLen);
+    dmaCopy(missilePal, &SPRITE_PALETTE_SUB[96], missilePalLen);
+    dmaCopy(oil_slickPal, &SPRITE_PALETTE_SUB[112], oil_slickPalLen);
+    
+    // Initially hide the item sprite
+    oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_16x16,
+           SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false, false, false);
+    oamUpdate(&oamSub);
+}
+
+static void updateItemDisplay_Sub(void) {
+    const Car* player = Race_GetPlayerCar();
+    
+    if (player->item == ITEM_NONE) {
+        // Hide sprite when no item
+        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_16x16,
+               SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false, false, false);
+    } else {
+        // Position in top-right corner
+        int itemX = 220;  // Right side (256 - 16 - some margin)
+        int itemY = 8;    // Top area
+        
+        // Determine which graphics to display and which palette to use
+        const unsigned int* itemTiles = NULL;
+        int paletteNum = 0;
+        
+        switch (player->item) {
+            case ITEM_BANANA:
+                itemTiles = bananaTiles;
+                paletteNum = 2;  // Same as main screen
+                break;
+            case ITEM_BOMB:
+                itemTiles = bombTiles;
+                paletteNum = 3;
+                break;
+            case ITEM_GREEN_SHELL:
+                itemTiles = green_shellTiles;
+                paletteNum = 4;
+                break;
+            case ITEM_RED_SHELL:
+                itemTiles = red_shellTiles;
+                paletteNum = 5;
+                break;
+            case ITEM_MISSILE:
+                itemTiles = missileTiles;
+                paletteNum = 6;
+                break;
+            case ITEM_OIL:
+                itemTiles = oil_slickTiles;
+                paletteNum = 7;
+                break;
+            case ITEM_MUSHROOM:
+                // Mushroom doesn't have a sprite, use banana as placeholder
+                itemTiles = bananaTiles;
+                paletteNum = 2;
+                break;
+            case ITEM_SPEEDBOOST:
+                // Speed boost doesn't have a sprite, use red shell as placeholder
+                itemTiles = red_shellTiles;
+                paletteNum = 5;
+                break;
+            default:
+                itemTiles = NULL;
+                break;
+        }
+        
+        if (itemTiles != NULL) {
+            // Copy the item graphics to sub screen sprite memory
+            dmaCopy(itemTiles, itemDisplayGfx_Sub, 
+                    (player->item == ITEM_MISSILE) ? missileTilesLen : 
+                    (player->item == ITEM_OIL) ? oil_slickTilesLen : 
+                    bananaTilesLen);  // Most items use same size as banana
+            
+            // Display the sprite
+            oamSet(&oamSub, 0, itemX, itemY, 0, paletteNum, SpriteSize_16x16,
+                   SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, false, false, false, false, false);
+        }
+    }
+    
+    oamUpdate(&oamSub);
+}
 //=============================================================================
 // Private Functions - Quadrant Management
 //=============================================================================
