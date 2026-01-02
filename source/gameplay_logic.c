@@ -44,7 +44,7 @@ static bool hasCompletedFirstCrossing[MAX_CARS] = {false};
 static CheckpointProgressState cpState[MAX_CARS] = {CP_STATE_START};
 static bool wasOnLeftSide[MAX_CARS] = {false};
 static bool wasOnTopSide[MAX_CARS] = {false};
-static bool isPaused = false;
+//static bool isPaused = false;
 static bool itemButtonHeldLast = false;
 
 static int collisionLockoutTimer[MAX_CARS] = {0};
@@ -540,17 +540,37 @@ static QuadrantID determineCarQuadrant(int x, int y) {
 }
 
 //=============================================================================
-// Pause Handling
+// Pause System with Key Interrupt
 //=============================================================================
+static volatile bool isPaused = false;
+static volatile int debounceFrames = 0;
+
+#define DEBOUNCE_DELAY 15  // ~250ms at 60Hz
+
 void init_pause_interrupt(void) {
-    REG_KEYCNT = BIT(14) | KEY_START;
+    // BIT(14) = enable key interrupt
+    // Actually, we need to handle this differently - let's use IRQ on press
+    REG_KEYCNT = BIT(14) | KEY_START;  // Enable interrupt for START key
     irqSet(IRQ_KEYS, PauseISR);
     irqEnable(IRQ_KEYS);
 }
 
 void PauseISR(void) {
+    // Check if we're in debounce period
+    if (debounceFrames > 0) {
+        return;  // Ignore bounces
+    }
+    
+    // Check if START is actually pressed (not released)
+    scanKeys();
+    if (!(keysHeld() & KEY_START)) {
+        return;  // Button was released, ignore
+    }
+    
+    // Toggle pause state
     isPaused = !isPaused;
-
+    debounceFrames = DEBOUNCE_DELAY;
+    
     if (isPaused) {
         RaceTick_TimerPause();
     } else {
@@ -558,8 +578,13 @@ void PauseISR(void) {
     }
 }
 
-void Race_SetPlayerIndex(int playerIndex) {
-    if (playerIndex >= 0 && playerIndex < MAX_CARS) {
-        KartMania.playerIndex = playerIndex;
+// Add this function to update debounce counter
+void UpdatePauseDebounce(void) {
+    if (debounceFrames > 0) {
+        debounceFrames--;
     }
+}
+
+bool IsPaused(void) {
+    return isPaused;
 }

@@ -187,7 +187,7 @@ void Graphical_Gameplay_initialize(void) {
     // Clear any leftover display from previous race
     u16* map = BG_MAP_RAM_SUB(0);
     memset(map, 32, 32 * 32 * 2);
-    changeColorDisp_Sub(ARGB16(1, 0,0,0));  // Reset to yellow
+    changeColorDisp_Sub(ARGB16(1, 0,0,0));  // Reset to black
     
     Race_Init(selectedMap, mode);
 
