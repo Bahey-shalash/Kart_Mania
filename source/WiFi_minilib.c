@@ -205,20 +205,34 @@ int openSocket() {
     sa_out.sin_family = AF_INET;        // Type of address (Inet)
     sa_out.sin_port = htons(OUT_PORT);  // set output port (same as input)
 
-    // Use true broadcast address (255.255.255.255) for maximum compatibility
-    // This avoids endianness issues with subnet broadcast calculation
-    sa_out.sin_addr.s_addr = htonl(0xFFFFFFFF);
+    // Derive broadcast address from current IP/mask (endian-correct)
+    struct in_addr gateway, snmask, dns1, dns2;
+    Wifi_GetIPInfo(&gateway, &snmask, &dns1, &dns2);
+
+    unsigned long ip_host = Wifi_GetIP();            // DSWifi returns host-order
+    unsigned long mask_host = ntohl(snmask.s_addr);  // Convert mask to host order
+    unsigned long broadcast_host = ip_host | ~mask_host;
+
+    // Fallback in case Wifi_GetIP() returns 0 unexpectedly
+    if (ip_host == 0) {
+        broadcast_host = 0xFFFFFFFF;
+    }
+
+    sa_out.sin_addr.s_addr = htonl(broadcast_host);
 
     // DEBUG: Print network info
-    unsigned long ip = Wifi_GetIP();
-    iprintf("IP: %lu.%lu.%lu.%lu\n",
-            (ip & 0xFF), ((ip >> 8) & 0xFF),
-            ((ip >> 16) & 0xFF), ((ip >> 24) & 0xFF));
-    iprintf("Broadcast: 255.255.255.255\n");
+    iprintf("IP: %lu.%lu.%lu.%lu\n", (ip_host & 0xFF), ((ip_host >> 8) & 0xFF),
+            ((ip_host >> 16) & 0xFF), ((ip_host >> 24) & 0xFF));
+    iprintf("Mask: %lu.%lu.%lu.%lu\n", (mask_host & 0xFF), ((mask_host >> 8) & 0xFF),
+            ((mask_host >> 16) & 0xFF), ((mask_host >> 24) & 0xFF));
+    iprintf("Broadcast: %lu.%lu.%lu.%lu\n", (broadcast_host & 0xFF),
+            ((broadcast_host >> 8) & 0xFF), ((broadcast_host >> 16) & 0xFF),
+            ((broadcast_host >> 24) & 0xFF));
 
     // Enable broadcast permission on the socket
     int broadcast_permission = 1;
-    setsockopt(socket_id, SOL_SOCKET, SO_BROADCAST, (char*)&broadcast_permission, sizeof(broadcast_permission));
+    setsockopt(socket_id, SOL_SOCKET, SO_BROADCAST, (char*)&broadcast_permission,
+               sizeof(broadcast_permission));
 
     // Set socket to be non-blocking
     char nonblock = 1;
@@ -301,7 +315,7 @@ int receiveData(char* data_buff, int bytes) {
     received_bytes = recvfrom(socket_id,  // Socket id
                               data_buff,  // Buffer where to put the data
                               bytes,      // Bytes to receive (at most)
-                              0,          // Non-blocking handled by ioctl; no flags needed
+                              0,  // Non-blocking handled by ioctl; no flags needed
                               (struct sockaddr*)&sa_in,  // Sender information
                               &info_size);               // Sender info size
 
@@ -325,7 +339,10 @@ int receiveData(char* data_buff, int bytes) {
 
 // Debug function to get low-level receive stats
 void getReceiveDebugStats(int* calls, int* success, int* filtered) {
-    if (calls) *calls = total_recvfrom_calls;
-    if (success) *success = total_recvfrom_success;
-    if (filtered) *filtered = total_filtered_own;
+    if (calls)
+        *calls = total_recvfrom_calls;
+    if (success)
+        *success = total_recvfrom_success;
+    if (filtered)
+        *filtered = total_filtered_own;
 }

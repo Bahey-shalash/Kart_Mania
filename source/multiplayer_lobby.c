@@ -104,6 +104,15 @@ GameState MultiplayerLobby_Update(void) {
     printf("AllReady=%d Countdown=%d\n", allReady ? 1 : 0, countdownActive ? 1 : 0);
     printf("Packets: Sent=%d Recv=%d\n", sent, received);
     printf("Socket: Calls=%d OK=%d Filt=%d\n", recvCalls, recvSuccess, recvFiltered);
+    unsigned long myIP = Wifi_GetIP();
+    unsigned char macAddr[6];
+    Wifi_GetData(WIFIGETDATA_MACADDRESS, 6, macAddr);
+    printf("IP: %lu.%lu.%lu.%lu\n",
+           (myIP & 0xFF), ((myIP >> 8) & 0xFF),
+           ((myIP >> 16) & 0xFF), ((myIP >> 24) & 0xFF));
+    printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+           macAddr[0], macAddr[1], macAddr[2],
+           macAddr[3], macAddr[4], macAddr[5]);
 
     // If someone drops or unreadies, cancel the countdown
     if (countdownActive && (!allReady || connectedCount < 2)) {
