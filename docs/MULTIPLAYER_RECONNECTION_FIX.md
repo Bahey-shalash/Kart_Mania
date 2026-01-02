@@ -12,7 +12,7 @@
 
 ### Initial Investigation
 
-**User Report**:
+** Report**:
 > "When leaving the lobby and re-entering, players are not detected by each other - it only works the first time."
 
 **Observable Symptoms**:
