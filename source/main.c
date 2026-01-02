@@ -81,17 +81,18 @@ int main(void) {
 static GameState update_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
+        case REINIT_HOME:  // NEW: Treat same as HOME_PAGE
             return HomePage_update();
         case SETTINGS:
             return Settings_update();
         case MAPSELECTION:
             return Map_selection_update();
-        case MULTIPLAYER_LOBBY:  // NEW
+        case MULTIPLAYER_LOBBY:
             return MultiplayerLobby_Update();
         case GAMEPLAY:
             return Gameplay_update();
         case PLAYAGAIN:
-            return PlayAgain_Update();  // FIXED: Use correct function name
+            return PlayAgain_Update();
         default:
             return state;
     }
@@ -100,6 +101,7 @@ static GameState update_state(GameState state) {
 static void init_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
+        case REINIT_HOME:  // NEW: Both initialize the same way
             HomePage_initialize();
             break;
         case MAPSELECTION:
@@ -123,6 +125,7 @@ static void init_state(GameState state) {
 static void cleanup_state(GameState state, GameState nextState) {
     switch (state) {
         case HOME_PAGE:
+        case REINIT_HOME:  // NEW: Both cleanup the same way
             HomePage_Cleanup();
             break;
         case MAPSELECTION:

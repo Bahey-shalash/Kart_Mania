@@ -119,13 +119,11 @@ GameState HomePage_update(void) {
                     return HOME_PAGE;
                 }
                 int playerID = Multiplayer_Init();
-                if (playerID < 0) {
-                    // Multiplayer_Init already showed error and waited for B
-                    // Just return to home page
-                    return HOME_PAGE;
+                if (playerID == -1) {
+                    return REINIT_HOME;  // CHANGED: Use intermediate state
                 }
                 GameContext_SetMultiplayerMode(true);
-                return MULTIPLAYER_LOBBY;  // Go to lobby
+                return MULTIPLAYER_LOBBY;
             }
             case HOME_BTN_SETTINGS:
                 return SETTINGS;

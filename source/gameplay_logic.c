@@ -216,6 +216,7 @@ void Race_Reset(void) {
 
 void Race_Stop(void) {
     KartMania.raceStarted = false;
+    cleanup_pause_interrupt();  // NEW: Clean up pause interrupt
     RaceTick_TimerStop();
 }
 
@@ -587,4 +588,11 @@ void UpdatePauseDebounce(void) {
 
 bool IsPaused(void) {
     return isPaused;
+}
+
+void cleanup_pause_interrupt(void) {
+    irqDisable(IRQ_KEYS);
+    irqClear(IRQ_KEYS);
+    isPaused = false;
+    debounceFrames = 0;
 }

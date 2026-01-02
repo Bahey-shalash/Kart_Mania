@@ -6,11 +6,12 @@
 #include "fixedmath2d.h"
 typedef enum {
     HOME_PAGE,
-    SETTINGS,
     MAPSELECTION,
     MULTIPLAYER_LOBBY,
     GAMEPLAY,
-    PLAYAGAIN
+    PLAYAGAIN,
+    SETTINGS,
+    REINIT_HOME  // NEW: Forces home page reinit after WiFi failure
 } GameState;
 
 typedef struct {

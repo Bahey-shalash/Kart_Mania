@@ -308,25 +308,29 @@ static void retransmitUnackedPackets(void) {
  * ============================================================================
  */
 
+//=============================================================================
+// Key interrupt for canceling WiFi connection
+//=============================================================================
+
+
 int Multiplayer_Init(void) {
     // Fresh timing each session so heartbeats/countdowns are consistent
     msCounter = 0;
     lastLobbyBroadcastMs = 0;
 
     if (initialized) {
-        // return myPlayerID;  // Already initialized
         Multiplayer_Cleanup();
         // Short delay to ensure cleanup completes
         for (int i = 0; i < 60; i++) {  // 1 second
             swiWaitForVBlank();
         }  // TODO: test if without this if it still works
     }
-
+    
     // Initialize console for status messages (sub-screen)
     consoleDemoInit();
     consoleClear();
-    printf("\x1b[2J");  // Clear screen
-
+    printf("\x1b[2J");
+    
     printf("=== MULTIPLAYER INIT ===\n\n");
     printf("Connecting to WiFi...\n");
     printf("Looking for 'MES-NDS'...\n\n");
@@ -344,23 +348,29 @@ int Multiplayer_Init(void) {
         printf("- Out of range\n");
         printf("- WiFi already initialized?\n\n");
         printf("Press B to return\n");
-
-        // Wait for user acknowledgment
+        
+        // Simple polling loop
         while (1) {
+            swiWaitForVBlank();
             scanKeys();
+            
             if (keysDown() & KEY_B) {
+                printf("DEBUG: B pressed! Breaking...\n");
+                for (int i = 0; i < 120; i++) swiWaitForVBlank();
                 break;
             }
             Wifi_Update();
             swiWaitForVBlank();
         }
-
+        
+        printf("DEBUG: Returning -1\n");
+        for (int i = 0; i < 120; i++) swiWaitForVBlank();
         return -1;
     }
-
+    
     printf("\nWiFi connected!\n");
     printf("Opening socket...\n");
-
+    
     // Open socket
     int socketResult = openSocket();
     printf("Socket open result: %d\n", socketResult);
@@ -370,8 +380,10 @@ int Multiplayer_Init(void) {
         printf("Failed to create UDP socket.\n");
         printf("Socket might already be open?\n\n");
         printf("Press B to return\n");
-
+        
+        // Simple polling loop
         while (1) {
+            swiWaitForVBlank();
             scanKeys();
             if (keysDown() & KEY_B) {
                 break;
@@ -379,35 +391,28 @@ int Multiplayer_Init(void) {
             Wifi_Update();
             swiWaitForVBlank();
         }
-
+        
         disconnectFromWiFi();
         return -1;
     }
-
+    
     printf("Socket ready!\n\n");
-
+    
     //=========================================================================
-    // PLAYER ID ASSIGNMENT - MAC ADDRESS BASED (COLLISION-FREE)
+    // PLAYER ID ASSIGNMENT
     //=========================================================================
-    // Get MAC address from WiFi hardware (6 bytes, globally unique)
     unsigned char macAddr[6];
     Wifi_GetData(WIFIGETDATA_MACADDRESS, 6, macAddr);
-
-    // Use last byte of MAC address to determine player ID
-    // This gives us excellent distribution across 0-7 player slots
-    // and guarantees no collisions (every DS has unique MAC address)
+    
     myPlayerID = macAddr[5] % MAX_MULTIPLAYER_PLAYERS;
-
-    // Get IP address for display/debugging purposes
     unsigned long myIP = Wifi_GetIP();
-
-    // Display connection info (helps with debugging network issues)
+    
     printf("You are Player %d\n", myPlayerID + 1);
     printf("IP: %lu.%lu.%lu.%lu\n", (myIP >> 0) & 0xFF, (myIP >> 8) & 0xFF,
            (myIP >> 16) & 0xFF, (myIP >> 24) & 0xFF);
-    printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", macAddr[0], macAddr[1], macAddr[2],
-           macAddr[3], macAddr[4], macAddr[5]);
-
+    printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", macAddr[0], macAddr[1], 
+           macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
+    
     // Initialize player tracking
     memset(players, 0, sizeof(players));
     players[myPlayerID].connected = true;
@@ -418,15 +423,14 @@ int Multiplayer_Init(void) {
     lastJoinResendMs = 0;
 
     initialized = true;
-
+    
     // Small delay to show success message
-    for (int i = 0; i < 90; i++) {  // ~1.5 seconds
+    for (int i = 0; i < 90; i++) {
         swiWaitForVBlank();
     }
-
+    
     return myPlayerID;
 }
-
 /**
  * Reset lobby state (call when re-entering lobby after exiting gameplay)
  * This clears stale connection state from previous sessions

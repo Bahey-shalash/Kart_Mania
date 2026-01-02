@@ -80,6 +80,7 @@ CountdownState Race_GetCountdownState(void);
 bool Race_IsCompleted(void);
 void Race_GetFinalTime(int* min, int* sec, int* msec);
 void Race_MarkAsCompleted(int min, int sec, int msec);
+void cleanup_pause_interrupt(void);
 //=============================================================================
 // State Queries (Read-Only Access)
 //=============================================================================
