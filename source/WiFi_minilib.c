@@ -1,4 +1,5 @@
 #include "WiFi_minilib.h"
+#include <stdio.h>
 
 // Socket port
 #define LOCAL_PORT 8888
@@ -28,6 +29,11 @@ int socket_id;
 bool socket_opened = false;
 bool WiFi_initialized = false;
 
+// Debug: Track raw recvfrom calls
+static int total_recvfrom_calls = 0;
+static int total_recvfrom_success = 0;
+static int total_filtered_own = 0;
+
 //=============================================================================
 // WiFi Initialization with Timeout Watchdogs
 //=============================================================================
@@ -37,14 +43,15 @@ int initWiFi() {
     if (WiFi_initialized == true)
         return 0;
 
+    // Ensure the radio is enabled (Wifi_InitDefault called once at startup)
+    // DO NOT call Wifi_InitDefault() here - it causes "works once" bugs
+    Wifi_EnableWifi();
+
     // Access point information structure
     Wifi_AccessPoint ap;
 
     // Indicates if the access point has been found
     int found = 0, count = 0, i = 0;
-
-    // Initialize WiFi by default (without WFC)
-    Wifi_InitDefault(false);
 
     // Set scan mode to find APs
     Wifi_ScanMode();
@@ -76,6 +83,7 @@ int initWiFi() {
 
         // If not found yet, wait one frame and increment counter
         if (!found) {
+            Wifi_Update();       // Update DSWifi state
             swiWaitForVBlank();  // Wait 1/60th second
             scanAttempts++;      // Increment watchdog counter
         }
@@ -128,7 +136,8 @@ int initWiFi() {
         // Check current connection status
         status = Wifi_AssocStatus();
 
-        // Wait for a VBlank (1/60th second) before checking again
+        // Update WiFi state and wait for a VBlank (1/60th second)
+        Wifi_Update();
         swiWaitForVBlank();
 
         // Increment watchdog counter
@@ -150,37 +159,66 @@ int initWiFi() {
 //=============================================================================
 
 int openSocket() {
-    // If socket already opened return 0 (error)
-    if (socket_opened == true)
-        return 0;
+    // Safety: force close if somehow still open
+    if (socket_opened) {
+        iprintf("WARNING: socket still open, forcing close...\n");
+        closeSocket();
+    }
+
+    // Clear socket address structures (critical for reconnection!)
+    memset(&sa_in, 0, sizeof(sa_in));
+    memset(&sa_out, 0, sizeof(sa_out));
 
     socket_id = socket(AF_INET, SOCK_DGRAM, 0);  // UDP socket
 
+    if (socket_id < 0) {
+        // DEBUG: Socket creation failed
+        iprintf("ERROR: socket() failed: %d\n", socket_id);
+        return 0;  // Failed to create socket
+    }
+
+    // DEBUG: Print socket ID (can help diagnose issues)
+    iprintf("Socket created: ID=%d\n", socket_id);
+
     //-----------Configure receiving side---------------------//
+
+    // Enable socket address reuse to prevent "address already in use" errors
+    // This is critical for allowing quick reconnection after disconnect
+    int reuse = 1;
+    setsockopt(socket_id, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse));
 
     sa_in.sin_family = AF_INET;          // Type of address (Inet)
     sa_in.sin_port = htons(LOCAL_PORT);  // set input port
     sa_in.sin_addr.s_addr = 0x00000000;  // Receive data from any address
     // Bind the socket
-    if (bind(socket_id, (struct sockaddr*)&sa_in, sizeof(sa_in)) < 0)
+    if (bind(socket_id, (struct sockaddr*)&sa_in, sizeof(sa_in)) < 0) {
+        // Cleanup the socket we just created before returning error
+        iprintf("ERROR: bind() failed!\n");
+        closesocket(socket_id);
         return 0;  // Error binding the socket
+    }
+
+    iprintf("Socket bound to port %d\n", LOCAL_PORT);
 
     //-----------Configure sending side-----------------------//
 
     sa_out.sin_family = AF_INET;        // Type of address (Inet)
     sa_out.sin_port = htons(OUT_PORT);  // set output port (same as input)
 
-    // Retrieve network parameters to obtain the broadcast address
-    struct in_addr gateway, snmask, dns1, dns2;
-    Wifi_GetIPInfo(&gateway, &snmask, &dns1, &dns2);
+    // Use true broadcast address (255.255.255.255) for maximum compatibility
+    // This avoids endianness issues with subnet broadcast calculation
+    sa_out.sin_addr.s_addr = htonl(0xFFFFFFFF);
+
+    // DEBUG: Print network info
     unsigned long ip = Wifi_GetIP();
-    unsigned long mask = snmask.s_addr;
+    iprintf("IP: %lu.%lu.%lu.%lu\n",
+            (ip & 0xFF), ((ip >> 8) & 0xFF),
+            ((ip >> 16) & 0xFF), ((ip >> 24) & 0xFF));
+    iprintf("Broadcast: 255.255.255.255\n");
 
-    // Calculate broadcast address
-    unsigned long broadcast_addr = ip | ~mask;
-
-    // Destination address (broadcast)
-    sa_out.sin_addr.s_addr = broadcast_addr;
+    // Enable broadcast permission on the socket
+    int broadcast_permission = 1;
+    setsockopt(socket_id, SOL_SOCKET, SO_BROADCAST, (char*)&broadcast_permission, sizeof(broadcast_permission));
 
     // Set socket to be non-blocking
     char nonblock = 1;
@@ -193,23 +231,44 @@ int openSocket() {
 
 void closeSocket() {
     // If socket not opened, nothing to do
-    if (socket_opened == false)
+    if (socket_opened == false) {
+        iprintf("closeSocket: already closed\n");
         return;
+    }
 
-    // Shutdown and close the socket in both directions
-    shutdown(socket_id, SHUT_RDWR);
+    iprintf("Closing socket ID=%d\n", socket_id);
+
+    // Close the socket (skip shutdown() - can be problematic on DS)
     closesocket(socket_id);
+    socket_id = -1;
     socket_opened = false;
+
+    iprintf("Socket closed\n");
 }
 
 void disconnectFromWiFi() {
     // If Wi-Fi not connected, nothing to do
-    if (WiFi_initialized == false)
+    if (WiFi_initialized == false) {
+        iprintf("WiFi: already disconnected\n");
         return;
+    }
+
+    iprintf("Disconnecting WiFi...\n");
 
     // Disconnect from the access point
     Wifi_DisconnectAP();
+
+    // Let DSWifi settle (~1 second with Wifi_Update)
+    // IMPORTANT: Keep WiFi stack alive and pumping - DON'T disable it!
+    // Disabling causes "works once" bugs on DS hardware
+    for (int i = 0; i < 60; i++) {
+        Wifi_Update();
+        swiWaitForVBlank();
+    }
+
     WiFi_initialized = false;
+
+    iprintf("WiFi disconnected (stack still alive)\n");
 }
 
 int sendData(char* data_buff, int bytes) {
@@ -238,6 +297,7 @@ int receiveData(char* data_buff, int bytes) {
         return -1;
 
     // Try to receive the data
+    total_recvfrom_calls++;
     received_bytes = recvfrom(socket_id,  // Socket id
                               data_buff,  // Buffer where to put the data
                               bytes,      // Bytes to receive (at most)
@@ -245,10 +305,27 @@ int receiveData(char* data_buff, int bytes) {
                               (struct sockaddr*)&sa_in,  // Sender information
                               &info_size);               // Sender info size
 
+    // If nothing received, return
+    if (received_bytes <= 0) {
+        return received_bytes;
+    }
+
+    total_recvfrom_success++;
+
     // Discard data sent by ourselves
-    if (sa_in.sin_addr.s_addr == Wifi_GetIP())
-        return 0;
+    unsigned long myIP = Wifi_GetIP();
+    if (sa_in.sin_addr.s_addr == myIP) {
+        total_filtered_own++;
+        return 0;  // Filter out our own packets
+    }
 
     // Return the amount of received bytes
     return received_bytes;
+}
+
+// Debug function to get low-level receive stats
+void getReceiveDebugStats(int* calls, int* success, int* filtered) {
+    if (calls) *calls = total_recvfrom_calls;
+    if (success) *success = total_recvfrom_success;
+    if (filtered) *filtered = total_filtered_own;
 }

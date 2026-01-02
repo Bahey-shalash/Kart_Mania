@@ -21,5 +21,7 @@ int sendData(char* data_buff, int bytes);
 void closeSocket();
 // Disconnect the WiFi
 void disconnectFromWiFi();
+// Debug: Get low-level receive statistics
+void getReceiveDebugStats(int* calls, int* success, int* filtered);
 
 #endif  // WIFI_MINILIB_H

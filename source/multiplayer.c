@@ -6,6 +6,10 @@
 
 #include "WiFi_minilib.h"
 
+// Access WiFi/socket status flags from WiFi_minilib
+extern bool socket_opened;
+extern bool WiFi_initialized;
+
 //=============================================================================
 // Protocol Constants
 //=============================================================================
@@ -18,20 +22,21 @@
 //=============================================================================
 
 typedef enum {
-    MSG_LOBBY_JOIN,      // "I'm joining the lobby"
-    MSG_LOBBY_UPDATE,    // "I'm still here" (heartbeat)
-    MSG_READY,           // "I pressed SELECT"
-    MSG_CAR_UPDATE,      // "Here's my car state" (during race)
-    MSG_ITEM_PLACED,     // "I placed/threw an item on the track"
-    MSG_ITEM_BOX_PICKUP, // "I picked up an item box"
-    MSG_DISCONNECT       // "I'm leaving"
+    MSG_LOBBY_JOIN,       // "I'm joining the lobby"
+    MSG_LOBBY_UPDATE,     // "I'm still here" (heartbeat)
+    MSG_READY,            // "I pressed SELECT"
+    MSG_LOBBY_ACK,        // "I received your lobby message" (ACK for reliable delivery)
+    MSG_CAR_UPDATE,       // "Here's my car state" (during race)
+    MSG_ITEM_PLACED,      // "I placed/threw an item on the track"
+    MSG_ITEM_BOX_PICKUP,  // "I picked up an item box"
+    MSG_DISCONNECT        // "I'm leaving"
 } MessageType;
 
 typedef struct {
     uint8_t version;   // Protocol version (for future compatibility)
     uint8_t msgType;   // MessageType enum
     uint8_t playerID;  // 0-7
-    uint8_t padding;   // Alignment
+    uint8_t seqNum;    // Sequence number (0-255, wraps around) for ACK tracking
 
     // Payload (28 bytes) - content depends on msgType
     union {
@@ -40,6 +45,12 @@ typedef struct {
             bool isReady;          // Has this player pressed SELECT?
             uint8_t reserved[27];  // Future expansion
         } lobby;
+
+        // For MSG_LOBBY_ACK (acknowledgment)
+        struct {
+            uint8_t ackSeqNum;     // Which sequence number we're acknowledging
+            uint8_t reserved[27];  // Future expansion
+        } ack;
 
         // For MSG_CAR_UPDATE (during race)
         struct {
@@ -53,16 +64,16 @@ typedef struct {
 
         // For MSG_ITEM_PLACED (item placed on track)
         struct {
-            Item itemType;      // 4 bytes - what item was placed
-            Vec2 position;      // 8 bytes - where it was placed
-            int angle512;       // 4 bytes - direction (for projectiles)
-            Q16_8 speed;        // 4 bytes - initial speed (for projectiles)
+            Item itemType;  // 4 bytes - what item was placed
+            Vec2 position;  // 8 bytes - where it was placed
+            int angle512;   // 4 bytes - direction (for projectiles)
+            Q16_8 speed;    // 4 bytes - initial speed (for projectiles)
             uint8_t reserved[8];
         } itemPlaced;
 
         // For MSG_ITEM_BOX_PICKUP (item box collected)
         struct {
-            int boxIndex;       // 4 bytes - which box was picked up
+            int boxIndex;  // 4 bytes - which box was picked up
             uint8_t reserved[24];
         } itemBoxPickup;
 
@@ -74,10 +85,23 @@ typedef struct {
 // Player Tracking
 //=============================================================================
 
+// Selective Repeat ARQ - Retransmission queue entry
+#define MAX_PENDING_ACKS 4  // Track up to 4 unacknowledged messages per player
+
 typedef struct {
-    bool connected;           // Is this player in the game?
-    bool ready;               // Has this player pressed SELECT? (lobby only)
-    uint32_t lastPacketTime;  // For timeout detection
+    NetworkPacket packet;        // The packet awaiting ACK
+    uint32_t lastSendTime;       // When we last sent this packet
+    bool active;                 // Is this slot in use?
+} PendingAck;
+
+typedef struct {
+    bool connected;              // is this player in the game?
+    bool ready;                  // Has this player pressed SELECT? (lobby only)
+    uint32_t lastPacketTime;     // For timeout detection
+
+    // Selective Repeat ARQ state (lobby only)
+    uint8_t lastSeqNumReceived;  // Last sequence number we received from this player
+    PendingAck pendingAcks[MAX_PENDING_ACKS];  // Packets awaiting ACK from this player
 } PlayerInfo;
 
 //=============================================================================
@@ -91,6 +115,26 @@ static bool initialized = false;
 // Simple millisecond counter (wraps every ~49 days, which is fine)
 static uint32_t msCounter = 0;
 static uint32_t lastLobbyBroadcastMs = 0;
+static uint32_t joinResendDeadlineMs = 0;
+static uint32_t lastJoinResendMs = 0;
+
+// Selective Repeat ARQ state
+static uint8_t nextSeqNum = 0;  // Next sequence number to use for outgoing packets
+#define ACK_TIMEOUT_MS 500      // Resend if no ACK after 500ms
+#define MAX_RETRIES 5           // Give up after 5 retransmissions
+
+// Debug counters
+static int totalPacketsSent = 0;
+static int totalPacketsReceived = 0;
+
+// Packet buffering for item placements/boxes (used across cleanup)
+#define MAX_BUFFERED_ITEM_PACKETS 16
+static NetworkPacket itemPacketBuffer[MAX_BUFFERED_ITEM_PACKETS];
+static int itemPacketCount = 0;
+
+#define MAX_BUFFERED_BOX_PACKETS 16
+static NetworkPacket boxPacketBuffer[MAX_BUFFERED_BOX_PACKETS];
+static int boxPacketCount = 0;
 
 //=============================================================================
 // Helper Functions
@@ -103,6 +147,87 @@ static uint32_t lastLobbyBroadcastMs = 0;
 static uint32_t getTimeMs(void) {
     msCounter += 16;  // Approximate: 1 frame at 60Hz = 16.67ms
     return msCounter;
+}
+
+/**
+ * Send a reliable lobby message with ACK tracking
+ * This implements Selective Repeat ARQ for lobby messages only
+ */
+static void sendReliableLobbyMessage(NetworkPacket* packet) {
+    // Assign sequence number
+    packet->seqNum = nextSeqNum++;
+
+    // Send the packet
+    sendData((char*)packet, sizeof(NetworkPacket));
+    totalPacketsSent++;
+
+    // Add to pending ACK queue for each connected player
+    uint32_t currentTime = getTimeMs();
+    for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
+        if (i == myPlayerID || !players[i].connected) {
+            continue;  // Don't track ACKs from ourselves or disconnected players
+        }
+
+        // Find an empty slot in the pending ACK queue
+        for (int j = 0; j < MAX_PENDING_ACKS; j++) {
+            if (!players[i].pendingAcks[j].active) {
+                players[i].pendingAcks[j].packet = *packet;
+                players[i].pendingAcks[j].lastSendTime = currentTime;
+                players[i].pendingAcks[j].active = true;
+                break;
+            }
+        }
+    }
+}
+
+/**
+ * Process ACK packets and remove acknowledged messages from retransmission queue
+ */
+static void processAck(uint8_t fromPlayerID, uint8_t ackSeqNum) {
+    if (fromPlayerID >= MAX_MULTIPLAYER_PLAYERS) {
+        return;
+    }
+
+    // Remove the acknowledged packet from pending queue
+    for (int i = 0; i < MAX_PENDING_ACKS; i++) {
+        if (players[fromPlayerID].pendingAcks[i].active &&
+            players[fromPlayerID].pendingAcks[i].packet.seqNum == ackSeqNum) {
+            players[fromPlayerID].pendingAcks[i].active = false;
+            break;
+        }
+    }
+}
+
+/**
+ * Retransmit packets that haven't been acknowledged within timeout
+ * Call this periodically in Multiplayer_UpdateLobby()
+ */
+static void retransmitUnackedPackets(void) {
+    uint32_t currentTime = getTimeMs();
+
+    for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
+        if (i == myPlayerID || !players[i].connected) {
+            continue;
+        }
+
+        for (int j = 0; j < MAX_PENDING_ACKS; j++) {
+            PendingAck* pending = &players[i].pendingAcks[j];
+
+            if (!pending->active) {
+                continue;
+            }
+
+            // Check if timeout elapsed
+            if (currentTime - pending->lastSendTime >= ACK_TIMEOUT_MS) {
+                // Resend the packet
+                sendData((char*)&pending->packet, sizeof(NetworkPacket));
+                pending->lastSendTime = currentTime;
+
+                // Note: In a full implementation, you'd track retry count
+                // and give up after MAX_RETRIES. For simplicity, we keep retrying.
+            }
+        }
+    }
 }
 
 //=============================================================================
@@ -184,9 +309,17 @@ static uint32_t getTimeMs(void) {
  */
 
 int Multiplayer_Init(void) {
+    // Fresh timing each session so heartbeats/countdowns are consistent
+    msCounter = 0;
+    lastLobbyBroadcastMs = 0;
+
     if (initialized) {
         // return myPlayerID;  // Already initialized
         Multiplayer_Cleanup();
+        // Short delay to ensure cleanup completes
+        for (int i = 0; i < 60; i++) {  // 1 second
+            swiWaitForVBlank();
+        }  // TODO: test if without this if it still works
     }
 
     // Initialize console for status messages (sub-screen)
@@ -200,13 +333,16 @@ int Multiplayer_Init(void) {
     printf("(This may take 5-10 seconds)\n");
 
     // Initialize WiFi (with timeout)
-    if (!initWiFi()) {
+    int wifiResult = initWiFi();
+    printf("WiFi init result: %d\n", wifiResult);
+    if (!wifiResult) {
         consoleClear();
         printf("WiFi Connection Failed!\n\n");
         printf("Possible issues:\n");
         printf("- WiFi is OFF\n");
         printf("- 'MES-NDS' AP not found\n");
-        printf("- Out of range\n\n");
+        printf("- Out of range\n");
+        printf("- WiFi already initialized?\n\n");
         printf("Press B to return\n");
 
         // Wait for user acknowledgment
@@ -215,6 +351,7 @@ int Multiplayer_Init(void) {
             if (keysDown() & KEY_B) {
                 break;
             }
+            Wifi_Update();
             swiWaitForVBlank();
         }
 
@@ -225,10 +362,13 @@ int Multiplayer_Init(void) {
     printf("Opening socket...\n");
 
     // Open socket
-    if (!openSocket()) {
+    int socketResult = openSocket();
+    printf("Socket open result: %d\n", socketResult);
+    if (!socketResult) {
         consoleClear();
         printf("Socket Error!\n\n");
-        printf("Failed to create UDP socket.\n\n");
+        printf("Failed to create UDP socket.\n");
+        printf("Socket might already be open?\n\n");
         printf("Press B to return\n");
 
         while (1) {
@@ -236,6 +376,7 @@ int Multiplayer_Init(void) {
             if (keysDown() & KEY_B) {
                 break;
             }
+            Wifi_Update();
             swiWaitForVBlank();
         }
 
@@ -273,6 +414,8 @@ int Multiplayer_Init(void) {
     players[myPlayerID].ready = false;
     players[myPlayerID].lastPacketTime = getTimeMs();
     lastLobbyBroadcastMs = players[myPlayerID].lastPacketTime;
+    joinResendDeadlineMs = lastLobbyBroadcastMs + 2000;  // resend JOIN for first 2s
+    lastJoinResendMs = 0;
 
     initialized = true;
 
@@ -294,11 +437,21 @@ static void resetLobbyState(void) {
         if (i != myPlayerID) {
             players[i].connected = false;
             players[i].ready = false;
+            players[i].lastPacketTime = 0;
+            players[i].lastSeqNumReceived = 0;
+
+            // Clear pending ACK queues (ARQ state)
+            for (int j = 0; j < MAX_PENDING_ACKS; j++) {
+                players[i].pendingAcks[j].active = false;
+            }
         }
     }
+
+    // Reset our own ARQ state
+    nextSeqNum = 0;  // Start fresh with sequence numbers
 }
 
-void Multiplayer_Cleanup(void) {
+/* void Multiplayer_Cleanup(void) {
     if (!initialized) {
         return;
     }
@@ -316,6 +469,47 @@ void Multiplayer_Cleanup(void) {
     initialized = false;
     lastLobbyBroadcastMs = 0;
     myPlayerID = -1;
+} */
+
+void Multiplayer_Cleanup(void) {
+    if (!initialized) {
+        return;
+    }
+
+    // Send disconnect message to other players (send multiple times for reliability)
+    NetworkPacket packet = {.version = PROTOCOL_VERSION,
+                            .msgType = MSG_DISCONNECT,
+                            .playerID = myPlayerID};
+
+    // Send 3 times with small gaps (UDP is unreliable)
+    for (int i = 0; i < 3; i++) {
+        sendData((char*)&packet, sizeof(NetworkPacket));
+
+        // Small delay between sends (just a few frames)
+        for (int j = 0; j < 5; j++) {
+            swiWaitForVBlank();
+        }
+    }
+
+    // Cleanup WiFi
+    closeSocket();
+    disconnectFromWiFi();
+
+    // Reset all multiplayer state so next session starts clean
+    memset(players, 0, sizeof(players));
+    itemPacketCount = 0;
+    boxPacketCount = 0;
+    memset(itemPacketBuffer, 0, sizeof(itemPacketBuffer));
+    memset(boxPacketBuffer, 0, sizeof(boxPacketBuffer));
+    initialized = false;
+    myPlayerID = -1;
+
+    // Reset ARQ state
+    nextSeqNum = 0;
+
+    // Reset debug counters
+    totalPacketsSent = 0;
+    totalPacketsReceived = 0;
 }
 
 //=============================================================================
@@ -359,36 +553,72 @@ void Multiplayer_JoinLobby(void) {
     // This prevents stale "ghost players" from previous sessions
     resetLobbyState();
 
+    // Mark self as not ready
+    players[myPlayerID].ready = false;
+    uint32_t currentTime = getTimeMs();
+    lastLobbyBroadcastMs = currentTime;
+    joinResendDeadlineMs = currentTime + 2000;  // Aggressively resend JOIN for first 2s
+    lastJoinResendMs = currentTime;
+
+    // Send JOIN message with Selective Repeat ARQ for reliability
     NetworkPacket packet = {.version = PROTOCOL_VERSION,
                             .msgType = MSG_LOBBY_JOIN,
                             .playerID = myPlayerID,
+                            .seqNum = 0,  // Will be set by sendReliableLobbyMessage
                             .payload.lobby = {.isReady = false}};
 
-    sendData((char*)&packet, sizeof(NetworkPacket));
+    sendReliableLobbyMessage(&packet);
 
-    // Mark self as not ready
-    players[myPlayerID].ready = false;
-    lastLobbyBroadcastMs = getTimeMs();
+    // Send a few extra times immediately for faster discovery (redundancy)
+    // These won't be tracked for ACK, but help with initial discovery
+    for (int i = 0; i < 3; i++) {
+        swiWaitForVBlank();
+        sendData((char*)&packet, sizeof(NetworkPacket));
+    }
 }
 
 bool Multiplayer_UpdateLobby(void) {
     NetworkPacket packet;
     uint32_t currentTime = getTimeMs();
 
+    // Retransmit unacknowledged packets (Selective Repeat ARQ)
+    retransmitUnackedPackets();
+
+    // During the first 2 seconds after joining, aggressively resend JOIN
+    // This helps with initial discovery when no players are connected yet
+    if (currentTime < joinResendDeadlineMs &&
+        currentTime - lastJoinResendMs >= 300) {  // every 300ms
+        NetworkPacket joinAgain = {
+            .version = PROTOCOL_VERSION,
+            .msgType = MSG_LOBBY_JOIN,
+            .playerID = myPlayerID,
+            .seqNum = 0,
+            .payload.lobby = {.isReady = players[myPlayerID].ready}};
+        // Don't use sendReliableLobbyMessage here - just broadcast
+        sendData((char*)&joinAgain, sizeof(NetworkPacket));
+        lastJoinResendMs = currentTime;
+    }
+
     // Periodic heartbeat so peers don't time out (every ~1s)
+    // Heartbeats use reliable delivery now
     if (currentTime - lastLobbyBroadcastMs >= 1000) {
         NetworkPacket heartbeat = {
             .version = PROTOCOL_VERSION,
             .msgType = MSG_LOBBY_UPDATE,
             .playerID = myPlayerID,
+            .seqNum = 0,  // Will be set by sendReliableLobbyMessage
             .payload.lobby = {.isReady = players[myPlayerID].ready}};
-        sendData((char*)&heartbeat, sizeof(NetworkPacket));
+        sendReliableLobbyMessage(&heartbeat);
         lastLobbyBroadcastMs = currentTime;
         players[myPlayerID].lastPacketTime = currentTime;
     }
 
     // Receive all pending packets (non-blocking)
+    int packetsReceived = 0;
     while (receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
+        packetsReceived++;
+        totalPacketsReceived++;
+
         // Validate packet
         if (packet.version != PROTOCOL_VERSION)
             continue;
@@ -403,6 +633,26 @@ bool Multiplayer_UpdateLobby(void) {
                 players[packet.playerID].connected = true;
                 players[packet.playerID].ready = false;
                 players[packet.playerID].lastPacketTime = currentTime;
+                players[packet.playerID].lastSeqNumReceived = packet.seqNum;
+
+                // Send ACK for this packet
+                NetworkPacket ack = {
+                    .version = PROTOCOL_VERSION,
+                    .msgType = MSG_LOBBY_ACK,
+                    .playerID = myPlayerID,
+                    .seqNum = 0,  // ACKs don't need sequence numbers
+                    .payload.ack = {.ackSeqNum = packet.seqNum}};
+                sendData((char*)&ack, sizeof(NetworkPacket));
+
+                // CRITICAL: Immediately respond so the joining player discovers us!
+                // Send our own state as a reliable message
+                NetworkPacket response = {
+                    .version = PROTOCOL_VERSION,
+                    .msgType = MSG_LOBBY_UPDATE,
+                    .playerID = myPlayerID,
+                    .seqNum = 0,  // Will be set by sendReliableLobbyMessage
+                    .payload.lobby = {.isReady = players[myPlayerID].ready}};
+                sendReliableLobbyMessage(&response);
                 break;
 
             case MSG_LOBBY_UPDATE:
@@ -410,11 +660,31 @@ bool Multiplayer_UpdateLobby(void) {
                 players[packet.playerID].connected = true;
                 players[packet.playerID].ready = packet.payload.lobby.isReady;
                 players[packet.playerID].lastPacketTime = currentTime;
+                players[packet.playerID].lastSeqNumReceived = packet.seqNum;
+
+                // Send ACK for this packet
+                NetworkPacket updateAck = {
+                    .version = PROTOCOL_VERSION,
+                    .msgType = MSG_LOBBY_ACK,
+                    .playerID = myPlayerID,
+                    .seqNum = 0,
+                    .payload.ack = {.ackSeqNum = packet.seqNum}};
+                sendData((char*)&updateAck, sizeof(NetworkPacket));
+                break;
+
+            case MSG_LOBBY_ACK:
+                // Process ACK - remove packet from retransmission queue
+                processAck(packet.playerID, packet.payload.ack.ackSeqNum);
                 break;
 
             case MSG_DISCONNECT:
                 players[packet.playerID].connected = false;
                 players[packet.playerID].ready = false;
+
+                // Clear pending ACKs for this player (they're gone, stop waiting)
+                for (int i = 0; i < MAX_PENDING_ACKS; i++) {
+                    players[packet.playerID].pendingAcks[i].active = false;
+                }
                 break;
 
             default:
@@ -433,6 +703,11 @@ bool Multiplayer_UpdateLobby(void) {
                 // Player timed out
                 players[i].connected = false;
                 players[i].ready = false;
+
+                // Clear pending ACKs for this player (they timed out, stop waiting)
+                for (int j = 0; j < MAX_PENDING_ACKS; j++) {
+                    players[i].pendingAcks[j].active = false;
+                }
             }
         }
     }
@@ -460,9 +735,10 @@ void Multiplayer_SetReady(bool ready) {
     NetworkPacket packet = {.version = PROTOCOL_VERSION,
                             .msgType = MSG_READY,
                             .playerID = myPlayerID,
+                            .seqNum = 0,  // Will be set by sendReliableLobbyMessage
                             .payload.lobby = {.isReady = ready}};
 
-    sendData((char*)&packet, sizeof(NetworkPacket));
+    sendReliableLobbyMessage(&packet);
 }
 
 //=============================================================================
@@ -481,19 +757,6 @@ void Multiplayer_SendCarState(const Car* car) {
 
     sendData((char*)&packet, sizeof(NetworkPacket));
 }
-
-//=============================================================================
-// Packet buffering for item placements
-// (needed because we process car states and items separately)
-//=============================================================================
-
-#define MAX_BUFFERED_ITEM_PACKETS 16
-static NetworkPacket itemPacketBuffer[MAX_BUFFERED_ITEM_PACKETS];
-static int itemPacketCount = 0;
-
-#define MAX_BUFFERED_BOX_PACKETS 16
-static NetworkPacket boxPacketBuffer[MAX_BUFFERED_BOX_PACKETS];
-static int boxPacketCount = 0;
 
 void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
     NetworkPacket packet;
@@ -543,22 +806,19 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
 // Public API - Item Synchronization
 //=============================================================================
 
-void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512, Q16_8 speed) {
+void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512,
+                                   Q16_8 speed) {
     if (!initialized) {
         return;
     }
 
-    NetworkPacket packet = {
-        .version = PROTOCOL_VERSION,
-        .msgType = MSG_ITEM_PLACED,
-        .playerID = myPlayerID,
-        .payload.itemPlaced = {
-            .itemType = itemType,
-            .position = position,
-            .angle512 = angle512,
-            .speed = speed
-        }
-    };
+    NetworkPacket packet = {.version = PROTOCOL_VERSION,
+                            .msgType = MSG_ITEM_PLACED,
+                            .playerID = myPlayerID,
+                            .payload.itemPlaced = {.itemType = itemType,
+                                                   .position = position,
+                                                   .angle512 = angle512,
+                                                   .speed = speed}};
 
     sendData((char*)&packet, sizeof(NetworkPacket));
 }
@@ -572,11 +832,9 @@ ItemPlacementData Multiplayer_ReceiveItemPlacements(void) {
         NetworkPacket packet = itemPacketBuffer[0];
 
         // Validate packet
-        if (packet.version == PROTOCOL_VERSION &&
-            packet.msgType == MSG_ITEM_PLACED &&
+        if (packet.version == PROTOCOL_VERSION && packet.msgType == MSG_ITEM_PLACED &&
             packet.playerID < MAX_MULTIPLAYER_PLAYERS &&
             packet.playerID != myPlayerID) {
-
             // Return the item placement data
             result.valid = true;
             result.playerID = packet.playerID;
@@ -601,14 +859,10 @@ void Multiplayer_SendItemBoxPickup(int boxIndex) {
         return;
     }
 
-    NetworkPacket packet = {
-        .version = PROTOCOL_VERSION,
-        .msgType = MSG_ITEM_BOX_PICKUP,
-        .playerID = myPlayerID,
-        .payload.itemBoxPickup = {
-            .boxIndex = boxIndex
-        }
-    };
+    NetworkPacket packet = {.version = PROTOCOL_VERSION,
+                            .msgType = MSG_ITEM_BOX_PICKUP,
+                            .playerID = myPlayerID,
+                            .payload.itemBoxPickup = {.boxIndex = boxIndex}};
 
     sendData((char*)&packet, sizeof(NetworkPacket));
 }
@@ -626,7 +880,6 @@ int Multiplayer_ReceiveItemBoxPickup(void) {
             packet.msgType == MSG_ITEM_BOX_PICKUP &&
             packet.playerID < MAX_MULTIPLAYER_PLAYERS &&
             packet.playerID != myPlayerID) {
-
             boxIndex = packet.payload.itemBoxPickup.boxIndex;
         }
 
@@ -640,4 +893,69 @@ int Multiplayer_ReceiveItemBoxPickup(void) {
     }
 
     return -1;
+}
+
+void Multiplayer_GetDebugStats(int* sentCount, int* receivedCount) {
+    if (sentCount) {
+        *sentCount = totalPacketsSent;
+    }
+    if (receivedCount) {
+        *receivedCount = totalPacketsReceived;
+    }
+}
+
+void Multiplayer_NukeConnectivity(void) {
+    // 1. Send disconnect packets (multiple times for reliability)
+    if (initialized) {
+        NetworkPacket packet = {.version = PROTOCOL_VERSION,
+                                .msgType = MSG_DISCONNECT,
+                                .playerID = myPlayerID};
+
+        for (int i = 0; i < 5; i++) {
+            sendData((char*)&packet, sizeof(NetworkPacket));
+            for (int j = 0; j < 3; j++) {
+                swiWaitForVBlank();
+            }
+        }
+    }
+
+    // 2. Close socket completely
+    if (socket_opened) {
+        closeSocket();
+    }
+
+    // 3. Disconnect WiFi completely
+    if (WiFi_initialized) {
+        disconnectFromWiFi();
+    }
+
+    // 4. Reset ALL multiplayer module state
+    memset(players, 0, sizeof(players));
+    itemPacketCount = 0;
+    boxPacketCount = 0;
+    memset(itemPacketBuffer, 0, sizeof(itemPacketBuffer));
+    memset(boxPacketBuffer, 0, sizeof(boxPacketBuffer));
+
+    // 5. Reset timing/counters
+    msCounter = 0;
+    lastLobbyBroadcastMs = 0;
+    joinResendDeadlineMs = 0;
+    lastJoinResendMs = 0;
+
+    // 5b. Reset ARQ state
+    nextSeqNum = 0;
+
+    // 5c. Reset debug counters
+    totalPacketsSent = 0;
+    totalPacketsReceived = 0;
+
+    // 6. Reset flags
+    initialized = false;
+    myPlayerID = -1;
+
+    // 7. Small delay to ensure everything settles
+    for (int i = 0; i < 60; i++) {  // 1 second - WiFi hardware needs time
+        Wifi_Update();  // CRITICAL: Keep WiFi stack alive during settling
+        swiWaitForVBlank();
+    }
 }

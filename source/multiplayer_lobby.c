@@ -6,6 +6,7 @@
 #include "context.h"
 #include "game_types.h"
 #include "multiplayer.h"
+#include "WiFi_minilib.h"
 
 //=============================================================================
 // Lobby State
@@ -46,20 +47,17 @@ GameState MultiplayerLobby_Update(void) {
     scanKeys();
     int keys = keysDown();
 
-    //=========================================================================
-    // Handle SELECT button to toggle ready state
-    //=========================================================================
+    // Toggle ready state (disabled once countdown starts)
     if (keys & KEY_SELECT && !countdownActive) {
         int myID = Multiplayer_GetMyPlayerID();
         bool currentReady = Multiplayer_IsPlayerReady(myID);
         Multiplayer_SetReady(!currentReady);  // Toggle ready state
     }
 
-    //=========================================================================
-    // Handle B button to cancel and return to home page
-    //=========================================================================
-    if (keys & KEY_B && !countdownActive) {
+    // Allow cancel at any time (even during countdown/timeout)
+    if (keys & KEY_B) {
         Multiplayer_Cleanup();
+        GameContext_SetMultiplayerMode(false);
         return HOME_PAGE;
     }
 
@@ -93,9 +91,27 @@ GameState MultiplayerLobby_Update(void) {
 
     printf("\n(%d/%d ready)\n\n", readyCount, connectedCount);
 
-    //=========================================================================
+    // Debug info at bottom of screen
+    int sent, received;
+    Multiplayer_GetDebugStats(&sent, &received);
+
+    // Low-level socket debug
+    int recvCalls, recvSuccess, recvFiltered;
+    getReceiveDebugStats(&recvCalls, &recvSuccess, &recvFiltered);
+
+    printf("--------------------------------\n");
+    printf("DEBUG: MyID=%d Connected=%d\n", myID, connectedCount);
+    printf("AllReady=%d Countdown=%d\n", allReady ? 1 : 0, countdownActive ? 1 : 0);
+    printf("Packets: Sent=%d Recv=%d\n", sent, received);
+    printf("Socket: Calls=%d OK=%d Filt=%d\n", recvCalls, recvSuccess, recvFiltered);
+
+    // If someone drops or unreadies, cancel the countdown
+    if (countdownActive && (!allReady || connectedCount < 2)) {
+        countdownActive = false;
+        countdownTimer = 0;
+    }
+
     // Handle countdown or show instructions
-    //=========================================================================
     if (!countdownActive) {
         // Not in countdown - show instructions
         printf("Press SELECT when ready\n");
@@ -115,7 +131,7 @@ GameState MultiplayerLobby_Update(void) {
         countdownTimer--;
         if (countdownTimer <= 0) {
             // Countdown finished - start race!
-            GameContext_SetMap(ScorchingSands);// not sure about this 
+            GameContext_SetMap(ScorchingSands);  // not sure about this
             return GAMEPLAY;
         }
     }
