@@ -214,15 +214,22 @@ GameState Gameplay_update(void) {
     
     const RaceState* state = Race_GetState();
     
+    // CHANGED: Fixed best time saving and display logic
     // Save best time once when race finishes (NOT in VBlank - safe here!)
     if (state->raceFinished && !hasSavedBestTime) {
         Map currentMap = GameContext_GetMap();
+        
+        // Try to save the time (returns true if it's a new record)
         isNewRecord = StoragePB_SaveBestTime(currentMap, totalRaceMin, totalRaceSec, totalRaceMsec);
         
-        // Always update best time display
-        bestRaceMin = totalRaceMin;
-        bestRaceSec = totalRaceSec;
-        bestRaceMsec = totalRaceMsec;
+        // CHANGED: Load the actual best time from file instead of always using current time
+        // This ensures we display the real best time, not just the current race time
+        if (!StoragePB_LoadBestTime(currentMap, &bestRaceMin, &bestRaceSec, &bestRaceMsec)) {
+            // No best time exists (shouldn't happen after save, but handle it)
+            bestRaceMin = totalRaceMin;
+            bestRaceSec = totalRaceSec;
+            bestRaceMsec = totalRaceMsec;
+        }
         
         hasSavedBestTime = true;
     }
@@ -231,7 +238,7 @@ GameState Gameplay_update(void) {
     if (state->raceFinished && state->finishDelayTimer == 0) {
         finishDisplayCounter++;
         
-        // After 5 seconds, transition to PLAYAGAIN state
+        // After 2.5 seconds, transition to PLAYAGAIN state
         if (finishDisplayCounter >= FINISH_DISPLAY_FRAMES) {
             return PLAYAGAIN;  // Let main.c handle the transition
         }
@@ -371,7 +378,7 @@ void Gameplay_OnVBlank(void) {
     // Check if race is finished and showing final time
     const RaceState* state = Race_GetState();
     if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES) {
-        // Display final time for 5 seconds
+        // Display final time for 2.5 seconds
         displayFinalTime(totalRaceMin, totalRaceSec, totalRaceMsec);
         return;
     }
@@ -430,11 +437,12 @@ void Gameplay_OnVBlank(void) {
             raceMin = 0;
             raceSec = 0;
             raceMsec = 0;
-        } else if (!hasSavedBestTime) {
+        } else {
             // RACE COMPLETED!
             Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
             finishDisplayCounter = 0;
-            hasSavedBestTime = true;
+            // CHANGED: Removed hasSavedBestTime = true from here
+            // Let Gameplay_update() handle the save flag to prevent race condition
         }
     }
 
