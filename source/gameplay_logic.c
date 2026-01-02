@@ -275,9 +275,14 @@ void Race_Tick(void) {
 
     Items_Update();
 
-    // Calculate scroll position for collision detection
-    int scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
-    int scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
+
+    // Calculate scroll position based on car's CENTER (not top-left corner)
+    int carCenterX = FixedToInt(player->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carCenterY = FixedToInt(player->position.y) + CAR_SPRITE_CENTER_OFFSET;
+    
+    int scrollX = carCenterX - (SCREEN_WIDTH / 2);
+    int scrollY = carCenterY - (SCREEN_HEIGHT / 2);
+    
     if (scrollX < 0)
         scrollX = 0;
     if (scrollY < 0)
@@ -291,12 +296,28 @@ void Race_Tick(void) {
     Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
 
     Car_Update(player);
-    clampToMapBounds(player, KartMania.playerIndex);
+    clampToMapBounds(player, KartMania.playerIndex);  // This handles wall collision
     checkCheckpointProgression(player, KartMania.playerIndex);
 
     if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
         collisionLockoutTimer[KartMania.playerIndex]--;
     }
+
+    
+    // NEW: Network synchronization for multiplayer
+    if (isMultiplayerRace) {
+        networkUpdateCounter++;
+        if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
+            // Send my car state
+            Multiplayer_SendCarState(player);
+
+            // Receive others' car states
+            Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
+
+            networkUpdateCounter = 0;
+        }
+    }
+
 }
 
 //=============================================================================
@@ -347,12 +368,13 @@ static void updateCountdown(void) {
 // Checkpoint System
 //=============================================================================
 static void checkCheckpointProgression(const Car* car, int carIndex) {
-    int carX = FixedToInt(car->position.x);
-    int carY = FixedToInt(car->position.y);
+    int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
 
     bool isOnLeftSide = (carX < CHECKPOINT_DIVIDE_X);
     bool isOnTopSide = (carY < CHECKPOINT_DIVIDE_Y);
 
+    // ... rest of function stays the same
     switch (cpState[carIndex]) {
         case CP_STATE_START:
             if (!wasOnTopSide[carIndex] && isOnTopSide) {
@@ -390,40 +412,32 @@ static void checkCheckpointProgression(const Car* car, int carIndex) {
 // Finish Line Detection
 //=============================================================================
 static bool checkFinishLineCross(const Car* car, int carIndex) {
-    int carX = FixedToInt(car->position.x);
-    int carY = FixedToInt(car->position.y);
-
-    bool inXRange = (carX >= FINISH_LINE_X_MIN && carX <= FINISH_LINE_X_MAX);
-
-    if (!inXRange) {
-        wasAboveFinishLine[carIndex] = (carY < FINISH_LINE_Y);
-        return false;
-    }
-
+    int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
+    
     bool isNowAbove = (carY < FINISH_LINE_Y);
     bool crossedLine = !wasAboveFinishLine[carIndex] && isNowAbove;
-
     wasAboveFinishLine[carIndex] = isNowAbove;
-
+    
     if (crossedLine && !hasCompletedFirstCrossing[carIndex]) {
         hasCompletedFirstCrossing[carIndex] = true;
         return false;
     }
-
+    
     if (crossedLine && cpState[carIndex] == CP_STATE_READY_FOR_LAP) {
         cpState[carIndex] = CP_STATE_START;
         return true;
     }
-
+    
     return false;
 }
-
 //=============================================================================
 // Terrain Applications
 //=============================================================================
 static void applyTerrainEffects(Car* car) {
-    int carX = FixedToInt(car->position.x);
-    int carY = FixedToInt(car->position.y);
+    int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
+    
     if (Terrain_IsOnSand(carX, carY, loadedQuadrant)) {
         car->friction = SAND_FRICTION;
         if (car->speed > SAND_MAX_SPEED) {
@@ -508,8 +522,9 @@ static void handlePlayerInput(Car* player, int carIndex) {
 }
 
 static void clampToMapBounds(Car* car, int carIndex) {
-    int carX = FixedToInt(car->position.x);
-    int carY = FixedToInt(car->position.y);
+    // Get the visual center of the car (where it actually appears on screen)
+    int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
 
     QuadrantID quad = determineCarQuadrant(carX, carY);
 
@@ -527,9 +542,10 @@ static void clampToMapBounds(Car* car, int carIndex) {
         }
     }
 
-    Q16_8 minPos = IntToFixed(0);
-    Q16_8 maxPosX = IntToFixed(1024 - 32);
-    Q16_8 maxPosY = IntToFixed(1024 - 32);
+    // Map bounds should account for the sprite center offset
+    Q16_8 minPos = IntToFixed(-CAR_SPRITE_CENTER_OFFSET);
+    Q16_8 maxPosX = IntToFixed(1024 - CAR_SPRITE_CENTER_OFFSET);
+    Q16_8 maxPosY = IntToFixed(1024 - CAR_SPRITE_CENTER_OFFSET);
 
     if (car->position.x < minPos)
         car->position.x = minPos;

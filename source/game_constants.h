@@ -11,6 +11,16 @@
  * rendering constants, and other numeric values used throughout the codebase.
  */
 
+
+//=============================================================================
+// Rendering & Display Constants
+//=============================================================================
+
+// Sprite constants
+#define CAR_SPRITE_SIZE 32
+#define CAR_SPRITE_CENTER_OFFSET 16  // Half of sprite size for centering
+#define CAR_RADIUS 12  // Collision radius (adjust if needed - currently undefined in your code)
+
 //=============================================================================
 // Physics & Movement Constants
 //=============================================================================
@@ -62,8 +72,6 @@
 #define START_FACING_ANGLE ANGLE_UP
 
 #define FINISH_LINE_Y 580
-#define FINISH_LINE_X_MIN 900
-#define FINISH_LINE_X_MAX 960
 
 #define CHECKPOINT_DIVIDE_X 512
 #define CHECKPOINT_DIVIDE_Y 512
