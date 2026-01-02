@@ -28,7 +28,7 @@
 //=============================================================================
 // Constants
 //=============================================================================
-#define FINISH_DISPLAY_FRAMES 300  // 5 seconds at 60fps to show final time
+#define FINISH_DISPLAY_FRAMES 150  // 2.5 seconds at 60fps to show final time
 
 //=============================================================================
 // Private State
@@ -438,11 +438,11 @@ void Gameplay_OnVBlank(void) {
         }
     }
 
-    int carX = FixedToInt(player->position.x);
-    int carY = FixedToInt(player->position.y);
+    int carCenterX = FixedToInt(player->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carCenterY = FixedToInt(player->position.y) + CAR_SPRITE_CENTER_OFFSET;
 
-    scrollX = carX - (SCREEN_WIDTH / 2);
-    scrollY = carY - (SCREEN_HEIGHT / 2);
+    scrollX = carCenterX - (SCREEN_WIDTH / 2);
+    scrollY = carCenterY - (SCREEN_HEIGHT / 2);
 
     if (scrollX < 0)
         scrollX = 0;
@@ -470,6 +470,8 @@ void Gameplay_OnVBlank(void) {
     //=========================================================================
     if (state->gameMode == SinglePlayer) {
         // SINGLE PLAYER: Only render the player's car at OAM slot 41
+        int carX = FixedToInt(player->position.x);
+        int carY = FixedToInt(player->position.y);
         int screenX = carX - scrollX - 16;
         int screenY = carY - scrollY - 16;
 
@@ -637,7 +639,7 @@ static void renderCountdown(CountdownState state) {
             printDigit(map, 1, centerX, centerY);
             break;
         case COUNTDOWN_GO:
-            printDigit(map, 0, centerX - 2, centerY);
+            printDigit(map, 0, centerX, centerY);
             break;
         case COUNTDOWN_FINISHED:
             break;
