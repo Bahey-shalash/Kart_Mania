@@ -65,20 +65,22 @@ static bool hasSavedBestTime = false;
 typedef struct {
     const unsigned int* tiles;
     const unsigned short* map;
+    const unsigned short* palette;  // ADDED: Each quadrant has its own palette
     unsigned int tilesLen;
+    unsigned int paletteLen;  // ADDED: Palette length
 } QuadrantData;
 
 static const QuadrantData quadrantData[9] = {
-    {scorching_sands_TLTiles, scorching_sands_TLMap, scorching_sands_TLTilesLen},
-    {scorching_sands_TCTiles, scorching_sands_TCMap, scorching_sands_TCTilesLen},
-    {scorching_sands_TRTiles, scorching_sands_TRMap, scorching_sands_TRTilesLen},
-    {scorching_sands_MLTiles, scorching_sands_MLMap, scorching_sands_MLTilesLen},
-    {scorching_sands_MCTiles, scorching_sands_MCMap, scorching_sands_MCTilesLen},
-    {scorching_sands_MRTiles, scorching_sands_MRMap, scorching_sands_MRTilesLen},
-    {scorching_sands_BLTiles, scorching_sands_BLMap, scorching_sands_BLTilesLen},
-    {scorching_sands_BCTiles, scorching_sands_BCMap, scorching_sands_BCTilesLen},
-    {scorching_sands_BRTiles, scorching_sands_BRMap, scorching_sands_BRTilesLen}};
-
+    {scorching_sands_TLTiles, scorching_sands_TLMap, scorching_sands_TLPal, scorching_sands_TLTilesLen, scorching_sands_TLPalLen},
+    {scorching_sands_TCTiles, scorching_sands_TCMap, scorching_sands_TCPal, scorching_sands_TCTilesLen, scorching_sands_TCPalLen},
+    {scorching_sands_TRTiles, scorching_sands_TRMap, scorching_sands_TRPal, scorching_sands_TRTilesLen, scorching_sands_TRPalLen},
+    {scorching_sands_MLTiles, scorching_sands_MLMap, scorching_sands_MLPal, scorching_sands_MLTilesLen, scorching_sands_MLPalLen},
+    {scorching_sands_MCTiles, scorching_sands_MCMap, scorching_sands_MCPal, scorching_sands_MCTilesLen, scorching_sands_MCPalLen},
+    {scorching_sands_MRTiles, scorching_sands_MRMap, scorching_sands_MRPal, scorching_sands_MRTilesLen, scorching_sands_MRPalLen},
+    {scorching_sands_BLTiles, scorching_sands_BLMap, scorching_sands_BLPal, scorching_sands_BLTilesLen, scorching_sands_BLPalLen},
+    {scorching_sands_BCTiles, scorching_sands_BCMap, scorching_sands_BCPal, scorching_sands_BCTilesLen, scorching_sands_BCPalLen},
+    {scorching_sands_BRTiles, scorching_sands_BRMap, scorching_sands_BRPal, scorching_sands_BRTilesLen, scorching_sands_BRPalLen}
+};
 //=============================================================================
 // Private Prototypes
 //=============================================================================
@@ -686,7 +688,9 @@ static void configureBackground(void) {
 
     BGCTRL[0] =
         BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
-    dmaCopy(scorching_sands_TLPal, BG_PALETTE, scorching_sands_TLPalLen);
+    
+    // CHANGED: Don't load palette here - it will be loaded in loadQuadrant()
+    // based on currentQuadrant (which is QUAD_BR at start)
 
     // Sub screen setup with numbers tileset
     BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
@@ -696,8 +700,6 @@ static void configureBackground(void) {
     BG_PALETTE_SUB[1] = ARGB16(1, 0, 0, 0);
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
     updateChronoDisp_Sub(-1, -1, -1);
-    // Reserve BG1 on sub for console (4bpp, separate tile/map blocks)
-    // BGCTRL_SUB[1] = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(31) | BG_TILE_BASE(2);
 }
 
 // static void configureSprite(void) {
@@ -759,9 +761,15 @@ static void configureConsole(void) {
 //=============================================================================
 static void loadQuadrant(QuadrantID quad) {
     const QuadrantData* data = &quadrantData[quad];
-
+     // CHANGED: Clear the entire palette first to avoid color pollution
+    memset(BG_PALETTE, 0, 512);  // 256 colors × 2 bytes = 512 bytes
+    // CHANGED: Load tiles for this quadrant
     dmaCopy(data->tiles, BG_TILE_RAM(1), data->tilesLen);
+    
+    // CHANGED: Load palette for this quadrant
+    dmaCopy(data->palette, BG_PALETTE, data->paletteLen);
 
+    // Load the map data for this quadrant
     for (int i = 0; i < 32; i++) {
         dmaCopy(&data->map[i * 64], &BG_MAP_RAM(0)[i * 32], 64);
         dmaCopy(&data->map[i * 64 + 32], &BG_MAP_RAM(1)[i * 32], 64);
