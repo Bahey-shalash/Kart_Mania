@@ -185,4 +185,18 @@ void Multiplayer_SendItemBoxPickup(int boxIndex);
  */
 int Multiplayer_ReceiveItemBoxPickup(void);
 
+
+/**
+ * Nuclear option: Completely reset all multiplayer/WiFi state
+ * Use this when returning to home page or when things are stuck
+ */
+void Multiplayer_NukeConnectivity(void);
+
+/**
+ * Get debug statistics (for troubleshooting)
+ * @param sentCount - Output: total packets sent
+ * @param receivedCount - Output: total packets received
+ */
+void Multiplayer_GetDebugStats(int* sentCount, int* receivedCount);
+
 #endif  // MULTIPLAYER_H

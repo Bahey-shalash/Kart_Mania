@@ -2,6 +2,7 @@
  * Kart Mania - Main Source File
  */
 #include <nds.h>
+#include <dswifi9.h>
 #include "context.h"
 #include "game_types.h"
 #include "gameplay.h"
@@ -21,7 +22,7 @@
 //=============================================================================
 static GameState update_state(GameState state);
 static void init_state(GameState state);
-static void cleanup_state(GameState state);
+static void cleanup_state(GameState state, GameState nextState);
 
 //=============================================================================
 // MAIN
@@ -29,38 +30,47 @@ static void cleanup_state(GameState state);
 int main(void) {
     // Initialize storage first (includes fatInitDefault)
     bool storageAvailable = Storage_Init();
-    
+
     // Initialize context with hardcoded defaults
     GameContext_InitDefaults();
     GameContext* ctx = GameContext_Get();
-    
+
     // If storage available, load saved settings (overwrites defaults)
     if (storageAvailable) {
         Storage_LoadSettings();
     }
-    
+
     initSoundLibrary();
     LoadALLSoundFX();
     loadMUSIC();
-    
+
     // enables Music because default sound effect is true
     GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
-    
+
+    // Initialize WiFi stack ONCE at program start (critical for reconnection)
+    // DO NOT call Wifi_InitDefault() again later - just connect/disconnect
+    Wifi_InitDefault(false);
+
     init_state(ctx->currentGameState);
-    
+
     while (true) {
+        // Update DSWifi state (critical for multiplayer)
+        Wifi_Update();
+
         GameState nextState = update_state(ctx->currentGameState);
-        
+
         if (nextState != ctx->currentGameState) {
-            cleanup_state(ctx->currentGameState);
+            cleanup_state(ctx->currentGameState, nextState);
             ctx->currentGameState = nextState;
+            // Note: Multiplayer_NukeConnectivity() is called by HomePage_initialize()
+            // No need to call it here - let each state handle its own init
             video_nuke();
             init_state(nextState);
         }
-        
+
         swiWaitForVBlank();
     }
-    
+
     UnloadALLSoundFX();
     return 0;
 }
@@ -110,7 +120,7 @@ static void init_state(GameState state) {
     }
 }
 
-static void cleanup_state(GameState state) {
+static void cleanup_state(GameState state, GameState nextState) {
     switch (state) {
         case HOME_PAGE:
             HomePage_Cleanup();
@@ -118,11 +128,17 @@ static void cleanup_state(GameState state) {
         case MAPSELECTION:
             break;
         case MULTIPLAYER_LOBBY:
-            // Nothing to cleanup here (Multiplayer_Cleanup called elsewhere if needed)
+            // Keep connection alive only when heading into gameplay
+            if (nextState != GAMEPLAY && GameContext_IsMultiplayerMode()) {
+                Multiplayer_Cleanup();
+                GameContext_SetMultiplayerMode(false);
+            }
             break;
         case GAMEPLAY:
+            RaceTick_TimerStop();  // Stop physics/race timers
             Gameplay_Cleanup();
             Race_Stop();
+            // Only cleanup multiplayer if we were in multiplayer mode
             if (GameContext_IsMultiplayerMode()) {
                 Multiplayer_Cleanup();
                 GameContext_SetMultiplayerMode(false);
@@ -131,6 +147,9 @@ static void cleanup_state(GameState state) {
         case SETTINGS:
             break;
         case PLAYAGAIN:
+            // IMPORTANT: Don't cleanup multiplayer here either!
+            // The player might choose "YES" to play again, and we need
+            // to keep the WiFi connection alive
             break;
     }
 }

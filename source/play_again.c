@@ -10,6 +10,7 @@
 #include "gameplay_logic.h"
 #include "playagain.h"
 #include "sound.h"
+#include "multiplayer.h"
 
 //=============================================================================
 // Private constants / config
@@ -26,8 +27,8 @@ static PlayAgainButton lastSelected = PA_BTN_NONE;
 //=============================================================================
 // Private assets / tables (tiles for highlighting)
 //=============================================================================
-static const u8 selectionTileYes[64] = {[0 ... 63] = PA_SELECTION_PAL_BASE};      // YES
-static const u8 selectionTileNo[64] = {[0 ... 63] = PA_SELECTION_PAL_BASE + 1};   // NO
+static const u8 selectionTileYes[64] = {[0 ... 63] = PA_SELECTION_PAL_BASE};     // YES
+static const u8 selectionTileNo[64] = {[0 ... 63] = PA_SELECTION_PAL_BASE + 1};  // NO
 
 //=============================================================================
 // Private function prototypes
@@ -71,9 +72,19 @@ GameState PlayAgain_Update(void) {
             case PA_BTN_YES:
                 PlayCLICKSFX();
                 return GAMEPLAY;  // Restart race
+
             case PA_BTN_NO:
                 PlayCLICKSFX();
-                return HOME_PAGE;  // Go to home
+
+                // CRITICAL: Stop race timers before multiplayer cleanup
+                RaceTick_TimerStop();
+
+                if (GameContext_IsMultiplayerMode()) {
+                    Multiplayer_Cleanup();
+                    GameContext_SetMultiplayerMode(false);
+                }
+                return HOME_PAGE;
+
             default:
                 break;
         }
@@ -81,10 +92,17 @@ GameState PlayAgain_Update(void) {
 
     // Allow SELECT to quit
     if (keysDown() & KEY_SELECT) {
+        // CRITICAL: Stop race timers before multiplayer cleanup
+        RaceTick_TimerStop();
+
+        if (GameContext_IsMultiplayerMode()) {
+            Multiplayer_Cleanup();
+            GameContext_SetMultiplayerMode(false);
+        }
         return HOME_PAGE;
     }
 
-    return PLAYAGAIN;  // Stay on PLAYAGAIN state
+    return PLAYAGAIN;
 }
 
 void PlayAgain_OnVBlank(void) {
@@ -127,7 +145,7 @@ static void configBG_Sub_PA(void) {
     // Draw selection areas
     drawSelectionRect(PA_BTN_YES, 0);  // Tile index 0 for YES
     drawSelectionRect(PA_BTN_NO, 1);   // Tile index 1 for NO
-    
+
     // Immediately show YES as selected (like map selection does)
     PA_setSelectionTint(PA_BTN_YES, true);
     lastSelected = PA_BTN_YES;
@@ -144,14 +162,14 @@ static void drawSelectionRect(PlayAgainButton btn, u16 tileIndex) {
             endX = 16;
             endY = 20;
             break;
-            
-        case PA_BTN_NO:   // NO button circle
+
+        case PA_BTN_NO:  // NO button circle
             startX = 17;
             startY = 10;
             endX = 27;
             endY = 20;
             break;
-            
+
         default:
             return;
     }
@@ -164,9 +182,9 @@ static void drawSelectionRect(PlayAgainButton btn, u16 tileIndex) {
 static void PA_setSelectionTint(PlayAgainButton btn, bool show) {
     if (btn < 0 || btn >= PA_BTN_COUNT)
         return;
-    
+
     int paletteIndex = PA_SELECTION_PAL_BASE + btn;
-    
+
     // Use different highlight colors
     if (show) {
         if (btn == PA_BTN_YES) {
