@@ -453,8 +453,10 @@ void Gameplay_OnVBlank(void) {
             // RACE COMPLETED!
             Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
             finishDisplayCounter = 0;
-            // CHANGED: Removed hasSavedBestTime = true from here
-            // Let Gameplay_update() handle the save flag to prevent race condition
+                    // NEW: Hide item sprite when race finishes
+            oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,
+                SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false, false, false);
+            oamUpdate(&oamSub);
         }
     }
 
@@ -759,11 +761,10 @@ static void loadItemDisplay_Sub(void) {
     // Initialize sub screen OAM
     oamInit(&oamSub, SpriteMapping_1D_32, false);
     
-    // Allocate graphics for item sprite (16x16, 16-color like main screen items)
-    itemDisplayGfx_Sub = oamAllocateGfx(&oamSub, SpriteSize_16x16, SpriteColorFormat_16Color);
+    // CHANGED: Allocate for largest sprite size (32x32) to handle oil slick
+    itemDisplayGfx_Sub = oamAllocateGfx(&oamSub, SpriteSize_32x32, SpriteColorFormat_16Color);
     
     // Copy all item palettes to sub screen sprite palette
-    // Use the same palette layout as main screen for consistency
     dmaCopy(bananaPal, &SPRITE_PALETTE_SUB[32], bananaPalLen);
     dmaCopy(bombPal, &SPRITE_PALETTE_SUB[48], bombPalLen);
     dmaCopy(green_shellPal, &SPRITE_PALETTE_SUB[64], green_shellPalLen);
@@ -772,7 +773,7 @@ static void loadItemDisplay_Sub(void) {
     dmaCopy(oil_slickPal, &SPRITE_PALETTE_SUB[112], oil_slickPalLen);
     
     // Initially hide the item sprite
-    oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_16x16,
+    oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,  // CHANGED: to 32x32
            SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false, false, false);
     oamUpdate(&oamSub);
 }
@@ -782,7 +783,7 @@ static void updateItemDisplay_Sub(void) {
     
     if (player->item == ITEM_NONE) {
         // Hide sprite when no item
-        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_16x16,
+        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,  // CHANGED: to 32x32
                SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false, false, false);
     } else {
         // Position in top-right corner
@@ -792,41 +793,49 @@ static void updateItemDisplay_Sub(void) {
         // Determine which graphics to display and which palette to use
         const unsigned int* itemTiles = NULL;
         int paletteNum = 0;
+        SpriteSize spriteSize = SpriteSize_16x16;  // NEW: Variable sprite size
         
         switch (player->item) {
             case ITEM_BANANA:
                 itemTiles = bananaTiles;
-                paletteNum = 2;  // Same as main screen
+                paletteNum = 2;
+                spriteSize = SpriteSize_16x16;
                 break;
             case ITEM_BOMB:
                 itemTiles = bombTiles;
                 paletteNum = 3;
+                spriteSize = SpriteSize_16x16;
                 break;
             case ITEM_GREEN_SHELL:
                 itemTiles = green_shellTiles;
                 paletteNum = 4;
+                spriteSize = SpriteSize_16x16;
                 break;
             case ITEM_RED_SHELL:
                 itemTiles = red_shellTiles;
                 paletteNum = 5;
+                spriteSize = SpriteSize_16x16;
                 break;
             case ITEM_MISSILE:
                 itemTiles = missileTiles;
                 paletteNum = 6;
+                spriteSize = SpriteSize_16x32;  // CHANGED: Missile is 16x32
                 break;
             case ITEM_OIL:
                 itemTiles = oil_slickTiles;
                 paletteNum = 7;
+                spriteSize = SpriteSize_32x32;  // CHANGED: Oil is 32x32
+                itemX = 208;  // Adjust position for larger sprite (256 - 32 - margin)
                 break;
             case ITEM_MUSHROOM:
-                // Mushroom doesn't have a sprite, use banana as placeholder
                 itemTiles = bananaTiles;
                 paletteNum = 2;
+                spriteSize = SpriteSize_16x16;
                 break;
             case ITEM_SPEEDBOOST:
-                // Speed boost doesn't have a sprite, use red shell as placeholder
                 itemTiles = red_shellTiles;
                 paletteNum = 5;
+                spriteSize = SpriteSize_16x16;
                 break;
             default:
                 itemTiles = NULL;
@@ -838,16 +847,17 @@ static void updateItemDisplay_Sub(void) {
             dmaCopy(itemTiles, itemDisplayGfx_Sub, 
                     (player->item == ITEM_MISSILE) ? missileTilesLen : 
                     (player->item == ITEM_OIL) ? oil_slickTilesLen : 
-                    bananaTilesLen);  // Most items use same size as banana
+                    bananaTilesLen);
             
-            // Display the sprite
-            oamSet(&oamSub, 0, itemX, itemY, 0, paletteNum, SpriteSize_16x16,
+            // Display the sprite with appropriate size
+            oamSet(&oamSub, 0, itemX, itemY, 0, paletteNum, spriteSize,  // CHANGED: Use spriteSize variable
                    SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, false, false, false, false, false);
         }
     }
     
     oamUpdate(&oamSub);
 }
+
 //=============================================================================
 // Private Functions - Quadrant Management
 //=============================================================================
