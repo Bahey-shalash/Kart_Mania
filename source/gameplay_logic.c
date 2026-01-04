@@ -430,8 +430,11 @@ static void applyTerrainEffects(Car* car) {
 // Private Implementation
 //=============================================================================
 static void initCarAtSpawn(Car* car, int index) {
-    Vec2 spawnPos = Vec2_FromInt(START_LINE_X, START_LINE_Y + (index * CAR_SPACING));
-
+    int column = (index % 2);  // 0 = left (even), 1 = right (odd) 
+    int x = START_LINE_X + (column * 32);  // Left column at 904, right at 936
+    int y = START_LINE_Y + (index * 24);     
+    
+    Vec2 spawnPos = Vec2_FromInt(x, y);
     car->position = spawnPos;
     car->speed = 0;
     car->angle512 = START_FACING_ANGLE;
@@ -442,7 +445,6 @@ static void initCarAtSpawn(Car* car, int index) {
     car->maxSpeed = SPEED_50CC;
     car->accelRate = ACCEL_50CC;
     car->friction = FRICTION_50CC;
-
     wasAboveFinishLine[index] = false;
     hasCompletedFirstCrossing[index] = false;
     cpState[index] = CP_STATE_START;

@@ -66,12 +66,14 @@
 // Race Layout (pixel coordinates unless noted)
 //=============================================================================
 
-#define START_LINE_X 920
-#define START_LINE_Y 595
-#define CAR_SPACING 40
+// 904 Left Column  || 32px spacing || 936 Right Column
+#define START_LINE_X 904
+// 580 First Place || 24 px spacing per space || 48px per column
+#define START_LINE_Y 580
+
 #define START_FACING_ANGLE ANGLE_UP
 
-#define FINISH_LINE_Y 580
+#define FINISH_LINE_Y 540
 
 #define CHECKPOINT_DIVIDE_X 512
 #define CHECKPOINT_DIVIDE_Y 512
