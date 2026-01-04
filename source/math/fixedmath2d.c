@@ -12,7 +12,7 @@
  *   - Mat2_Scale, Mat2_Rotate
  */
 
-#include "../math/fixedmath2d.h"
+#include "fixedmath2d.h"
 
 /*=============================================================================
  * SIN/COS LOOKUP TABLE

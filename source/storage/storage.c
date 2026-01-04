@@ -15,9 +15,11 @@
 //=============================================================================
 
 /** Check if a directory exists */
-static bool directoryExists(const char* path) {
-    DIR* dir = opendir(path);
-    if (dir) {
+static bool directoryExists(const char *path)
+{
+    DIR *dir = opendir(path);
+    if (dir)
+    {
         closedir(dir);
         return true;
     }
@@ -25,9 +27,11 @@ static bool directoryExists(const char* path) {
 }
 
 /** Check if a file exists */
-static bool fileExists(const char* path) {
-    FILE* file = fopen(path, "r");
-    if (file) {
+static bool fileExists(const char *path)
+{
+    FILE *file = fopen(path, "r");
+    if (file)
+    {
         fclose(file);
         return true;
     }
@@ -35,8 +39,9 @@ static bool fileExists(const char* path) {
 }
 
 /** Write default settings to a file */
-static bool writeDefaultsToFile(const char* path) {
-    FILE* file = fopen(path, "w+");
+static bool writeDefaultsToFile(const char *path)
+{
+    FILE *file = fopen(path, "w+");
     if (file == NULL)
         return false;
 
@@ -52,47 +57,59 @@ static bool writeDefaultsToFile(const char* path) {
 //=============================================================================
 
 /** Initialize storage (FAT filesystem, create directory and files if needed) */
-bool Storage_Init(void) {
+bool Storage_Init(void)
+{
     if (!fatInitDefault())
         return false;
 
-    if (!directoryExists(STORAGE_DIR)) {
+    if (!directoryExists(STORAGE_DIR))
+    {
         mkdir(STORAGE_DIR, 0777);
     }
 
-    if (!fileExists(DEFAULT_SETTINGS_FILE)) {
+    if (!fileExists(DEFAULT_SETTINGS_FILE))
+    {
         if (!writeDefaultsToFile(DEFAULT_SETTINGS_FILE))
             return false;
     }
 
-    if (!fileExists(SETTINGS_FILE)) {
+    if (!fileExists(SETTINGS_FILE))
+    {
         if (!writeDefaultsToFile(SETTINGS_FILE))
             return false;
     }
 
-    if (!StoragePB_Init()) {
+    if (!StoragePB_Init())
+    {
         return false;
     }
     return true;
 }
 
 /** Load settings from file into GameContext */
-bool Storage_LoadSettings(void) {
-    FILE* file = fopen(SETTINGS_FILE, "r");
+bool Storage_LoadSettings(void)
+{
+    FILE *file = fopen(SETTINGS_FILE, "r");
     if (file == NULL)
         return false;
 
-    GameContext* ctx = GameContext_Get();
+    GameContext *ctx = GameContext_Get();
 
     int wifi = 1, music = 1, soundfx = 1;
     char line[32];
 
-    while (fgets(line, sizeof(line), file) != NULL) {
-        if (strncmp(line, "wifi=", 5) == 0) {
+    while (fgets(line, sizeof(line), file) != NULL)
+    {
+        if (strncmp(line, "wifi=", 5) == 0)
+        {
             wifi = (line[5] == '1') ? 1 : 0;
-        } else if (strncmp(line, "music=", 6) == 0) {
+        }
+        else if (strncmp(line, "music=", 6) == 0)
+        {
             music = (line[6] == '1') ? 1 : 0;
-        } else if (strncmp(line, "soundfx=", 8) == 0) {
+        }
+        else if (strncmp(line, "soundfx=", 8) == 0)
+        {
             soundfx = (line[8] == '1') ? 1 : 0;
         }
     }
@@ -108,10 +125,11 @@ bool Storage_LoadSettings(void) {
 }
 
 /** Save current GameContext settings to file */
-bool Storage_SaveSettings(void) {
-    GameContext* ctx = GameContext_Get();
+bool Storage_SaveSettings(void)
+{
+    GameContext *ctx = GameContext_Get();
 
-    FILE* file = fopen(SETTINGS_FILE, "w+");
+    FILE *file = fopen(SETTINGS_FILE, "w+");
     if (file == NULL)
         return false;
 
@@ -124,7 +142,8 @@ bool Storage_SaveSettings(void) {
 }
 
 /** Reset settings to default values */
-bool Storage_ResetToDefaults(void) {
+bool Storage_ResetToDefaults(void)
+{
     if (!writeDefaultsToFile(SETTINGS_FILE))
         return false;
 

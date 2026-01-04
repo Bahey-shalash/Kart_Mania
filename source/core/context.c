@@ -1,6 +1,6 @@
 // BAHEY------
 
-#include "../core/context.h"
+#include "context.h"
 
 #include "../audio/sound.h"
 

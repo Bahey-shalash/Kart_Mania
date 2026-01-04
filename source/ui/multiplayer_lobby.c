@@ -1,4 +1,4 @@
-#include "../ui/multiplayer_lobby.h"
+#include "multiplayer_lobby.h"
 
 #include <nds.h>
 #include <stdio.h>

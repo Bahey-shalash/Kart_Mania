@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 
-#include "../core/game_types.h"
+#include "game_types.h"
 
 typedef struct {
     struct {

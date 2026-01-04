@@ -1,4 +1,4 @@
-#include "../graphics/graphics.h"
+#include "graphics.h"
 // BAHEY------
 #include <nds.h>
 #include <string.h>

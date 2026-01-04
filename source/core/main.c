@@ -3,8 +3,8 @@
  */
 #include <nds.h>
 #include <dswifi9.h>
-#include "../core/context.h"
-#include "../core/game_types.h"
+#include "context.h"
+#include "game_types.h"
 #include "../gameplay/gameplay.h"
 #include "../gameplay/gameplay_logic.h"
 #include "../graphics/graphics.h"

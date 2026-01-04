@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "../gameplay/items/Items.h"
+#include "items/Items.h"
 #include "../math/fixedmath2d.h"
 
 //=============================================================================
