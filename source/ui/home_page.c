@@ -18,6 +18,29 @@
 #include "kart_home.h"
 
 //=============================================================================
+// Private Types
+//=============================================================================
+
+typedef enum {
+    HOME_BTN_NONE = -1,
+    HOME_BTN_SINGLEPLAYER = 0,
+    HOME_BTN_MULTIPLAYER = 1,
+    HOME_BTN_SETTINGS = 2,
+    HOME_BTN_COUNT
+} HomeButtonSelected;
+
+typedef struct {
+    u16* gfx;
+    int x;
+    int y;
+    int id;
+} HomeKartSprite;
+
+typedef struct {
+    int x, y, width, height;
+} MenuItemHitBox;
+
+//=============================================================================
 // Private Macros
 //=============================================================================
 

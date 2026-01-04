@@ -11,7 +11,27 @@
 #include "map_top.h"
 #include "map_top_clouds.h"
 #include "../audio/sound.h"
-// BAHEY------
+//BAHEY-----
+//=============================================================================
+// Private Types
+//=============================================================================
+
+typedef enum {
+    SP_BTN_NONE = -1,
+    SP_BTN_MAP1 = 0,  // Scorching Sands
+    SP_BTN_MAP2 = 1,  // Alpine Rush
+    SP_BTN_MAP3 = 2,  // Neon Circuit
+    SP_BTN_HOME = 3,  // Home button
+    SP_BTN_COUNT
+} MapSelectionButton;
+
+typedef enum {
+    TILE_SEL_MAP1 = 0,
+    TILE_SEL_MAP2 = 1,
+    TILE_SEL_MAP3 = 2,
+    TILE_SEL_SP_HOME = 3
+} Map_sel_TileIndex;
+
 //=============================================================================
 // Private constants / config
 //=============================================================================

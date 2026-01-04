@@ -1,5 +1,5 @@
 #include "../storage/storage.h"
-// HUGO------
+
 #include <dirent.h>
 #include <fat.h>
 #include <stdio.h>
@@ -9,7 +9,12 @@
 
 #include "../core/context.h"
 #include "../storage/storage_pb.h"
-// Check if a directory exists
+
+//=============================================================================
+// Private Helper Functions
+//=============================================================================
+
+/** Check if a directory exists */
 static bool directoryExists(const char* path) {
     DIR* dir = opendir(path);
     if (dir) {
@@ -19,7 +24,7 @@ static bool directoryExists(const char* path) {
     return false;
 }
 
-// Check if a file exists
+/** Check if a file exists */
 static bool fileExists(const char* path) {
     FILE* file = fopen(path, "r");
     if (file) {
@@ -29,7 +34,7 @@ static bool fileExists(const char* path) {
     return false;
 }
 
-// Write default settings to a file
+/** Write default settings to a file */
 static bool writeDefaultsToFile(const char* path) {
     FILE* file = fopen(path, "w+");
     if (file == NULL)
@@ -42,34 +47,36 @@ static bool writeDefaultsToFile(const char* path) {
     return true;
 }
 
+//=============================================================================
+// Public API
+//=============================================================================
+
+/** Initialize storage (FAT filesystem, create directory and files if needed) */
 bool Storage_Init(void) {
-    // Initialize FAT filesystem
     if (!fatInitDefault())
         return false;
 
-    // Create /kart-mania directory if it doesn't exist
     if (!directoryExists(STORAGE_DIR)) {
         mkdir(STORAGE_DIR, 0777);
     }
 
-    // Create default_settings.txt if it doesn't exist
     if (!fileExists(DEFAULT_SETTINGS_FILE)) {
         if (!writeDefaultsToFile(DEFAULT_SETTINGS_FILE))
             return false;
     }
 
-    // Create settings.txt if it doesn't exist (copy defaults)
     if (!fileExists(SETTINGS_FILE)) {
         if (!writeDefaultsToFile(SETTINGS_FILE))
             return false;
     }
-    // Initialize personal best times
+
     if (!StoragePB_Init()) {
         return false;
     }
     return true;
 }
 
+/** Load settings from file into GameContext */
 bool Storage_LoadSettings(void) {
     FILE* file = fopen(SETTINGS_FILE, "r");
     if (file == NULL)
@@ -92,7 +99,7 @@ bool Storage_LoadSettings(void) {
 
     fclose(file);
 
-    // Apply to context (don't trigger side effects yet - main.c will do that)
+    // Apply to context
     ctx->userSettings.wifiEnabled = wifi;
     ctx->userSettings.musicEnabled = music;
     ctx->userSettings.soundFxEnabled = soundfx;
@@ -100,6 +107,7 @@ bool Storage_LoadSettings(void) {
     return true;
 }
 
+/** Save current GameContext settings to file */
 bool Storage_SaveSettings(void) {
     GameContext* ctx = GameContext_Get();
 
@@ -115,12 +123,10 @@ bool Storage_SaveSettings(void) {
     return true;
 }
 
+/** Reset settings to default values */
 bool Storage_ResetToDefaults(void) {
-    // For now, just write hardcoded defaults to settings.txt
-    // Later could copy from default_settings.txt
     if (!writeDefaultsToFile(SETTINGS_FILE))
         return false;
 
-    // Reload into context
     return Storage_LoadSettings();
 }

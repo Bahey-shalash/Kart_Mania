@@ -15,6 +15,32 @@
 #include "settings_top.h"
 
 //=============================================================================
+// Private Types
+//=============================================================================
+
+typedef enum {
+    SETTINGS_BTN_NONE = -1,
+    SETTINGS_BTN_WIFI = 0,
+    SETTINGS_BTN_MUSIC = 1,
+    SETTINGS_BTN_SOUND_FX = 2,
+    SETTINGS_BTN_SAVE = 3,
+    SETTINGS_BTN_BACK = 4,
+    SETTINGS_BTN_HOME = 5,
+    SETTINGS_BTN_COUNT
+} SettingsButtonSelected;
+
+typedef enum {
+    TILE_RED = 3,
+    TILE_GREEN = 4,
+    TILE_SEL_WIFI = 5,
+    TILE_SEL_MUSIC = 6,
+    TILE_SEL_SOUNDFX = 7,
+    TILE_SEL_SAVE = 8,
+    TILE_SEL_BACK = 9,
+    TILE_SEL_HOME = 10
+} SettingsTileIndex;
+
+//=============================================================================
 // Private Assets
 //=============================================================================
 

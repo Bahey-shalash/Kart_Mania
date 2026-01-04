@@ -2,8 +2,14 @@
 
 #include <stdio.h>
 #include <string.h>
-// HUGO------
-// Helper function to convert map enum to string
+
+#include "../core/game_constants.h"
+
+//=============================================================================
+// Private Helper Functions
+//=============================================================================
+
+/** Convert map enum to string representation */
 static const char* mapToString(Map map) {
     switch (map) {
         case ScorchingSands:
@@ -17,7 +23,7 @@ static const char* mapToString(Map map) {
     }
 }
 
-// Helper function to compare times (returns true if time1 < time2)
+/** Compare two times (returns true if time1 is faster than time2) */
 static bool isTimeFaster(int min1, int sec1, int msec1, int min2, int sec2, int msec2) {
     if (min1 < min2)
         return true;
@@ -30,7 +36,7 @@ static bool isTimeFaster(int min1, int sec1, int msec1, int min2, int sec2, int 
     return msec1 < msec2;
 }
 
-// Check if a file exists
+/** Check if a file exists at the given path */
 static bool fileExists(const char* path) {
     FILE* file = fopen(path, "r");
     if (file) {
@@ -40,8 +46,12 @@ static bool fileExists(const char* path) {
     return false;
 }
 
+//=============================================================================
+// Public API
+//=============================================================================
+
+/** Initialize personal best times storage (creates file if needed) */
 bool StoragePB_Init(void) {
-    // Create best_times.txt if it doesn't exist (empty file is fine)
     if (!fileExists(BEST_TIMES_FILE)) {
         FILE* file = fopen(BEST_TIMES_FILE, "w+");
         if (file == NULL) {
@@ -52,10 +62,11 @@ bool StoragePB_Init(void) {
     return true;
 }
 
+/** Load personal best time for a specific map */
 bool StoragePB_LoadBestTime(Map map, int* min, int* sec, int* msec) {
     FILE* file = fopen(BEST_TIMES_FILE, "r");
     if (file == NULL) {
-        return false;  // No best times file exists yet
+        return false;
     }
 
     const char* mapName = mapToString(map);
@@ -65,7 +76,8 @@ bool StoragePB_LoadBestTime(Map map, int* min, int* sec, int* msec) {
     while (fgets(line, sizeof(line), file) != NULL) {
         char mapStr[32];
         int m, s, ms;
-        // Format: MapName=MM:SS.mmm
+
+        // Parse format: MapName=MM:SS.mmm
         if (sscanf(line, "%[^=]=%d:%d.%d", mapStr, &m, &s, &ms) == 4) {
             if (strcmp(mapStr, mapName) == 0) {
                 *min = m;
@@ -81,6 +93,7 @@ bool StoragePB_LoadBestTime(Map map, int* min, int* sec, int* msec) {
     return found;
 }
 
+/** Save a new personal best time (only if faster than existing record) */
 bool StoragePB_SaveBestTime(Map map, int min, int sec, int msec) {
     // Check if there's an existing time
     int oldMin, oldSec, oldMsec;
@@ -89,19 +102,19 @@ bool StoragePB_SaveBestTime(Map map, int min, int sec, int msec) {
     // If we had a previous time and the new time isn't faster, don't save
     if (hadPreviousTime) {
         if (!isTimeFaster(min, sec, msec, oldMin, oldSec, oldMsec)) {
-            return false;  // Not a new record
+            return false;
         }
     }
 
     // Read all existing times into memory
-    char lines[10][64];  // Support up to 10 map records
+    char lines[STORAGE_MAX_MAP_RECORDS][64];
     int lineCount = 0;
     bool updatedExisting = false;
 
     FILE* file = fopen(BEST_TIMES_FILE, "r");
     if (file != NULL) {
         char line[64];
-        while (fgets(line, sizeof(line), file) != NULL && lineCount < 10) {
+        while (fgets(line, sizeof(line), file) != NULL && lineCount < STORAGE_MAX_MAP_RECORDS) {
             char mapStr[32];
             if (sscanf(line, "%[^=]=", mapStr) == 1) {
                 if (strcmp(mapStr, mapToString(map)) == 0) {
@@ -121,7 +134,7 @@ bool StoragePB_SaveBestTime(Map map, int min, int sec, int msec) {
     }
 
     // If we didn't update an existing entry, add a new one
-    if (!updatedExisting && lineCount < 10) {
+    if (!updatedExisting && lineCount < STORAGE_MAX_MAP_RECORDS) {
         snprintf(lines[lineCount], sizeof(lines[lineCount]), "%s=%02d:%02d.%03d\n",
                  mapToString(map), min, sec, msec);
         lineCount++;
@@ -138,5 +151,5 @@ bool StoragePB_SaveBestTime(Map map, int min, int sec, int msec) {
     }
 
     fclose(file);
-    return true;  // New record!
+    return true;
 }

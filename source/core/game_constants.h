@@ -18,8 +18,7 @@
 // Sprite constants
 #define CAR_SPRITE_SIZE 32
 #define CAR_SPRITE_CENTER_OFFSET 16  // Half of sprite size for centering
-#define CAR_RADIUS \
-    12  // Collision radius (adjust if needed - currently undefined in your code)
+#define CAR_RADIUS 16  // Collision radius for 32x32 sprite
 
 //=============================================================================
 // Physics & Movement Constants
@@ -363,5 +362,35 @@
 #define HOME_KART_INITIAL_X -64
 #define HOME_KART_Y 120
 #define HOME_KART_OFFSCREEN_X 256
+
+//=============================================================================
+// Storage Constants
+//=============================================================================
+
+// Personal best times storage limits
+#define STORAGE_MAX_MAP_RECORDS 10
+
+//=============================================================================
+// Terrain Detection Constants
+//=============================================================================
+
+// Track colors (5-bit RGB)
+#define TERRAIN_GRAY_MAIN_R5 12
+#define TERRAIN_GRAY_MAIN_G5 12
+#define TERRAIN_GRAY_MAIN_B5 12
+#define TERRAIN_GRAY_LIGHT_R5 14
+#define TERRAIN_GRAY_LIGHT_G5 14
+#define TERRAIN_GRAY_LIGHT_B5 14
+
+// Sand colors (5-bit RGB)
+#define TERRAIN_SAND_PRIMARY_R5 20
+#define TERRAIN_SAND_PRIMARY_G5 18
+#define TERRAIN_SAND_PRIMARY_B5 12
+#define TERRAIN_SAND_SECONDARY_R5 22
+#define TERRAIN_SAND_SECONDARY_G5 20
+#define TERRAIN_SAND_SECONDARY_B5 14
+
+// Color matching tolerance
+#define TERRAIN_COLOR_TOLERANCE_5BIT 1
 
 #endif  // GAME_CONSTANTS_H

@@ -1,61 +1,46 @@
-//=============================================================================
-// terrain_detection.c
-//=============================================================================
 #include "../gameplay/terrain_detection.h"
 
 #include <nds.h>
 #include <stdlib.h>
 
 #include "../core/game_constants.h"
-// HUGO------
-#define QUAD_OFFSET 256
 
-// Gray track colors
-#define GRAY_MAIN_R5 12
-#define GRAY_MAIN_G5 12
-#define GRAY_MAIN_B5 12
-#define GRAY_LIGHT_R5 14
-#define GRAY_LIGHT_G5 14
-#define GRAY_LIGHT_B5 14
+//=============================================================================
+// Private Helper Functions
+//=============================================================================
 
-// Sand colors
-#define SAND_PRIMARY_R5 20
-#define SAND_PRIMARY_G5 18
-#define SAND_PRIMARY_B5 12
-#define SAND_SECONDARY_R5 22
-#define SAND_SECONDARY_G5 20
-#define SAND_SECONDARY_B5 14
-
-#define COLOR_TOLERANCE_5BIT 1  // Tolerance in 5-bit space
-
-// Helper function to check 5-bit color similarity
+/** Check if 5-bit RGB color matches target within tolerance */
 static inline bool colorMatches5bit(int r5, int g5, int b5, int targetR5, int targetG5,
                                     int targetB5, int tolerance) {
     return (abs(r5 - targetR5) <= tolerance && abs(g5 - targetG5) <= tolerance &&
             abs(b5 - targetB5) <= tolerance);
 }
 
-// Helper function to check if 5-bit color is gray track
+/** Check if 5-bit color is gray track (main or light gray) */
 static inline bool isGrayTrack5bit(int r5, int g5, int b5) {
     // Check for main gray (12,12,12)
-    if (colorMatches5bit(r5, g5, b5, GRAY_MAIN_R5, GRAY_MAIN_G5, GRAY_MAIN_B5,
-                         COLOR_TOLERANCE_5BIT)) {
+    if (colorMatches5bit(r5, g5, b5, TERRAIN_GRAY_MAIN_R5, TERRAIN_GRAY_MAIN_G5, TERRAIN_GRAY_MAIN_B5,
+                         TERRAIN_COLOR_TOLERANCE_5BIT)) {
         return true;
     }
     // Check for light gray (14,14,14)
-    if (colorMatches5bit(r5, g5, b5, GRAY_LIGHT_R5, GRAY_LIGHT_G5, GRAY_LIGHT_B5,
-                         COLOR_TOLERANCE_5BIT)) {
+    if (colorMatches5bit(r5, g5, b5, TERRAIN_GRAY_LIGHT_R5, TERRAIN_GRAY_LIGHT_G5, TERRAIN_GRAY_LIGHT_B5,
+                         TERRAIN_COLOR_TOLERANCE_5BIT)) {
         return true;
     }
     return false;
 }
 
+//=============================================================================
+// Public API
+//=============================================================================
+
 bool Terrain_IsOnSand(int x, int y, QuadrantID quad) {
     int col = quad % QUADRANT_GRID_SIZE;
     int row = quad / QUADRANT_GRID_SIZE;
 
-    int quadStartX = col * QUAD_OFFSET;
-    int quadStartY = row * QUAD_OFFSET;
+    int quadStartX = col * QUAD_SIZE;
+    int quadStartY = row * QUAD_SIZE;
 
     int localX = x - quadStartX;
     int localY = y - quadStartY;
@@ -98,8 +83,8 @@ bool Terrain_IsOnSand(int x, int y, QuadrantID quad) {
     }
 
     // SECOND: Check if color matches sand shades (5-bit exact match)
-    return colorMatches5bit(r5, g5, b5, SAND_PRIMARY_R5, SAND_PRIMARY_G5,
-                            SAND_PRIMARY_B5, COLOR_TOLERANCE_5BIT) ||
-           colorMatches5bit(r5, g5, b5, SAND_SECONDARY_R5, SAND_SECONDARY_G5,
-                            SAND_SECONDARY_B5, COLOR_TOLERANCE_5BIT);
+    return colorMatches5bit(r5, g5, b5, TERRAIN_SAND_PRIMARY_R5, TERRAIN_SAND_PRIMARY_G5,
+                            TERRAIN_SAND_PRIMARY_B5, TERRAIN_COLOR_TOLERANCE_5BIT) ||
+           colorMatches5bit(r5, g5, b5, TERRAIN_SAND_SECONDARY_R5, TERRAIN_SAND_SECONDARY_G5,
+                            TERRAIN_SAND_SECONDARY_B5, TERRAIN_COLOR_TOLERANCE_5BIT);
 }

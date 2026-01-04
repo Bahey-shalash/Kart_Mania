@@ -1,8 +1,31 @@
-//=============================================================================
-// wall_collision.c
-//=============================================================================
 #include "../gameplay/wall_collision.h"
-// HUGO------
+
+//=============================================================================
+// Private Types
+//=============================================================================
+
+// Wall segment types
+typedef enum {
+    WALL_HORIZONTAL,  // Constant Y, X range
+    WALL_VERTICAL     // Constant X, Y range
+} WallType;
+
+typedef struct {
+    WallType type;
+    int fixed_coord;  // X for vertical, Y for horizontal
+    int min_range;    // Min X/Y
+    int max_range;    // Max X/Y
+} WallSegment;
+
+typedef struct {
+    const WallSegment* segments;
+    int count;
+} QuadrantWalls;
+
+//=============================================================================
+// Wall Data - Quadrant Definitions
+//=============================================================================
+
 // TL Quadrant (offset: 0, 0) - walls already in correct global coords
 static const WallSegment walls_TL[] = {
     {WALL_VERTICAL, 8, 0, 512},        // good
@@ -121,9 +144,10 @@ static const QuadrantWalls quadrantWalls[9] = {
     {walls_BR, sizeof(walls_BR) / sizeof(WallSegment)}};
 
 //=============================================================================
-// Collision Detection
+// Private Helper Functions
 //=============================================================================
 
+/** Check if car collides with a wall segment */
 static inline bool segmentCollision(const WallSegment* wall, int carX, int carY,
                                     int radius) {
     if (wall->type == WALL_HORIZONTAL) {
@@ -140,6 +164,10 @@ static inline bool segmentCollision(const WallSegment* wall, int carX, int carY,
         return (carY + radius >= wall->min_range && carY - radius <= wall->max_range);
     }
 }
+
+//=============================================================================
+// Public API
+//=============================================================================
 
 bool Wall_CheckCollision(int carX, int carY, int carRadius, QuadrantID quad) {
     if (quad < QUAD_TL || quad > QUAD_BR)
