@@ -157,7 +157,8 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount);
  * @param angle512 - Direction (for projectiles like shells)
  * @param speed - Initial speed (for projectiles)
  */
-void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512, Q16_8 speed);
+void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512, Q16_8 speed,
+                                   int shooterCarIndex);
 
 /**
  * Receive item placements from other players
@@ -166,12 +167,13 @@ void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512, Q
  * - Caller should create the item on their local track
  */
 typedef struct {
-    bool valid;         // True if data is available
-    uint8_t playerID;   // Which player placed the item
-    Item itemType;      // What item was placed
-    Vec2 position;      // Where it was placed
-    int angle512;       // Direction (for projectiles)
-    Q16_8 speed;        // Initial speed (for projectiles)
+    bool valid;           // True if data is available
+    uint8_t playerID;     // Which player placed the item
+    Item itemType;        // What item was placed
+    Vec2 position;        // Where it was placed
+    int angle512;         // Direction (for projectiles)
+    Q16_8 speed;          // Initial speed (for projectiles)
+    int shooterCarIndex;  // Who fired this projectile
 } ItemPlacementData;
 
 ItemPlacementData Multiplayer_ReceiveItemPlacements(void);

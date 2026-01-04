@@ -22,12 +22,12 @@ extern bool WiFi_initialized;
 //=============================================================================
 
 typedef enum {
-    MSG_LOBBY_JOIN,       // "I'm joining the lobby"
-    MSG_LOBBY_UPDATE,     // "I'm still here" (heartbeat)
-    MSG_READY,            // "I pressed SELECT"
-    MSG_LOBBY_ACK,        // "I received your lobby message" (ACK for reliable delivery)
-    MSG_CAR_UPDATE,       // "Here's my car state" (during race)
-    MSG_ITEM_PLACED,      // "I placed/threw an item on the track"
+    MSG_LOBBY_JOIN,    // "I'm joining the lobby"
+    MSG_LOBBY_UPDATE,  // "I'm still here" (heartbeat)
+    MSG_READY,         // "I pressed SELECT"
+    MSG_LOBBY_ACK,     // "I received your lobby message" (ACK for reliable delivery)
+    MSG_CAR_UPDATE,    // "Here's my car state" (during race)
+    MSG_ITEM_PLACED,   // "I placed/threw an item on the track"
     MSG_ITEM_BOX_PICKUP,  // "I picked up an item box"
     MSG_DISCONNECT        // "I'm leaving"
 } MessageType;
@@ -64,11 +64,12 @@ typedef struct {
 
         // For MSG_ITEM_PLACED (item placed on track)
         struct {
-            Item itemType;  // 4 bytes - what item was placed
-            Vec2 position;  // 8 bytes - where it was placed
-            int angle512;   // 4 bytes - direction (for projectiles)
-            Q16_8 speed;    // 4 bytes - initial speed (for projectiles)
-            uint8_t reserved[8];
+            Item itemType;        // 4 bytes - what item was placed
+            Vec2 position;        // 8 bytes - where it was placed
+            int angle512;         // 4 bytes - direction (for projectiles)
+            Q16_8 speed;          // 4 bytes - initial speed (for projectiles)
+            int shooterCarIndex;  // 4 bytes - who fired this (for immunity)
+            uint8_t reserved[4];  // 4 bytes - future use
         } itemPlaced;
 
         // For MSG_ITEM_BOX_PICKUP (item box collected)
@@ -89,16 +90,16 @@ typedef struct {
 #define MAX_PENDING_ACKS 4  // Track up to 4 unacknowledged messages per player
 
 typedef struct {
-    NetworkPacket packet;        // The packet awaiting ACK
-    uint32_t lastSendTime;       // When we last sent this packet
-    int retryCount;              // Number of times we've retried
-    bool active;                 // Is this slot in use?
+    NetworkPacket packet;   // The packet awaiting ACK
+    uint32_t lastSendTime;  // When we last sent this packet
+    int retryCount;         // Number of times we've retried
+    bool active;            // Is this slot in use?
 } PendingAck;
 
 typedef struct {
-    bool connected;              // is this player in the game?
-    bool ready;                  // Has this player pressed SELECT? (lobby only)
-    uint32_t lastPacketTime;     // For timeout detection
+    bool connected;           // is this player in the game?
+    bool ready;               // Has this player pressed SELECT? (lobby only)
+    uint32_t lastPacketTime;  // For timeout detection
 
     // Selective Repeat ARQ state (lobby only)
     uint8_t lastSeqNumReceived;  // Last sequence number we received from this player
@@ -319,7 +320,6 @@ static void retransmitUnackedPackets(void) {
 // Key interrupt for canceling WiFi connection
 //=============================================================================
 
-
 int Multiplayer_Init(void) {
     // Fresh timing each session so heartbeats/countdowns are consistent
     msCounter = 0;
@@ -332,12 +332,12 @@ int Multiplayer_Init(void) {
             swiWaitForVBlank();
         }  // TODO: test if without this if it still works
     }
-    
+
     // Initialize console for status messages (sub-screen)
     consoleDemoInit();
     consoleClear();
     printf("\x1b[2J");
-    
+
     printf("=== MULTIPLAYER INIT ===\n\n");
     printf("Connecting to WiFi...\n");
     printf("Looking for 'MES-NDS'...\n\n");
@@ -355,29 +355,31 @@ int Multiplayer_Init(void) {
         printf("- Out of range\n");
         printf("- WiFi already initialized?\n\n");
         printf("Press B to return\n");
-        
+
         // Simple polling loop
         while (1) {
             swiWaitForVBlank();
             scanKeys();
-            
+
             if (keysDown() & KEY_B) {
                 printf("DEBUG: B pressed! Breaking...\n");
-                for (int i = 0; i < 120; i++) swiWaitForVBlank();
+                for (int i = 0; i < 120; i++)
+                    swiWaitForVBlank();
                 break;
             }
             Wifi_Update();
             swiWaitForVBlank();
         }
-        
+
         printf("DEBUG: Returning -1\n");
-        for (int i = 0; i < 120; i++) swiWaitForVBlank();
+        for (int i = 0; i < 120; i++)
+            swiWaitForVBlank();
         return -1;
     }
-    
+
     printf("\nWiFi connected!\n");
     printf("Opening socket...\n");
-    
+
     // Open socket
     int socketResult = openSocket();
     printf("Socket open result: %d\n", socketResult);
@@ -387,7 +389,7 @@ int Multiplayer_Init(void) {
         printf("Failed to create UDP socket.\n");
         printf("Socket might already be open?\n\n");
         printf("Press B to return\n");
-        
+
         // Simple polling loop
         while (1) {
             swiWaitForVBlank();
@@ -398,28 +400,28 @@ int Multiplayer_Init(void) {
             Wifi_Update();
             swiWaitForVBlank();
         }
-        
+
         disconnectFromWiFi();
         return -1;
     }
-    
+
     printf("Socket ready!\n\n");
-    
+
     //=========================================================================
     // PLAYER ID ASSIGNMENT
     //=========================================================================
     unsigned char macAddr[6];
     Wifi_GetData(WIFIGETDATA_MACADDRESS, 6, macAddr);
-    
+
     myPlayerID = macAddr[5] % MAX_MULTIPLAYER_PLAYERS;
     unsigned long myIP = Wifi_GetIP();
-    
+
     printf("You are Player %d\n", myPlayerID + 1);
     printf("IP: %lu.%lu.%lu.%lu\n", (myIP >> 0) & 0xFF, (myIP >> 8) & 0xFF,
            (myIP >> 16) & 0xFF, (myIP >> 24) & 0xFF);
-    printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", macAddr[0], macAddr[1], 
-           macAddr[2], macAddr[3], macAddr[4], macAddr[5]);
-    
+    printf("MAC: %02X:%02X:%02X:%02X:%02X:%02X\n", macAddr[0], macAddr[1], macAddr[2],
+           macAddr[3], macAddr[4], macAddr[5]);
+
     // Initialize player tracking
     memset(players, 0, sizeof(players));
     players[myPlayerID].connected = true;
@@ -430,12 +432,12 @@ int Multiplayer_Init(void) {
     lastJoinResendMs = 0;
 
     initialized = true;
-    
+
     // Small delay to show success message
     for (int i = 0; i < 90; i++) {
         swiWaitForVBlank();
     }
-    
+
     return myPlayerID;
 }
 /**
@@ -581,7 +583,8 @@ void Multiplayer_JoinLobby(void) {
     players[myPlayerID].ready = false;
     uint32_t currentTime = getTimeMs();
     lastLobbyBroadcastMs = currentTime;
-    joinResendDeadlineMs = currentTime + 2000;  // Aggressively resend JOIN for first 2s
+    joinResendDeadlineMs =
+        currentTime + 2000;  // Aggressively resend JOIN for first 2s
     lastJoinResendMs = currentTime;
 
     // Send JOIN message with Selective Repeat ARQ for reliability
@@ -660,12 +663,11 @@ bool Multiplayer_UpdateLobby(void) {
                 players[packet.playerID].lastSeqNumReceived = packet.seqNum;
 
                 // Send ACK for this packet
-                NetworkPacket ack = {
-                    .version = PROTOCOL_VERSION,
-                    .msgType = MSG_LOBBY_ACK,
-                    .playerID = myPlayerID,
-                    .seqNum = 0,  // ACKs don't need sequence numbers
-                    .payload.ack = {.ackSeqNum = packet.seqNum}};
+                NetworkPacket ack = {.version = PROTOCOL_VERSION,
+                                     .msgType = MSG_LOBBY_ACK,
+                                     .playerID = myPlayerID,
+                                     .seqNum = 0,  // ACKs don't need sequence numbers
+                                     .payload.ack = {.ackSeqNum = packet.seqNum}};
                 sendData((char*)&ack, sizeof(NetworkPacket));
 
                 // CRITICAL: Immediately respond so the joining player discovers us!
@@ -840,24 +842,26 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
 //=============================================================================
 
 void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512,
-                                   Q16_8 speed) {
+                                   Q16_8 speed, int shooterCarIndex) {
     if (!initialized) {
         return;
     }
 
-    NetworkPacket packet = {.version = PROTOCOL_VERSION,
-                            .msgType = MSG_ITEM_PLACED,
-                            .playerID = myPlayerID,
-                            .payload.itemPlaced = {.itemType = itemType,
-                                                   .position = position,
-                                                   .angle512 = angle512,
-                                                   .speed = speed}};
+    NetworkPacket packet = {
+        .version = PROTOCOL_VERSION,
+        .msgType = MSG_ITEM_PLACED,
+        .playerID = myPlayerID,
+        .payload.itemPlaced = {.itemType = itemType,
+                               .position = position,
+                               .angle512 = angle512,
+                               .speed = speed,
+                               .shooterCarIndex = shooterCarIndex}};
 
     sendData((char*)&packet, sizeof(NetworkPacket));
 }
 
 ItemPlacementData Multiplayer_ReceiveItemPlacements(void) {
-    ItemPlacementData result = {.valid = false};
+    ItemPlacementData result = {.valid = false, .shooterCarIndex = -1};
 
     // Check buffered item packets (buffered by Multiplayer_ReceiveCarStates)
     if (itemPacketCount > 0) {
@@ -871,6 +875,11 @@ ItemPlacementData Multiplayer_ReceiveItemPlacements(void) {
             // Return the item placement data
             result.valid = true;
             result.playerID = packet.playerID;
+            int shooterIndex = packet.payload.itemPlaced.shooterCarIndex;
+            if (shooterIndex < 0 || shooterIndex >= MAX_MULTIPLAYER_PLAYERS) {
+                shooterIndex = packet.playerID;  // Fallback for older packets
+            }
+            result.shooterCarIndex = shooterIndex;
             result.itemType = packet.payload.itemPlaced.itemType;
             result.position = packet.payload.itemPlaced.position;
             result.angle512 = packet.payload.itemPlaced.angle512;
@@ -988,7 +997,7 @@ void Multiplayer_NukeConnectivity(void) {
 
     // 7. Small delay to ensure everything settles
     for (int i = 0; i < 60; i++) {  // 1 second - WiFi hardware needs time
-        Wifi_Update();  // CRITICAL: Keep WiFi stack alive during settling
+        Wifi_Update();              // CRITICAL: Keep WiFi stack alive during settling
         swiWaitForVBlank();
     }
 }
