@@ -4,10 +4,8 @@
  */
 
 #include "../ui/settings.h"
-
 #include <nds.h>
 #include <string.h>
-
 #include "../audio/sound.h"
 #include "../core/context.h"
 #include "../core/game_constants.h"

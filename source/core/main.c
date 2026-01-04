@@ -88,9 +88,9 @@ static GameState update_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
         case REINIT_HOME:  // NEW: Treat same as HOME_PAGE
-            return HomePage_update();
+            return HomePage_Update();
         case SETTINGS:
-            return Settings_update();
+            return Settings_Update();
         case MAPSELECTION:
             return Map_selection_update();
         case MULTIPLAYER_LOBBY:
@@ -108,7 +108,7 @@ static void init_state(GameState state) {
     switch (state) {
         case HOME_PAGE:
         case REINIT_HOME:  // NEW: Both initialize the same way
-            HomePage_initialize();
+            HomePage_Initialize();
             break;
         case MAPSELECTION:
             Map_Selection_initialize();
@@ -120,7 +120,7 @@ static void init_state(GameState state) {
             Graphical_Gameplay_initialize();
             break;
         case SETTINGS:
-            Settings_initialize();
+            Settings_Initialize();
             break;
         case PLAYAGAIN:
             PlayAgain_Initialize();

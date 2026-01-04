@@ -340,4 +340,28 @@
 #define SETTINGS_HOME_TOUCH_Y_MIN 128
 #define SETTINGS_HOME_TOUCH_Y_MAX 176
 
+//=============================================================================
+// UI Constants - Home Page Screen
+//=============================================================================
+
+// Palette indices for selection highlighting
+#define HOME_HL_PAL_BASE 251
+
+// Menu layout parameters
+#define HOME_MENU_X 32
+#define HOME_MENU_WIDTH 192
+#define HOME_MENU_HEIGHT 40
+#define HOME_MENU_SPACING 54
+#define HOME_MENU_Y_START 24
+
+// Highlight tile parameters
+#define HOME_HIGHLIGHT_TILE_X 6
+#define HOME_HIGHLIGHT_TILE_WIDTH 20
+#define HOME_HIGHLIGHT_TILE_HEIGHT 3
+
+// Kart sprite parameters
+#define HOME_KART_INITIAL_X -64
+#define HOME_KART_Y 120
+#define HOME_KART_OFFSCREEN_X 256
+
 #endif  // GAME_CONSTANTS_H

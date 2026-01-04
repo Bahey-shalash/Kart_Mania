@@ -1,11 +1,35 @@
+/**
+ * home_page.h
+ */
+
 #ifndef HOME_PAGE_H
 #define HOME_PAGE_H
-// BAHEY------
+
 #include "../core/game_types.h"
 
-void HomePage_initialize(void);
-GameState HomePage_update(void);
+//=============================================================================
+// Public API
+//=============================================================================
+
+/**
+ * Initialize the Home Page screen
+ */
+void HomePage_Initialize(void);
+
+/**
+ * Update Home Page screen logic
+ * @return The next GameState
+ */
+GameState HomePage_Update(void);
+
+/**
+ * VBlank callback for animating home screen sprite
+ */
 void HomePage_OnVBlank(void);
+
+/**
+ * Cleanup Home Page resources
+ */
 void HomePage_Cleanup(void);
 
-#endif
+#endif  // HOME_PAGE_H

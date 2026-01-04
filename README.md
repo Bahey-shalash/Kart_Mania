@@ -133,6 +133,81 @@ while (1) {
 
 ---
 
+### Home Page Screen (`ui/home_page.c`)
+
+#### Purpose
+Main menu screen with single player, multiplayer, and settings options, featuring animated kart sprite.
+
+#### Features
+- **Three menu buttons**: Single Player, Multiplayer, Settings
+- **Animated sprite**: Kart scrolling across top screen
+- **WiFi check**: Prevents multiplayer if WiFi is disabled in settings
+- **Dual-screen UI**: Animated graphics on top, interactive menu on bottom
+
+#### Architecture
+
+**Graphics System:**
+- **Main Screen (Top)**: Bitmap background with animated kart sprite (64x64px, scrolls left-to-right)
+- **Sub Screen (Bottom)**:
+  - **BG0 (Priority 0)**: Main menu graphics
+  - **BG1 (Priority 1)**: Selection highlight layer
+- Uses palette indices 251-253 for button highlights
+- VBlank interrupt for smooth sprite animation
+
+**Input Handling:**
+
+| Input | Action |
+|-------|--------|
+| UP / DOWN | Cycle through menu buttons |
+| A Button | Activate selected button |
+| Touch | Select button by touching hitbox |
+
+**State Management:**
+- Tracks current and previous selection for highlighting
+- Multiplayer button checks WiFi settings before proceeding
+- Handles multiplayer init failure with REINIT_HOME state
+
+#### Usage
+```c
+// Initialize the screen
+HomePage_Initialize();
+
+// In VBlank ISR
+HomePage_OnVBlank();  // Animate kart sprite
+
+// In main loop
+while (1) {
+    GameState next = HomePage_Update();
+    if (next == MAPSELECTION) {
+        // Go to map selection
+    } else if (next == MULTIPLAYER_LOBBY) {
+        // Go to multiplayer lobby
+    } else if (next == SETTINGS) {
+        // Go to settings
+    } else if (next == REINIT_HOME) {
+        // Multiplayer init failed, reinit home
+    }
+}
+
+// When exiting
+HomePage_Cleanup();  // Free sprite graphics
+```
+
+#### Constants (see `game_constants.h`)
+- `HOME_HL_PAL_BASE` - Palette base index (251)
+- `HOME_MENU_X/WIDTH/HEIGHT/SPACING/Y_START` - Menu layout parameters
+- `HOME_HIGHLIGHT_TILE_X/WIDTH/HEIGHT` - Highlight tile parameters
+- `HOME_KART_INITIAL_X/Y/OFFSCREEN_X` - Kart sprite animation parameters
+
+#### Design Notes
+- **WiFi validation**: Plays ding sound and stays on home page if WiFi disabled for multiplayer
+- **Sprite cleanup**: Must call `HomePage_Cleanup()` before state transition to free OAM graphics
+- **VBlank callback**: `HomePage_OnVBlank()` called from timer ISR for smooth animation
+- **Array-driven hitboxes**: Touch detection uses array lookup for maintainability
+- **Reinit state**: REINIT_HOME allows multiplayer failure recovery without losing home page state
+
+---
+
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
