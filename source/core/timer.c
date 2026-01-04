@@ -1,7 +1,7 @@
-#include "../core/timer.h"
+#include "timer.h"
 #include <nds.h>
-#include "../core/context.h"
-#include "../core/game_types.h"
+#include "context.h"
+#include "game_types.h"
 #include "../gameplay/gameplay.h"
 #include "../gameplay/gameplay_logic.h"
 #include "../ui/home_page.h"

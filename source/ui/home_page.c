@@ -1,4 +1,4 @@
-#include "../ui/home_page.h"
+#include "home_page.h"
 // HUGO------
 #include <string.h>
 

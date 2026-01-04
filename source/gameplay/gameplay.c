@@ -1,14 +1,14 @@
-#include "../gameplay/gameplay.h"
+#include "gameplay.h"
 
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
 // HUGO------
-#include "../gameplay/items/Items.h"
+#include "items/Items.h"
 #include "../core/context.h"
 #include "../core/game_constants.h"
 #include "../core/game_types.h"
-#include "../gameplay/gameplay_logic.h"
+#include "gameplay_logic.h"
 #include "kart_sprite.h"
 #include "../network/multiplayer.h"
 #include "numbers.h"
@@ -22,7 +22,7 @@
 #include "scorching_sands_TC.h"
 #include "scorching_sands_TL.h"
 #include "scorching_sands_TR.h"
-#include "../gameplay/wall_collision.h"
+#include "wall_collision.h"
 #include "../storage/storage_pb.h"
 
 #include "banana.h"

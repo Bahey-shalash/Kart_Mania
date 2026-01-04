@@ -3,10 +3,10 @@
 // HUGO------
 #include <stdbool.h>
 
-#include "../math/Car.h"
-#include "../gameplay/items/Items.h"
+#include "Car.h"
+#include "items/Items.h"
 #include "../core/game_types.h"
-#include "../gameplay/wall_collision.h"
+#include "wall_collision.h"
 
 //=============================================================================
 // Constants

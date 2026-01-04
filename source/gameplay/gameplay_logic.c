@@ -1,14 +1,14 @@
 // HUGO------
-#include "../gameplay/gameplay_logic.h"
+#include "gameplay_logic.h"
 
 #include <nds.h>
 
-#include "../gameplay/items/Items.h"
+#include "items/Items.h"
 #include "../core/game_constants.h"
 #include "../network/multiplayer.h"
-#include "../gameplay/terrain_detection.h"
+#include "terrain_detection.h"
 #include "../core/timer.h"
-#include "../gameplay/wall_collision.h"
+#include "wall_collision.h"
 
 //=============================================================================
 // Constants

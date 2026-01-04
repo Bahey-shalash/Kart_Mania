@@ -1,4 +1,4 @@
-#include "../ui/play_again.h"
+#include "play_again.h"
 
 #include <nds.h>
 #include <string.h>

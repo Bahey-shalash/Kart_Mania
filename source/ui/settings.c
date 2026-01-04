@@ -1,4 +1,4 @@
-#include "../ui/settings.h"
+#include "settings.h"
 
 #include <nds.h>
 #include <string.h>

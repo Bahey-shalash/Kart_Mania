@@ -23,9 +23,11 @@ fix_includes_in_file() {
     sed -i '' 's|#include "game_constants\.h"|#include "'${prefix}'core/game_constants.h"|g' "$file"
     sed -i '' 's|#include "timer\.h"|#include "'${prefix}'core/timer.h"|g' "$file"
 
-    # Math files (fixedmath2d.h, Car.h)
+    # Math files (fixedmath2d.h)
     sed -i '' 's|#include "fixedmath2d\.h"|#include "'${prefix}'math/fixedmath2d.h"|g' "$file"
-    sed -i '' 's|#include "Car\.h"|#include "'${prefix}'math/Car.h"|g' "$file"
+
+    # Gameplay core (Car.h lives under gameplay)
+    sed -i '' 's|#include "Car\.h"|#include "'${prefix}'gameplay/Car.h"|g' "$file"
 
     # Gameplay files
     sed -i '' 's|#include "gameplay\.h"|#include "'${prefix}'gameplay/gameplay.h"|g' "$file"

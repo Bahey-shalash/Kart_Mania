@@ -1,4 +1,4 @@
-#include "../storage/storage_pb.h"
+#include "storage_pb.h"
 
 #include <stdio.h>
 #include <string.h>

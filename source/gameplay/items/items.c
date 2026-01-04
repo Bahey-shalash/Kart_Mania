@@ -1,19 +1,19 @@
-#include "../../gameplay/items/Items.h"
+#include "Items.h"
 // BAHEY------
-#include "../../gameplay/items/item_navigation.h"
+#include "item_navigation.h"
 
 #include <stdlib.h>
 #include <string.h>
 
 #include "../../core/game_constants.h"
-#include "../../gameplay/gameplay_logic.h"
+#include "../gameplay_logic.h"
 #include "../../network/multiplayer.h"
-#include "../../gameplay/wall_collision.h"
+#include "../wall_collision.h"
 
 // Sprite graphics includes
 #include <stdio.h>
 
-#include "../../math/Car.h"
+#include "../Car.h"
 #include "banana.h"
 #include "bomb.h"
 #include "green_shell.h"

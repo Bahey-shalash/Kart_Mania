@@ -1,10 +1,10 @@
-#include "../network/multiplayer.h"
+#include "multiplayer.h"
 
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
 // BAHEY------
-#include "../network/WiFi_minilib.h"
+#include "WiFi_minilib.h"
 
 // Access WiFi/socket status flags from WiFi_minilib
 extern bool socket_opened;

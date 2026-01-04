@@ -1,4 +1,4 @@
-#include "../ui/map_selection.h"
+#include "map_selection.h"
 
 #include <nds.h>
 #include <string.h>

@@ -1,4 +1,4 @@
-#include "../network/WiFi_minilib.h"
+#include "WiFi_minilib.h"
 #include <stdio.h>
 // BAHEY------
 // Socket port

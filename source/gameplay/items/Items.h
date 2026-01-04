@@ -116,14 +116,14 @@ typedef struct {
 
 // Probability distributions by rank
 static const ItemProbability ITEM_PROBABILITIES[8] = {
-    // 1st place - Defensive tilt, balanced spread (no missile)
-    {20, 20, 5, 15, 10, 0, 5, 25},
+    // 1st place - Defensive tilt, more negative mushrooms (no missile)
+    {17, 18, 5, 15, 10, 0, 15, 20},
 
-    // 2nd place - Mostly defensive, still balanced
-    {18, 18, 5, 16, 12, 0, 6, 25},
+    // 2nd place - Mostly defensive, more mushrooms up front
+    {17, 17, 5, 16, 12, 0, 13, 20},
 
-    // 3rd place - Balanced
-    {15, 15, 5, 15, 15, 0, 10, 25},
+    // 3rd place - Balanced with extra mushrooms
+    {15, 15, 5, 15, 15, 0, 12, 23},
 
     // 4th place - Slightly offensive
     {13, 13, 5, 17, 17, 0, 10, 25},

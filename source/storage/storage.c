@@ -1,4 +1,4 @@
-#include "../storage/storage.h"
+#include "storage.h"
 // HUGO------
 #include <dirent.h>
 #include <fat.h>
@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 
 #include "../core/context.h"
-#include "../storage/storage_pb.h"
+#include "storage_pb.h"
 // Check if a directory exists
 static bool directoryExists(const char* path) {
     DIR* dir = opendir(path);

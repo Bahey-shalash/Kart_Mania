@@ -1,7 +1,7 @@
 //=============================================================================
 // wall_collision.c
 //=============================================================================
-#include "../gameplay/wall_collision.h"
+#include "wall_collision.h"
 // HUGO------
 // TL Quadrant (offset: 0, 0) - walls already in correct global coords
 static const WallSegment walls_TL[] = {

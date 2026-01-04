@@ -1,7 +1,7 @@
 //=============================================================================
 // terrain_detection.c
 //=============================================================================
-#include "../gameplay/terrain_detection.h"
+#include "terrain_detection.h"
 
 #include <nds.h>
 #include <stdlib.h>
