@@ -713,7 +713,7 @@ static void configureGraphics(void) {
     REG_DISPCNT_SUB =
         MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
-    VRAM_D_CR = VRAM_ENABLE | VRAM_D_SUB_SPRITE;  // NEW: Sub sprite VRAM
+    VRAM_D_CR = VRAM_ENABLE | VRAM_D_SUB_SPRITE;
 }
 
 static void configureBackground(void) {
@@ -721,9 +721,7 @@ static void configureBackground(void) {
     if (selectedMap != ScorchingSands)
         return;
 
-    BGCTRL[0] =
-        BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
-
+    BGCTRL[0] = BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
     // Sub screen setup with numbers tileset
     BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
     swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
