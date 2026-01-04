@@ -1,7 +1,7 @@
 
 #include "item_navigation.h"
 #include <stdlib.h>
-
+// BAHEY------
 #define WAYPOINT_REACHED_DIST IntToFixed(25)  // 25 pixels = close enough
 
 // Scorching Sands racing line waypoints (extracted from track coordinates)

@@ -1,6 +1,6 @@
 #ifndef STORAGE_H
 #define STORAGE_H
-
+// HUGO------
 /*
  *Storage never triggers side effects. It only mutates GameContext data.
  */

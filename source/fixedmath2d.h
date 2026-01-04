@@ -1,3 +1,5 @@
+
+// BAHEY------
 /*
  * fixedmath2d.h - Fixed-point 2D vector math for Nintendo DS
  *

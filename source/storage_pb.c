@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
-
+// HUGO------
 // Helper function to convert map enum to string
 static const char* mapToString(Map map) {
     switch (map) {

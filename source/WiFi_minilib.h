@@ -1,6 +1,6 @@
 #ifndef WIFI_MINILIB_H
 #define WIFI_MINILIB_H
-
+// BAHEY------
 #include <nds.h>
 #include <dswifi9.h>
 #include <sys/types.h>

@@ -3,7 +3,7 @@
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
-
+// BAHEY------
 #include "WiFi_minilib.h"
 
 // Access WiFi/socket status flags from WiFi_minilib

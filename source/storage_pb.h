@@ -1,6 +1,6 @@
 #ifndef STORAGE_PB_H
 #define STORAGE_PB_H
-
+// HUGO------
 #include <stdbool.h>
 #include "game_types.h"  // For Map enum
 
