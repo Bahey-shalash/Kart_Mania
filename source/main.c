@@ -47,6 +47,12 @@ int main(void) {
     // enables Music because default sound effect is true
     GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
 
+    // sound Fx
+
+    if (!ctx->userSettings.soundFxEnabled) {
+        SOUNDFX_OFF();
+    }
+
     // Initialize WiFi stack ONCE at program start (critical for reconnection)
     // DO NOT call Wifi_InitDefault() again later - just connect/disconnect
     Wifi_InitDefault(false);
