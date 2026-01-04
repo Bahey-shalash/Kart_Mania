@@ -6,7 +6,7 @@
 #include "gameplay_logic.h"
 #include "home_page.h"
 #include "map_selection.h"
-#include "play_again.h"  // ADD THIS
+#include "play_again.h" 
 
 //=============================================================================
 // Private Prototypes
@@ -43,7 +43,9 @@ void timerISRVblank(void) {
             break;
             
         case GAMEPLAY: 
-
+            if (Race_IsCountdownActive()) {
+                Race_CountdownTick();  // Network sync only, no movement
+            }
             Gameplay_OnVBlank();  // This handles EVERYTHING including final time display
             
             // Only update during normal racing (not countdown, not finished)
@@ -67,7 +69,7 @@ void RaceTick_TimerInit(void) {
     TIMER0_CR = TIMER_ENABLE | TIMER_DIV_1024 | TIMER_IRQ_REQ;
     irqSet(IRQ_TIMER0, RaceTick_ISR);
     irqEnable(IRQ_TIMER0);
-    
+
     TIMER_DATA(1) = TIMER_FREQ_1024(1000);
     TIMER1_CR = TIMER_ENABLE | TIMER_DIV_1024 | TIMER_IRQ_REQ;
     irqSet(IRQ_TIMER1, ChronoTick_ISR);

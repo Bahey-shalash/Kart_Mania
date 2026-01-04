@@ -35,7 +35,7 @@
 //=============================================================================
 // Constants
 //=============================================================================
-#define FINISH_DISPLAY_FRAMES 150  // 2.5 seconds at 60fps to show final time
+#define FINISH_DISPLAY_FRAMES 150 // 2.5 seconds at 60fps to show final time
 
 //=============================================================================
 // Private State
@@ -50,17 +50,17 @@ static int scrollY = 0;
 static QuadrantID currentQuadrant = QUAD_BR;
 
 // Sprite graphics pointer (allocated during configureSprite)
-static u16* kartGfx = NULL;
-static u16* itemDisplayGfx_Sub = NULL;
+static u16 *kartGfx = NULL;
+static u16 *itemDisplayGfx_Sub = NULL;
 
 static bool countdownCleared = false;
-static int finishDisplayCounter = 0;  // NEW: Count frames showing final time
+static int finishDisplayCounter = 0; // NEW: Count frames showing final time
 
 static int totalRaceMin = 0;
 static int totalRaceSec = 0;
 static int totalRaceMsec = 0;
 
-static int bestRaceMin = -1;  // -1 means no best time exists
+static int bestRaceMin = -1; // -1 means no best time exists
 static int bestRaceSec = -1;
 static int bestRaceMsec = -1;
 static bool isNewRecord = false;
@@ -70,12 +70,13 @@ static bool hasSavedBestTime = false;
 //=============================================================================
 // Quadrant Data
 //=============================================================================
-typedef struct {
-    const unsigned int* tiles;
-    const unsigned short* map;
-    const unsigned short* palette;  // ADDED: Each quadrant has its own palette
+typedef struct
+{
+    const unsigned int *tiles;
+    const unsigned short *map;
+    const unsigned short *palette; // ADDED: Each quadrant has its own palette
     unsigned int tilesLen;
-    unsigned int paletteLen;  // ADDED: Palette length
+    unsigned int paletteLen; // ADDED: Palette length
 } QuadrantData;
 
 static const QuadrantData quadrantData[9] = {
@@ -110,48 +111,58 @@ static QuadrantID determineQuadrant(int x, int y);
 static void renderCountdown(CountdownState state);
 static void clearCountdownDisplay(void);
 static void displayFinalTime(int min, int sec, int msec);
-void printDigit(u16* map, int number, int x, int y);
-static void loadItemDisplay_Sub(void);    // NEW
-static void updateItemDisplay_Sub(void);  // NEW
+void printDigit(u16 *map, int number, int x, int y);
+static void loadItemDisplay_Sub(void);   // NEW
+static void updateItemDisplay_Sub(void); // NEW
 
 //=============================================================================
 // Timer Getters
 //=============================================================================
-int Gameplay_GetRaceMin(void) {
+int Gameplay_GetRaceMin(void)
+{
     return raceMin;
 }
 
-int Gameplay_GetRaceSec(void) {
+int Gameplay_GetRaceSec(void)
+{
     return raceSec;
 }
 
-int Gameplay_GetRaceMsec(void) {
+int Gameplay_GetRaceMsec(void)
+{
     return raceMsec;
 }
 
-int Gameplay_GetCurrentLap(void) {
+int Gameplay_GetCurrentLap(void)
+{
     return currentLap;
 }
 
-void Gameplay_IncrementTimer(void) {
-    if (Race_IsCompleted()) {
+void Gameplay_IncrementTimer(void)
+{
+    if (Race_IsCompleted())
+    {
         return;
     }
 
     // Increment lap time
     raceMsec = (raceMsec + 1) % MS_PER_SECOND;
-    if (raceMsec == 0) {
+    if (raceMsec == 0)
+    {
         raceSec = (raceSec + 1) % SECONDS_PER_MINUTE;
-        if (raceSec == 0) {
+        if (raceSec == 0)
+        {
             raceMin++;
         }
     }
 
     // Increment total time
     totalRaceMsec = (totalRaceMsec + 1) % MS_PER_SECOND;
-    if (totalRaceMsec == 0) {
+    if (totalRaceMsec == 0)
+    {
         totalRaceSec = (totalRaceSec + 1) % SECONDS_PER_MINUTE;
-        if (totalRaceSec == 0) {
+        if (totalRaceSec == 0)
+        {
             totalRaceMin++;
         }
     }
@@ -160,7 +171,8 @@ void Gameplay_IncrementTimer(void) {
 //=============================================================================
 // Public API - Initialization
 //=============================================================================
-void Graphical_Gameplay_initialize(void) {
+void Graphical_Gameplay_initialize(void)
+{
     configureGraphics();
     configureBackground();
     // NOTE: configureSprite() is called from configureBackground() - we need to change
@@ -181,12 +193,13 @@ void Graphical_Gameplay_initialize(void) {
     Map selectedMap = GameContext_GetMap();
 
     // Check context to determine game mode
-    GameContext* ctx = GameContext_Get();
+    GameContext *ctx = GameContext_Get();
     GameMode mode = ctx->isMultiplayerMode ? MultiPlayer : SinglePlayer;
 
     // Initialize race with appropriate mode
     if (!StoragePB_LoadBestTime(selectedMap, &bestRaceMin, &bestRaceSec,
-                                &bestRaceMsec)) {
+                                &bestRaceMsec))
+    {
         bestRaceMin = -1;
         bestRaceSec = -1;
         bestRaceMsec = -1;
@@ -194,16 +207,16 @@ void Graphical_Gameplay_initialize(void) {
     isNewRecord = false;
 
     // Clear any leftover display from previous race
-    u16* map = BG_MAP_RAM_SUB(0);
+    u16 *map = BG_MAP_RAM_SUB(0);
     memset(map, 32, 32 * 32 * 2);
-    changeColorDisp_Sub(ARGB16(1, 0, 0, 0));  // Reset to black
+    changeColorDisp_Sub(ARGB16(1, 0, 0, 0)); // Reset to black
 
     Race_Init(selectedMap, mode);
 
     // NOW call configureSprite (remove it from wherever it's being called before)
     configureSprite();
 
-    const Car* player = Race_GetPlayerCar();
+    const Car *player = Race_GetPlayerCar();
     scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
     scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
 
@@ -223,21 +236,24 @@ void Graphical_Gameplay_initialize(void) {
 //=============================================================================
 // Public API - Update
 //=============================================================================
-GameState Gameplay_update(void) {
+GameState Gameplay_update(void)
+{
     scanKeys();
     int keysdown = keysDown();
 
     // Handle SELECT to exit anytime
-    if (keysdown & KEY_SELECT) {
+    if (keysdown & KEY_SELECT)
+    {
         Race_Stop();
         return HOME_PAGE;
     }
 
-    const RaceState* state = Race_GetState();
+    const RaceState *state = Race_GetState();
 
     // CHANGED: Fixed best time saving and display logic
     // Save best time once when race finishes (NOT in VBlank - safe here!)
-    if (state->raceFinished && !hasSavedBestTime) {
+    if (state->raceFinished && !hasSavedBestTime)
+    {
         Map currentMap = GameContext_GetMap();
 
         // Try to save the time (returns true if it's a new record)
@@ -248,7 +264,8 @@ GameState Gameplay_update(void) {
         // time This ensures we display the real best time, not just the current race
         // time
         if (!StoragePB_LoadBestTime(currentMap, &bestRaceMin, &bestRaceSec,
-                                    &bestRaceMsec)) {
+                                    &bestRaceMsec))
+        {
             // No best time exists (shouldn't happen after save, but handle it)
             bestRaceMin = totalRaceMin;
             bestRaceSec = totalRaceSec;
@@ -259,15 +276,20 @@ GameState Gameplay_update(void) {
     }
 
     // Check if race finished and counting display frames
-    if (state->raceFinished && state->finishDelayTimer == 0) {
+    if (state->raceFinished && state->finishDelayTimer == 0)
+    {
         finishDisplayCounter++;
 
         // After 2.5 seconds, transition to PLAYAGAIN state
-        if (finishDisplayCounter >= FINISH_DISPLAY_FRAMES) {
-            if (state->gameMode == MultiPlayer) {
+        if (finishDisplayCounter >= FINISH_DISPLAY_FRAMES)
+        {
+            if (state->gameMode == MultiPlayer)
+            {
                 return HOME_PAGE;
-            } else{
-            return PLAYAGAIN; 
+            }
+            else
+            {
+                return PLAYAGAIN;
             }
         }
     }
@@ -400,19 +422,22 @@ GameState Gameplay_update(void) {
 //     Items_Render(scrollX, scrollY);
 //     oamUpdate(&oamMain);
 // }
-void Gameplay_OnVBlank(void) {
-    const Car* player = Race_GetPlayerCar();
+void Gameplay_OnVBlank(void)
+{
+    const Car *player = Race_GetPlayerCar();
 
     // Check if race is finished and showing final time
-    const RaceState* state = Race_GetState();
-    if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES) {
+    const RaceState *state = Race_GetState();
+    if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES)
+    {
         // Display final time for 2.5 seconds
         displayFinalTime(totalRaceMin, totalRaceSec, totalRaceMsec);
         return;
     }
 
     // Check if countdown is active
-    if (Race_IsCountdownActive()) {
+    if (Race_IsCountdownActive())
+    {
         Race_UpdateCountdown();
         renderCountdown(Race_GetCountdownState());
 
@@ -433,7 +458,8 @@ void Gameplay_OnVBlank(void) {
             scrollY = MAX_SCROLL_Y;
 
         QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
-        if (newQuadrant != currentQuadrant) {
+        if (newQuadrant != currentQuadrant)
+        {
             loadQuadrant(newQuadrant);
             currentQuadrant = newQuadrant;
             Race_SetLoadedQuadrant(newQuadrant);
@@ -444,33 +470,87 @@ void Gameplay_OnVBlank(void) {
         BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
         BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
 
-        // Render car sprite during countdown (use slot 41, offset -16)
-        int dsAngle = -(player->angle512 << 6);
-        oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
-        int screenX = carX - scrollX - 16;
-        int screenY = carY - scrollY - 16;
+        // CHANGED: Render all cars during countdown based on game mode
+        if (state->gameMode == SinglePlayer)
+        {
+            // Single player - only render player's car
+            int dsAngle = -(player->angle512 << 6);
+            oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
+            int screenX = carX - scrollX - 16;
+            int screenY = carY - scrollY - 16;
 
-        oamSet(&oamMain, 41, screenX, screenY, 0, 0, SpriteSize_32x32,
-               SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
-               false);
+            oamSet(&oamMain, 41, screenX, screenY, 0, 0, SpriteSize_32x32,
+                   SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
+                   false);
+        }
+        else
+        {
+            // MULTIPLAYER: Render ALL connected players during countdown
+            for (int i = 0; i < state->carCount; i++)
+            {
+                int oamSlot = 41 + i;
+
+                if (!Multiplayer_IsPlayerConnected(i))
+                {
+                    // Hide disconnected players
+                    oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_32x32,
+                           SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
+                           false);
+                    continue;
+                }
+
+                const Car *car = &state->cars[i];
+                int carWorldX = FixedToInt(car->position.x);
+                int carWorldY = FixedToInt(car->position.y);
+                int carScreenX = carWorldX - scrollX - 16;
+                int carScreenY = carWorldY - scrollY - 16;
+
+                // Set rotation for this car
+                int dsAngle = -(car->angle512 << 6);
+                oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
+
+                // Check if on screen
+                bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH + 32 &&
+                                 carScreenY >= -32 && carScreenY < SCREEN_HEIGHT + 32);
+
+                if (onScreen)
+                {
+                    oamSet(&oamMain, oamSlot, carScreenX, carScreenY, 0, 0,
+                           SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i, true,
+                           false, false, false, false);
+                }
+                else
+                {
+                    // Off-screen cars
+                    oamSet(&oamMain, oamSlot, -64, -64, 0, 0, SpriteSize_32x32,
+                           SpriteColorFormat_16Color, car->gfx, i, true, false, false,
+                           false, false);
+                }
+            }
+        }
 
         oamUpdate(&oamMain);
         return;
     }
 
-    if (!countdownCleared) {
+    if (!countdownCleared)
+    {
         clearCountdownDisplay();
         countdownCleared = true;
     }
 
-    if (Race_CheckFinishLineCross(player)) {
-        if (currentLap < Race_GetLapCount()) {
+    if (Race_CheckFinishLineCross(player))
+    {
+        if (currentLap < Race_GetLapCount())
+        {
             // Normal lap completion - reset LAP timer (but total keeps running)
             currentLap++;
             raceMin = 0;
             raceSec = 0;
             raceMsec = 0;
-        } else {
+        }
+        else
+        {
             // RACE COMPLETED!
             Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
             finishDisplayCounter = 0;
@@ -498,7 +578,8 @@ void Gameplay_OnVBlank(void) {
         scrollY = MAX_SCROLL_Y;
 
     QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
-    if (newQuadrant != currentQuadrant) {
+    if (newQuadrant != currentQuadrant)
+    {
         loadQuadrant(newQuadrant);
         currentQuadrant = newQuadrant;
         Race_SetLoadedQuadrant(newQuadrant);
@@ -512,7 +593,8 @@ void Gameplay_OnVBlank(void) {
     //=========================================================================
     // Render cars based on game mode
     //=========================================================================
-    if (state->gameMode == SinglePlayer) {
+    if (state->gameMode == SinglePlayer)
+    {
         // SINGLE PLAYER: Only render the player's car at OAM slot 41
         int carX = FixedToInt(player->position.x);
         int carY = FixedToInt(player->position.y);
@@ -527,19 +609,23 @@ void Gameplay_OnVBlank(void) {
         oamSet(&oamMain, 41, screenX, screenY, 0, 0, SpriteSize_32x32,
                SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
                false);
-    } else {
-        // MULTIPLAYER: Render all connected players during countdown
-        for (int i = 0; i < state->carCount; i++) {
+    }
+    else
+    {
+        // MULTIPLAYER: Render all connected players
+        for (int i = 0; i < state->carCount; i++)
+        {
             int oamSlot = 41 + i;
 
-            if (!Multiplayer_IsPlayerConnected(i)) {
+            if (!Multiplayer_IsPlayerConnected(i))
+            {
                 oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_32x32,
                        SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
                        false);
                 continue;
             }
 
-            const Car* car = &state->cars[i];
+            const Car *car = &state->cars[i];
             int carWorldX = FixedToInt(car->position.x);
             int carWorldY = FixedToInt(car->position.y);
             int carScreenX = carWorldX - scrollX - 16;
@@ -551,11 +637,14 @@ void Gameplay_OnVBlank(void) {
             bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH + 32 &&
                              carScreenY >= -32 && carScreenY < SCREEN_HEIGHT + 32);
 
-            if (onScreen) {
+            if (onScreen)
+            {
                 oamSet(&oamMain, oamSlot, carScreenX, carScreenY, 0, 0,
                        SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i, true,
                        false, false, false, false);
-            } else {
+            }
+            else
+            {
                 oamSet(&oamMain, oamSlot, -64, -64, 0, 0, SpriteSize_32x32,
                        SpriteColorFormat_16Color, car->gfx, i, true, false, false,
                        false, false);
@@ -567,10 +656,11 @@ void Gameplay_OnVBlank(void) {
     updateItemDisplay_Sub();
     oamUpdate(&oamMain);
 }
-
-void Gameplay_Cleanup(void) {
+void Gameplay_Cleanup(void)
+{
     freeSprites();
-    if (itemDisplayGfx_Sub) {
+    if (itemDisplayGfx_Sub)
+    {
         oamFreeGfx(&oamSub, itemDisplayGfx_Sub);
         itemDisplayGfx_Sub = NULL;
     }
@@ -580,8 +670,9 @@ void Gameplay_Cleanup(void) {
 // Display Functions
 //=============================================================================
 
-static void displayFinalTime(int min, int sec, int msec) {
-    u16* map = BG_MAP_RAM_SUB(0);
+static void displayFinalTime(int min, int sec, int msec)
+{
+    u16 *map = BG_MAP_RAM_SUB(0);
 
     // Clear screen
     memset(map, 32, 32 * 32 * 2);
@@ -613,7 +704,8 @@ static void displayFinalTime(int min, int sec, int msec) {
     printDigit(map, msec / 100, x, y);
 
     // Display PERSONAL BEST below (y = 16)
-    if (bestRaceMin >= 0) {
+    if (bestRaceMin >= 0)
+    {
         // Show the best time
         x = 0;
         y = 16;
@@ -643,9 +735,12 @@ static void displayFinalTime(int min, int sec, int msec) {
     }
 
     // Set background color based on whether it's a new record
-    if (isNewRecord) {
-        changeColorDisp_Sub(ARGB16(1, 0, 20, 0));  // Green for new record!
-    } else {
+    if (isNewRecord)
+    {
+        changeColorDisp_Sub(ARGB16(1, 0, 20, 0)); // Green for new record!
+    }
+    else
+    {
         changeColorDisp_Sub(ARGB16(1, 0, 0, 0));
     }
 }
@@ -653,13 +748,16 @@ static void displayFinalTime(int min, int sec, int msec) {
 //=============================================================================
 // Countdown Display Functions
 //=============================================================================
-static void renderCountdown(CountdownState state) {
-    u16* map = BG_MAP_RAM_SUB(0);
+static void renderCountdown(CountdownState state)
+{
+    u16 *map = BG_MAP_RAM_SUB(0);
 
     // Clear previous countdown display
-    for (int i = 16; i < 24; i++) {
-        for (int j = 12; j < 20; j++) {
-            map[i * 32 + j] = 32;  // Empty tile
+    for (int i = 16; i < 24; i++)
+    {
+        for (int j = 12; j < 20; j++)
+        {
+            map[i * 32 + j] = 32; // Empty tile
         }
     }
 
@@ -667,29 +765,33 @@ static void renderCountdown(CountdownState state) {
     int centerX = 14;
     int centerY = 10;
 
-    switch (state) {
-        case COUNTDOWN_3:
-            printDigit(map, 3, centerX, centerY);
-            break;
-        case COUNTDOWN_2:
-            printDigit(map, 2, centerX, centerY);
-            break;
-        case COUNTDOWN_1:
-            printDigit(map, 1, centerX, centerY);
-            break;
-        case COUNTDOWN_GO:
-            printDigit(map, 0, centerX, centerY);
-            break;
-        case COUNTDOWN_FINISHED:
-            break;
+    switch (state)
+    {
+    case COUNTDOWN_3:
+        printDigit(map, 3, centerX, centerY);
+        break;
+    case COUNTDOWN_2:
+        printDigit(map, 2, centerX, centerY);
+        break;
+    case COUNTDOWN_1:
+        printDigit(map, 1, centerX, centerY);
+        break;
+    case COUNTDOWN_GO:
+        printDigit(map, 0, centerX, centerY);
+        break;
+    case COUNTDOWN_FINISHED:
+        break;
     }
 }
 
-static void clearCountdownDisplay(void) {
-    u16* map = BG_MAP_RAM_SUB(0);
+static void clearCountdownDisplay(void)
+{
+    u16 *map = BG_MAP_RAM_SUB(0);
 
-    for (int i = 16; i < 24; i++) {
-        for (int j = 12; j < 20; j++) {
+    for (int i = 16; i < 24; i++)
+    {
+        for (int j = 12; j < 20; j++)
+        {
             map[i * 32 + j] = 32;
         }
     }
@@ -698,7 +800,8 @@ static void clearCountdownDisplay(void) {
 //=============================================================================
 // Private Functions - Setup
 //=============================================================================
-static void configureGraphics(void) {
+static void configureGraphics(void)
+{
     REG_DISPCNT = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
@@ -710,7 +813,8 @@ static void configureGraphics(void) {
     VRAM_D_CR = VRAM_ENABLE | VRAM_D_SUB_SPRITE;
 }
 
-static void configureBackground(void) {
+static void configureBackground(void)
+{
     Map selectedMap = GameContext_GetMap();
     if (selectedMap != ScorchingSands)
         return;
@@ -721,35 +825,40 @@ static void configureBackground(void) {
     swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
     swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
     BG_PALETTE_SUB[0] = ARGB16(1, 0, 0, 0);
-    BG_PALETTE_SUB[255] = ARGB16(1, 20, 20, 20);  // white background
+    BG_PALETTE_SUB[255] = ARGB16(1, 20, 20, 20); // white background
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
     updateChronoDisp_Sub(-1, -1, -1);
     loadItemDisplay_Sub();
 }
 
-static void configureSprite(void) {
+static void configureSprite(void)
+{
     oamInit(&oamMain, SpriteMapping_1D_32, false);
 
     dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
 
-    if (kartGfx) {
+    if (kartGfx)
+    {
         oamFreeGfx(&oamMain, kartGfx);
     }
 
     kartGfx = oamAllocateGfx(&oamMain, SpriteSize_32x32, SpriteColorFormat_16Color);
     dmaCopy(kart_spriteTiles, kartGfx, kart_spriteTilesLen);
 
-    const RaceState* state = Race_GetState();
+    const RaceState *state = Race_GetState();
     // Set graphics for ALL cars
-    for (int i = 0; i < (state->carCount); i++) {
+    for (int i = 0; i < (state->carCount); i++)
+    {
         Race_SetCarGfx(i, kartGfx);
     }
 
     Items_LoadGraphics();
 }
 
-static void freeSprites(void) {
-    if (kartGfx) {
+static void freeSprites(void)
+{
+    if (kartGfx)
+    {
         oamFreeGfx(&oamMain, kartGfx);
         kartGfx = NULL;
     }
@@ -770,7 +879,8 @@ static void configureConsole(void) {
 //=============================================================================
 // Sub Screen Item Display
 //=============================================================================
-static void loadItemDisplay_Sub(void) {
+static void loadItemDisplay_Sub(void)
+{
     // Initialize sub screen OAM
     oamInit(&oamSub, SpriteMapping_1D_32, false);
 
@@ -787,78 +897,84 @@ static void loadItemDisplay_Sub(void) {
     dmaCopy(oil_slickPal, &SPRITE_PALETTE_SUB[112], oil_slickPalLen);
 
     // Initially hide the item sprite
-    oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,  // CHANGED: to 32x32
+    oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32, // CHANGED: to 32x32
            SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false,
            false, false);
     oamUpdate(&oamSub);
 }
 
-static void updateItemDisplay_Sub(void) {
-    const Car* player = Race_GetPlayerCar();
+static void updateItemDisplay_Sub(void)
+{
+    const Car *player = Race_GetPlayerCar();
 
-    if (player->item == ITEM_NONE) {
+    if (player->item == ITEM_NONE)
+    {
         // Hide sprite when no item
-        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,  // CHANGED: to 32x32
+        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32, // CHANGED: to 32x32
                SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false,
                false, false);
-    } else {
+    }
+    else
+    {
         // Position in top-right corner
-        int itemX = 220;  // Right side (256 - 16 - some margin)
-        int itemY = 8;    // Top area
+        int itemX = 220; // Right side (256 - 16 - some margin)
+        int itemY = 8;   // Top area
 
         // Determine which graphics to display and which palette to use
-        const unsigned int* itemTiles = NULL;
+        const unsigned int *itemTiles = NULL;
         int paletteNum = 0;
-        SpriteSize spriteSize = SpriteSize_16x16;  // NEW: Variable sprite size
+        SpriteSize spriteSize = SpriteSize_16x16; // NEW: Variable sprite size
 
-        switch (player->item) {
-            case ITEM_BANANA:
-                itemTiles = bananaTiles;
-                paletteNum = 2;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_BOMB:
-                itemTiles = bombTiles;
-                paletteNum = 3;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_GREEN_SHELL:
-                itemTiles = green_shellTiles;
-                paletteNum = 4;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_RED_SHELL:
-                itemTiles = red_shellTiles;
-                paletteNum = 5;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_MISSILE:
-                itemTiles = missileTiles;
-                paletteNum = 6;
-                spriteSize = SpriteSize_16x32;  // CHANGED: Missile is 16x32
-                break;
-            case ITEM_OIL:
-                itemTiles = oil_slickTiles;
-                paletteNum = 7;
-                spriteSize = SpriteSize_32x32;  // CHANGED: Oil is 32x32
-                itemX = 208;  // Adjust position for larger sprite (256 - 32 - margin)
-                break;
-            case ITEM_MUSHROOM:
-                itemTiles = bananaTiles;
-                paletteNum = 2;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_SPEEDBOOST:
-                itemTiles = red_shellTiles;
-                paletteNum = 5;
-                spriteSize = SpriteSize_16x16;
-                break;
-            default:
-                itemTiles = NULL;
-                break;
+        switch (player->item)
+        {
+        case ITEM_BANANA:
+            itemTiles = bananaTiles;
+            paletteNum = 2;
+            spriteSize = SpriteSize_16x16;
+            break;
+        case ITEM_BOMB:
+            itemTiles = bombTiles;
+            paletteNum = 3;
+            spriteSize = SpriteSize_16x16;
+            break;
+        case ITEM_GREEN_SHELL:
+            itemTiles = green_shellTiles;
+            paletteNum = 4;
+            spriteSize = SpriteSize_16x16;
+            break;
+        case ITEM_RED_SHELL:
+            itemTiles = red_shellTiles;
+            paletteNum = 5;
+            spriteSize = SpriteSize_16x16;
+            break;
+        case ITEM_MISSILE:
+            itemTiles = missileTiles;
+            paletteNum = 6;
+            spriteSize = SpriteSize_16x32; // CHANGED: Missile is 16x32
+            break;
+        case ITEM_OIL:
+            itemTiles = oil_slickTiles;
+            paletteNum = 7;
+            spriteSize = SpriteSize_32x32; // CHANGED: Oil is 32x32
+            itemX = 208;                   // Adjust position for larger sprite (256 - 32 - margin)
+            break;
+        case ITEM_MUSHROOM:
+            itemTiles = bananaTiles;
+            paletteNum = 2;
+            spriteSize = SpriteSize_16x16;
+            break;
+        case ITEM_SPEEDBOOST:
+            itemTiles = red_shellTiles;
+            paletteNum = 5;
+            spriteSize = SpriteSize_16x16;
+            break;
+        default:
+            itemTiles = NULL;
+            break;
         }
 
-        if (itemTiles != NULL) {
+        if (itemTiles != NULL)
+        {
             // Copy the item graphics to sub screen sprite memory
             dmaCopy(itemTiles, itemDisplayGfx_Sub,
                     (player->item == ITEM_MISSILE) ? missileTilesLen
@@ -867,7 +983,7 @@ static void updateItemDisplay_Sub(void) {
 
             // Display the sprite with appropriate size
             oamSet(&oamSub, 0, itemX, itemY, 0, paletteNum,
-                   spriteSize,  // CHANGED: Use spriteSize variable
+                   spriteSize, // CHANGED: Use spriteSize variable
                    SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, false, false,
                    false, false, false);
         }
@@ -879,10 +995,11 @@ static void updateItemDisplay_Sub(void) {
 //=============================================================================
 // Private Functions - Quadrant Management
 //=============================================================================
-static void loadQuadrant(QuadrantID quad) {
-    const QuadrantData* data = &quadrantData[quad];
+static void loadQuadrant(QuadrantID quad)
+{
+    const QuadrantData *data = &quadrantData[quad];
     // CHANGED: Clear the entire palette first to avoid color pollution
-    memset(BG_PALETTE, 0, 512);  // 256 colors × 2 bytes = 512 bytes
+    memset(BG_PALETTE, 0, 512); // 256 colors × 2 bytes = 512 bytes
     // CHANGED: Load tiles for this quadrant
     dmaCopy(data->tiles, BG_TILE_RAM(1), data->tilesLen);
 
@@ -890,7 +1007,8 @@ static void loadQuadrant(QuadrantID quad) {
     dmaCopy(data->palette, BG_PALETTE, data->paletteLen);
 
     // Load the map data for this quadrant
-    for (int i = 0; i < 32; i++) {
+    for (int i = 0; i < 32; i++)
+    {
         dmaCopy(&data->map[i * 64], &BG_MAP_RAM(0)[i * 32], 64);
         dmaCopy(&data->map[i * 64 + 32], &BG_MAP_RAM(1)[i * 32], 64);
         dmaCopy(&data->map[(i + 32) * 64], &BG_MAP_RAM(2)[i * 32], 64);
@@ -898,36 +1016,44 @@ static void loadQuadrant(QuadrantID quad) {
     }
 }
 
-static QuadrantID determineQuadrant(int x, int y) {
-    int col = (x < QUAD_OFFSET) ? 0 : (x < 2 * QUAD_OFFSET) ? 1 : 2;
-    int row = (y < QUAD_OFFSET) ? 0 : (y < 2 * QUAD_OFFSET) ? 1 : 2;
+static QuadrantID determineQuadrant(int x, int y)
+{
+    int col = (x < QUAD_OFFSET) ? 0 : (x < 2 * QUAD_OFFSET) ? 1
+                                                            : 2;
+    int row = (y < QUAD_OFFSET) ? 0 : (y < 2 * QUAD_OFFSET) ? 1
+                                                            : 2;
     return (QuadrantID)(row * QUADRANT_GRID_SIZE + col);
 }
 
 //=============================================================================
 // Sub-Screen Display Functions
 //=============================================================================
-void printDigit(u16* map, int number, int x, int y) {
+void printDigit(u16 *map, int number, int x, int y)
+{
     int i, j;
-    if (number < 10) {
+    if (number < 10)
+    {
         for (i = 0; i < 8; i++)
             for (j = 0; j < 4; j++)
                 map[(i + y) * 32 + j + x] =
                     (number >= 0) ? (u16)(i * 4 + j) + 32 * number : 32;
     }
-    if (number == 10) {
+    if (number == 10)
+    {
         for (i = 0; i < 8; i++)
             for (j = 0; j < 2; j++)
                 map[(i + y) * 32 + j + x] = (u16)(i * 4 + j) + 32 * 10 + 2;
     }
-    if (number == 11) {
+    if (number == 11)
+    {
         for (i = 0; i < 8; i++)
             for (j = 0; j < 2; j++)
                 map[(i + y) * 32 + j + x] = (u16)(i * 4 + j) + 32 * 10;
     }
 }
 
-void updateChronoDisp(u16* map, int min, int sec, int msec) {
+void updateChronoDisp(u16 *map, int min, int sec, int msec)
+{
     int x = 0, y = 0;
     int number;
 
@@ -994,21 +1120,25 @@ void updateChronoDisp(u16* map, int min, int sec, int msec) {
     printDigit(map, number, x, y);
 }
 
-void updateChronoDisp_Sub(int min, int sec, int msec) {
+void updateChronoDisp_Sub(int min, int sec, int msec)
+{
     updateChronoDisp(BG_MAP_RAM_SUB(0), min, sec, msec);
 }
 
-void changeColorDisp_Sub(uint16 c) {
+void changeColorDisp_Sub(uint16 c)
+{
     BG_PALETTE_SUB[0] = c;
 }
 
-void updateLapDisp_Sub(int currentLap, int totalLaps) {
+void updateLapDisp_Sub(int currentLap, int totalLaps)
+{
     int x, y;
 
     // Current lap
     x = 0;
     y = 0;
-    if (currentLap >= 0 && currentLap <= 9) {
+    if (currentLap >= 0 && currentLap <= 9)
+    {
         printDigit(BG_MAP_RAM_SUB(0), currentLap, x, y);
     }
 
@@ -1020,9 +1150,12 @@ void updateLapDisp_Sub(int currentLap, int totalLaps) {
     // Total laps
     x = 6;
     y = 0;
-    if (totalLaps >= 0 && totalLaps <= 9) {
+    if (totalLaps >= 0 && totalLaps <= 9)
+    {
         printDigit(BG_MAP_RAM_SUB(0), totalLaps, x, y);
-    } else if (totalLaps >= 10) {
+    }
+    else if (totalLaps >= 10)
+    {
         printDigit(BG_MAP_RAM_SUB(0), totalLaps / 10, x, y);
         x = 10;
         y = 0;

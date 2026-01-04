@@ -96,5 +96,6 @@ void Race_SetCarGfx(int index, u16* gfx);
 void Race_SetLoadedQuadrant(QuadrantID quad);
 void Race_SetPlayerIndex(int playerIndex);
 void UpdatePauseDebounce(void);
+void Race_CountdownTick(void);
 
 #endif  // GAMEPLAY_LOGIC_H

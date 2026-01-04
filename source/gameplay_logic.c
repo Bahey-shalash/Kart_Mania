@@ -297,6 +297,30 @@ void Race_Tick(void) {
     }
 }
 
+
+//=============================================================================
+// Countdown Tick - Only handles network sync, no game logic
+//=============================================================================
+void Race_CountdownTick(void) {
+    // Only run during countdown in multiplayer
+    if (!Race_IsCountdownActive() || !isMultiplayerRace) {
+        return;
+    }
+    
+    // Network sync only - share spawn positions
+    networkUpdateCounter++;
+    if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
+        Car* player = &KartMania.cars[KartMania.playerIndex];
+        
+        // Send my car's spawn position
+        Multiplayer_SendCarState(player);
+
+        // Receive others' spawn positions
+        Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
+
+        networkUpdateCounter = 0;
+    }
+}
 //=============================================================================
 // Countdown System
 //=============================================================================
