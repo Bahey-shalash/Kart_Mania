@@ -577,8 +577,11 @@ static void Gameplay_ConfigureSubBackground(void) {
     swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
     BG_PALETTE_SUB[0] = ARGB16(1, 0, 0, 0);
     BG_PALETTE_SUB[255] = ARGB16(1, 20, 20, 20);
+    // Clear entire map to prevent garbage
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
-    Gameplay_UpdateChronoDisplay(-1, -1, -1);
+    // Initialize displays
+    Gameplay_UpdateChronoDisplay(0, 0, 0);
+    Gameplay_UpdateLapDisplay(1, Race_GetLapCount());
     Gameplay_LoadItemDisplay();
 #endif
 }
@@ -691,12 +694,8 @@ static void Gameplay_RenderCountdown(CountdownState state) {
 #ifndef CONSOLE_DEBUG_MODE
     u16* map = BG_MAP_RAM_SUB(0);
 
-    // Clear countdown area
-    for (int i = 16; i < 24; i++) {
-        for (int j = 12; j < 20; j++) {
-            map[i * 32 + j] = 32;
-        }
-    }
+    // Clear entire screen first to remove any previous displays
+    memset(map, 32, 32 * 32 * 2);
 
     int centerX = 14;
     int centerY = 10;
@@ -724,11 +723,20 @@ static void Gameplay_RenderCountdown(CountdownState state) {
 static void Gameplay_ClearCountdownDisplay(void) {
 #ifndef CONSOLE_DEBUG_MODE
     u16* map = BG_MAP_RAM_SUB(0);
-    for (int i = 16; i < 24; i++) {
-        for (int j = 12; j < 20; j++) {
+    // Clear entire screen to remove any countdown remnants
+    for (int i = 0; i < 32; i++) {
+        for (int j = 0; j < 32; j++) {
             map[i * 32 + j] = 32;
         }
     }
+    // Redraw the timer display
+    Gameplay_UpdateChronoDisplay(
+        Gameplay_GetRaceMin(),
+        Gameplay_GetRaceSec(),
+        Gameplay_GetRaceMsec()
+    );
+    // Redraw the lap display
+    Gameplay_UpdateLapDisplay(Gameplay_GetCurrentLap(), Race_GetLapCount());
 #endif
 }
 

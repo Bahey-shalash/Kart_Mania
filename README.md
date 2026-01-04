@@ -676,6 +676,449 @@ Race Complete → Display final time (2.5s)
 - Automatically hides when race finishes
 
 ---
+
+### Gameplay Logic (`gameplay/gameplay_logic.c`)
+
+#### Purpose
+Core race logic engine handling physics updates, lap tracking, input processing, and race state management for both single-player and multiplayer modes.
+
+#### Features
+- **Race state management**: Complete lifecycle from initialization to completion
+- **Physics engine**: Car movement, terrain effects, collision detection, and wall bouncing
+- **Lap validation system**: Checkpoint-based lap counting with anti-cheat measures
+- **Countdown system**: 3-2-1-GO! sequence before race start
+- **Input handling**: Player controls with item usage and inverted control effects
+- **Network synchronization**: 15Hz multiplayer state updates
+- **Pause functionality**: START button interrupt-based pause system with debouncing
+- **Collision lockout**: Temporary acceleration disable after wall hits
+
+#### Architecture
+
+**Race State Structure:**
+```c
+typedef struct {
+    bool raceStarted;           // Race active flag
+    bool raceFinished;          // Race completed flag
+    GameMode gameMode;          // SinglePlayer or MultiPlayer
+    Map currentMap;             // Current race track
+    
+    int carCount;               // Number of cars (1 or MAX_CARS)
+    int playerIndex;            // Local player index
+    Car cars[MAX_CARS];         // All car states
+    
+    int totalLaps;              // Laps for this race
+    int finishDelayTimer;       // Countdown before finish menu
+    int finalTimeMin/Sec/Msec;  // Final race time
+} RaceState;
+```
+
+**Checkpoint Progression System:**
+Cars must pass through 4 checkpoints in sequence to validate a lap:
+```
+START → NEED_LEFT → NEED_DOWN → NEED_RIGHT → READY_FOR_LAP
+  |         |            |             |              |
+  └─────────┴────────────┴─────────────┴──────────────┘
+           (Crossing finish line here counts as lap)
+```
+
+This prevents lap skipping by driving backwards or cutting corners.
+
+**State Tracking Arrays:**
+```c
+// Per-car tracking (indexed by car index)
+bool wasAboveFinishLine[MAX_CARS];      // Finish line position
+bool hasCompletedFirstCrossing[MAX_CARS]; // Ignore spawn crossing
+CheckpointProgressState cpState[MAX_CARS]; // Current checkpoint state
+bool wasOnLeftSide[MAX_CARS];           // Left checkpoint state
+bool wasOnTopSide[MAX_CARS];            // Top checkpoint state
+int collisionLockoutTimer[MAX_CARS];    // Wall collision cooldown
+```
+
+#### Update Loops
+
+**Main Race Loop (`Race_Tick`):**
+```
+60 FPS Update Cycle:
+├─ Check if race finished → only decrement delay timer
+├─ Handle player input
+├─ Apply terrain effects (sand friction/speed cap)
+├─ Update items system
+├─ Check item collisions
+├─ Update car physics
+├─ Handle wall collisions + lockout
+├─ Check checkpoint progression
+└─ Network sync (every 4 frames in multiplayer)
+```
+
+**Countdown Loop (`Race_CountdownTick`):**
+```
+During Countdown (multiplayer only):
+├─ Network sync only (share spawn positions)
+└─ No physics or game logic
+```
+
+**Physics Update Order:**
+1. Player input → steering/acceleration
+2. Terrain effects → friction/speed modification
+3. Items update → projectile movement
+4. Item collisions → pickup/hit detection
+5. Car physics → velocity/position update
+6. Wall collision → pushback + lockout
+7. Checkpoint tracking → lap validation
+
+#### Input Handling
+
+**Control Mapping:**
+
+| Input | Action | Notes |
+|-------|--------|-------|
+| A | Accelerate | Disabled during collision lockout |
+| B | Brake | Only when moving forward |
+| LEFT/RIGHT | Steer | Only works when accelerating |
+| L | Use item | Press and release to fire |
+| DOWN + L | Drop item behind | Hazards (banana, oil, bomb) |
+| START | Pause/Resume | Interrupt-driven with debounce |
+
+**Control Inversion:**
+When hit by mushroom item, steering is inverted:
+```c
+bool invertControls = effects->confusionActive;
+int turnAmount = invertControls ? TURN_STEP_50CC : -TURN_STEP_50CC;
+```
+
+#### Lap Validation System
+
+**Checkpoint Zones:**
+- **X Divide**: 512 pixels (left vs right side)
+- **Y Divide**: 512 pixels (top vs bottom side)
+- **Finish Line**: Y = 540 pixels
+
+**Validation Sequence:**
+1. Car spawns at bottom → `CP_STATE_START`
+2. Crosses Y=512 going up → `CP_STATE_NEED_LEFT`
+3. Crosses X=512 going left → `CP_STATE_NEED_DOWN`
+4. Crosses Y=512 going down → `CP_STATE_NEED_RIGHT`
+5. Crosses X=512 going right → `CP_STATE_READY_FOR_LAP`
+6. Crosses finish line (Y=540) → **Lap counted!**
+7. Reset to `CP_STATE_START`
+
+**Anti-Cheat Measures:**
+- First finish line crossing ignored (spawn position)
+- Must complete full checkpoint sequence
+- Cannot skip checkpoints
+- Prevents backwards driving exploits
+
+#### Network Synchronization
+
+**Update Frequency:**
+- **Rate**: 15 Hz (every 4 frames at 60 FPS)
+- **Data**: Car position, velocity, angle, item state
+
+**Multiplayer Mode:**
+```c
+if (networkUpdateCounter >= 4) {
+    Multiplayer_SendCarState(myPlayer);
+    Multiplayer_ReceiveCarStates(allCars, carCount);
+    networkUpdateCounter = 0;
+}
+```
+
+**Spawn Position Assignment:**
+- Connected players sorted by index
+- Spawn positions assigned sequentially
+- Disconnected players placed off-map (-1000, -1000)
+- Two columns: even indices left, odd indices right
+
+#### Terrain System
+
+**Sand Effects:**
+```c
+if (Terrain_IsOnSand(carX, carY, quadrant)) {
+    car->friction = SAND_FRICTION;        // 150/256 = 58.6%
+    if (car->speed > SAND_MAX_SPEED) {
+        car->speed -= excess / 2;         // Gradual slowdown
+    }
+}
+```
+
+**Normal Track:**
+```c
+car->friction = FRICTION_50CC;  // 240/256 = 93.75%
+```
+
+#### Collision System
+
+**Wall Collision:**
+1. Check if car center within CAR_RADIUS of wall
+2. Get collision normal vector (nx, ny)
+3. Push car away by CAR_RADIUS pixels
+4. Set speed to 0
+5. Enable collision lockout for 60 frames (1 second)
+
+**Lockout Effect:**
+- Acceleration disabled
+- Prevents wall grinding exploits
+- Visual feedback: car stops moving forward
+
+**Map Boundaries:**
+```c
+// Account for sprite center offset
+minPos = -16;           // Allow sprite to reach edge
+maxPos = 1024 - 16;     // Map size minus offset
+```
+
+#### Countdown System
+
+**Sequence:**
+```
+COUNTDOWN_3  (60 frames) → "3"
+COUNTDOWN_2  (60 frames) → "2"
+COUNTDOWN_1  (60 frames) → "1"
+COUNTDOWN_GO (60 frames) → "GO!"
+COUNTDOWN_FINISHED       → Race starts, timer begins
+```
+
+**Timing:**
+- Each number displays for 1 second (60 frames)
+- Total countdown: 4 seconds
+- Timer starts exactly when GO! disappears
+- Player input blocked until COUNTDOWN_FINISHED
+
+#### Pause System
+
+**Interrupt-Based Implementation:**
+```c
+// IRQ handler for START button
+void Race_PauseISR(void) {
+    if (debounceFrames > 0) return;      // Prevent bounce
+    if (!(keysHeld() & KEY_START)) return; // Verify press
+    
+    isPaused = !isPaused;
+    debounceFrames = 15;  // 250ms debounce
+    
+    isPaused ? RaceTick_TimerPause() : RaceTick_TimerEnable();
+}
+```
+
+**Debouncing:**
+- 15 frame cooldown (~250ms at 60 FPS)
+- Prevents accidental double-toggles
+- Updated each frame in main loop
+
+#### Race Modes
+
+**Single-Player:**
+- 1 car (player only)
+- Player index: 0
+- Standard lap counts per map
+- No network synchronization
+
+**Multiplayer:**
+- Up to 8 cars (MAX_CARS)
+- Player index: from `Multiplayer_GetMyPlayerID()`
+- Special lap count: 5 laps on Scorching Sands
+- 15Hz network updates
+- Spawn positions based on connected players
+
+#### Usage
+
+```c
+// Initialize race
+Race_Init(ScorchingSands, SinglePlayer);
+
+// Main game loop (60 FPS)
+while (1) {
+    swiWaitForVBlank();
+    
+    // Update countdown or race
+    if (Race_IsCountdownActive()) {
+        Race_CountdownTick();  // MP only: network sync
+        Race_UpdateCountdown(); // Advance countdown
+    } else {
+        Race_Tick();  // Normal race update
+    }
+    
+    Race_UpdatePauseDebounce();  // Update pause cooldown
+    
+    // Check for race completion
+    if (Race_IsCompleted()) {
+        int min, sec, msec;
+        Race_GetFinalTime(&min, &sec, &msec);
+        // Show results screen
+    }
+}
+
+// Cleanup
+Race_Stop();
+```
+
+#### Public API
+
+**Lifecycle:**
+- `Race_Init(map, mode)` - Initialize new race
+- `Race_Tick()` - Update race logic (60 FPS)
+- `Race_CountdownTick()` - Update countdown network sync
+- `Race_Reset()` - Reset to initial state
+- `Race_Stop()` - Cleanup and disable timers
+- `Race_MarkAsCompleted(min, sec, msec)` - Mark race finished
+
+**State Queries:**
+- `Race_GetState()` - Get full race state (read-only)
+- `Race_GetPlayerCar()` - Get player's car (read-only)
+- `Race_IsActive()` - Check if race is running
+- `Race_IsCompleted()` - Check if race is finished
+- `Race_GetLapCount()` - Get total laps
+- `Race_CheckFinishLineCross(car)` - Check lap completion
+- `Race_GetFinalTime(&min, &sec, &msec)` - Get final time
+
+**Countdown:**
+- `Race_UpdateCountdown()` - Advance countdown state
+- `Race_IsCountdownActive()` - Check if still counting
+- `Race_GetCountdownState()` - Get current countdown phase
+
+**Configuration:**
+- `Race_SetCarGfx(index, gfx)` - Set car sprite graphics
+- `Race_SetLoadedQuadrant(quad)` - Update loaded map section
+
+**Pause System:**
+- `Race_InitPauseInterrupt()` - Enable pause button
+- `Race_CleanupPauseInterrupt()` - Disable pause button
+- `Race_UpdatePauseDebounce()` - Update bounce prevention
+- `Race_PauseISR()` - Interrupt service routine (internal)
+
+#### Constants (see `game_constants.h`)
+
+**Physics:**
+- `TURN_STEP_50CC` - Steering angle delta (3 units)
+- `SPEED_50CC` - Maximum speed (3.0 px/frame in Q16.8)
+- `ACCEL_50CC` - Acceleration rate (1.0 px/frame² in Q16.8)
+- `FRICTION_50CC` - Normal friction (240/256 = 93.75%)
+- `SAND_FRICTION` - Sand friction (150/256 = 58.6%)
+- `COLLISION_LOCKOUT_FRAMES` - Wall hit cooldown (60 frames)
+
+**Race Layout:**
+- `START_LINE_X/Y` - Spawn position (904, 580)
+- `START_FACING_ANGLE` - Initial direction (ANGLE_UP = 270°)
+- `FINISH_LINE_Y` - Finish line position (540)
+- `CHECKPOINT_DIVIDE_X/Y` - Checkpoint boundaries (512, 512)
+
+**Lap Counts:**
+- `LAPS_SCORCHING_SANDS` - 2 laps (5 in multiplayer)
+- `LAPS_ALPIN_RUSH` - 10 laps
+- `LAPS_NEON_CIRCUIT` - 10 laps
+
+**Timing:**
+- `COUNTDOWN_NUMBER_DURATION` - 60 frames per number
+- `COUNTDOWN_GO_DURATION` - 60 frames for GO!
+- `FINISH_DELAY_FRAMES` - 300 frames (5 seconds) post-race
+
+#### Design Notes
+
+**Critical Update Order:**
+Physics updates must follow this exact order to prevent bugs:
+1. Input → Terrain → Items → Collisions → Physics → Walls → Checkpoints
+
+**Multiplayer Spawn Algorithm:**
+```c
+// Build sorted list of connected players
+connectedIndices = [0, 2, 5, 7];  // Example: 4 players
+
+// Assign spawn positions sequentially
+Player 0 → spawnPosition 0 → (904, 580)  // Left column, first
+Player 2 → spawnPosition 1 → (936, 604)  // Right column, second
+Player 5 → spawnPosition 2 → (904, 628)  // Left column, third
+Player 7 → spawnPosition 3 → (936, 652)  // Right column, fourth
+```
+
+**Collision Lockout Rationale:**
+Prevents exploit where players could "ride" walls by holding accelerate. Forces player to back away before accelerating again.
+
+**First Crossing Ignore:**
+Cars spawn above finish line (Y=580 > 540). Without this check, spawning would immediately count as a lap completion.
+
+**Network Update Rate:**
+15Hz chosen as balance between:
+- Bandwidth (lower = less data)
+- Responsiveness (higher = smoother)
+- Frame budget (60 FPS / 4 = 15 updates/sec)
+
+**Pause Interrupt Priority:**
+Uses key interrupt (IRQ_KEYS) for instant response. Alternative polling-based approach would have 1-frame delay and could miss quick presses.
+
+**Terrain Detection Optimization:**
+Checks quadrant ID to avoid loading wrong map data. Sand detection uses pixel color sampling from loaded quadrant tiles.
+
+**Memory Safety:**
+- All array accesses bounds-checked
+- Car index validated before gfx assignment
+- Disconnected players safely handled with off-map positions
+
+#### State Flow
+
+```
+Race_Init()
+    ↓
+COUNTDOWN_3 (1 second)
+    ↓
+COUNTDOWN_2 (1 second)
+    ↓
+COUNTDOWN_1 (1 second)
+    ↓
+COUNTDOWN_GO (1 second)
+    ↓
+COUNTDOWN_FINISHED
+    ↓
+Race Active (Race_Tick runs)
+    ↓
+Lap Complete → Reset lap timer, continue racing
+    ↓
+Final Lap Complete → Race_MarkAsCompleted()
+    ↓
+Delay Timer (5 seconds showing final time)
+    ↓
+finishDelayTimer reaches 0
+    ↓
+→ PLAYAGAIN (single-player)
+→ HOME_PAGE (multiplayer)
+```
+
+#### Common Integration Patterns
+
+**Timer Interrupt Integration:**
+```c
+// In timer ISR (1000 Hz)
+void timerIRQ(void) {
+    if (Race_IsActive() && !Race_IsCountdownActive()) {
+        Gameplay_IncrementTimer();  // Lap + total time
+    }
+}
+```
+
+**Input Blocking:**
+```c
+// Player input only processed when:
+// - Race is active (not finished)
+// - Countdown has finished
+// - Not paused
+if (Race_IsActive() && !Race_IsCountdownActive() && !isPaused) {
+    Race_Tick();
+}
+```
+
+**Lap Completion Handling:**
+```c
+// In gameplay update loop
+if (Race_CheckFinishLineCross(player)) {
+    if (currentLap < Race_GetLapCount()) {
+        currentLap++;      // Next lap
+        // Reset lap timer (but not total time)
+    } else {
+        // Final lap - race complete!
+        Race_MarkAsCompleted(totalMin, totalSec, totalMsec);
+    }
+}
+```
+---
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.

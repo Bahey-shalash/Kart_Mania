@@ -28,7 +28,7 @@ void initTimer(void) {
 
 void timerISRVblank(void) {
     GameContext* ctx = GameContext_Get();
-    UpdatePauseDebounce();
+    Race_UpdatePauseDebounce();
     switch (ctx->currentGameState) {
         case HOME_PAGE:
             HomePage_OnVBlank();
