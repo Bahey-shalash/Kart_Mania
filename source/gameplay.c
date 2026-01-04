@@ -264,7 +264,11 @@ GameState Gameplay_update(void) {
 
         // After 2.5 seconds, transition to PLAYAGAIN state
         if (finishDisplayCounter >= FINISH_DISPLAY_FRAMES) {
-            return PLAYAGAIN;  // Let main.c handle the transition
+            if (state->gameMode == MultiPlayer) {
+                return HOME_PAGE;
+            } else{
+            return PLAYAGAIN; 
+            }
         }
     }
 
@@ -524,14 +528,11 @@ void Gameplay_OnVBlank(void) {
                SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
                false);
     } else {
-        // MULTIPLAYER: Render only connected players' cars
+        // MULTIPLAYER: Render all connected players during countdown
         for (int i = 0; i < state->carCount; i++) {
-            // OAM slot for this car (slots 41-48 for cars)
             int oamSlot = 41 + i;
 
-            // Skip rendering if this player is not connected
             if (!Multiplayer_IsPlayerConnected(i)) {
-                // Hide this OAM slot completely
                 oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_32x32,
                        SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
                        false);
@@ -539,29 +540,22 @@ void Gameplay_OnVBlank(void) {
             }
 
             const Car* car = &state->cars[i];
-
             int carWorldX = FixedToInt(car->position.x);
             int carWorldY = FixedToInt(car->position.y);
-
-            // Convert to screen coordinates
             int carScreenX = carWorldX - scrollX - 16;
             int carScreenY = carWorldY - scrollY - 16;
 
-            // Set rotation for this car (affine matrices 0-7 for cars)
             int dsAngle = -(car->angle512 << 6);
             oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
 
-            // Check if on screen (with margin for smooth enter/exit)
             bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH + 32 &&
                              carScreenY >= -32 && carScreenY < SCREEN_HEIGHT + 32);
 
             if (onScreen) {
-                // Render car sprite on screen (use affine matrix i)
                 oamSet(&oamMain, oamSlot, carScreenX, carScreenY, 0, 0,
                        SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i, true,
                        false, false, false, false);
             } else {
-                // Move off-screen cars way off screen
                 oamSet(&oamMain, oamSlot, -64, -64, 0, 0, SpriteSize_32x32,
                        SpriteColorFormat_16Color, car->gfx, i, true, false, false,
                        false, false);
