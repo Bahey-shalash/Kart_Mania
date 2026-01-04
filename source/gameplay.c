@@ -38,7 +38,7 @@
 #define FINISH_DISPLAY_FRAMES 150 // 2.5 seconds at 60fps to show final time
 
 //! DEBUGGING FLAG
-#define console_on_debug  // Uncomment to enable debug console on sub screen 
+//#define console_on_debug  // Uncomment to enable debug console on sub screen 
 //! DEBUGGING FLAG
 //=============================================================================
 // Private State
@@ -550,8 +550,11 @@ void Gameplay_OnVBlank(void)
                 oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
 
                 // Check if on screen
-                bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH + 32 &&
-                                 carScreenY >= -32 && carScreenY < SCREEN_HEIGHT + 32);
+                // IMPORTANT: Coordinates must be in valid range to avoid DS hardware wraparound
+                // X: DS OAM X is 9-bit signed, but keep in [0, 256) to be safe
+                // Y: DS OAM Y is 8-bit (0-255), but values >= 192 wrap to top of screen
+                bool onScreen = (carScreenX >= -16 && carScreenX < SCREEN_WIDTH + 16 &&
+                                 carScreenY >= -16 && carScreenY < SCREEN_HEIGHT + 16);
 
                 if (onScreen)
                 {
@@ -676,8 +679,11 @@ void Gameplay_OnVBlank(void)
             int dsAngle = -(car->angle512 << 6);
             oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
 
-            bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH + 32 &&
-                             carScreenY >= -32 && carScreenY < SCREEN_HEIGHT + 32);
+            // IMPORTANT: Coordinates must be in valid range to avoid DS hardware wraparound
+            // X: DS OAM X is 9-bit signed, but keep in [0, 256) to be safe
+            // Y: DS OAM Y is 8-bit (0-255), but values >= 192 wrap to top of screen
+            bool onScreen = (carScreenX >= -16 && carScreenX < SCREEN_WIDTH + 32 &&
+                             carScreenY >= -16 && carScreenY < SCREEN_HEIGHT + 32);
 
             if (onScreen)
             {
