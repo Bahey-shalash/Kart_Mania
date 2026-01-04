@@ -550,8 +550,8 @@ void Gameplay_OnVBlank(void)
                 oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
 
                 // Check if on screen
-                bool onScreen = (carScreenX >= -16 && carScreenX < SCREEN_WIDTH + 16 &&
-                                 carScreenY >= -16 && carScreenY < SCREEN_HEIGHT + 16);
+                bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH &&
+                                 carScreenY >= -32 && carScreenY < SCREEN_HEIGHT);
 
                 if (onScreen)
                 {
@@ -676,8 +676,8 @@ void Gameplay_OnVBlank(void)
             int dsAngle = -(car->angle512 << 6);
             oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
 
-            bool onScreen = (carScreenX >= -16 && carScreenX < SCREEN_WIDTH + 16 &&
-                             carScreenY >= -16 && carScreenY < SCREEN_HEIGHT + 16);
+            bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH &&
+                             carScreenY >= -32 && carScreenY < SCREEN_HEIGHT);
 
             if (onScreen)
             {
