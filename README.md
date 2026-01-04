@@ -454,6 +454,228 @@ if (Wall_CheckCollision(carX, carY, CAR_RADIUS, quad)) {
 
 ---
 
+### Gameplay Screen (`gameplay/gameplay.c`)
+
+#### Purpose
+Main racing screen handling real-time gameplay, rendering, physics, and race progression for both single-player and multiplayer modes.
+
+#### Features
+- **Dual-screen racing interface**: Top screen shows the race track with car sprites; bottom screen displays race timer, lap counter, and current item
+- **Dynamic camera system**: Smooth scrolling that follows the player's kart with automatic quadrant loading
+- **Countdown sequence**: 3-2-1-GO! countdown before race start with visual display
+- **Lap tracking**: Monitors finish line crossings and manages lap progression
+- **Personal best times**: Saves and displays best race times per map with visual feedback for new records
+- **Item display**: Shows currently held item in top-right corner of sub screen
+- **Race completion**: Displays final time with personal best comparison (green background for new records)
+- **Debug mode**: Optional console output for development (see `CONSOLE_DEBUG_MODE`)
+
+#### Architecture
+
+**Graphics System:**
+- **Main Screen (Top)**:
+  - **BG0 (64x64, Priority 1)**: Dynamic race track with quadrant-based streaming
+  - **Sprites**: Kart sprites with rotation for all players (OAM slots 41+)
+  - **Item sprites**: Rendered dynamically across the track
+
+- **Sub Screen (Bottom)**:
+  - **BG0 (32x32)**: Timer and lap counter display using number tiles
+  - **Sprite (Slot 0)**: Current item icon (16x16 or 32x32 depending on item)
+  - Background color changes: Black (normal), Green (new record)
+
+**Quadrant Streaming:**
+The 1024×1024 map is divided into a 3×3 grid of 256×256 quadrants:
+```
+[TL] [TC] [TR]
+[ML] [MC] [MR]
+[BL] [BC] [BR]
+```
+- Only the visible quadrant is loaded into VRAM at any time
+- Automatic transitions when camera crosses quadrant boundaries
+- Each quadrant has independent tiles, map data, and palette
+
+**Input Handling:**
+
+| Input | Action |
+|-------|--------|
+| SELECT | Exit to home screen (emergency quit) |
+| D-pad / A / B | Race controls (handled by `Race_Update` in gameplay_logic) |
+
+**State Management:**
+- **Timer system**: Tracks both lap time (resets per lap) and total race time
+- **Lap progression**: Increments lap counter on finish line cross, completes race on final lap
+- **Best time tracking**: Loads best time on init, saves new records on race completion
+- **Display states**: Countdown → Racing → Final Time Display → Play Again/Home
+
+#### Camera System
+
+**Scrolling Logic:**
+```c
+// Center camera on player
+scrollX = playerX - (SCREEN_WIDTH / 2);
+scrollY = playerY - (SCREEN_HEIGHT / 2);
+
+// Clamp to map boundaries
+if (scrollX < 0) scrollX = 0;
+if (scrollY < 0) scrollY = 0;
+if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
+if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+```
+
+**Quadrant Detection:**
+```c
+int col = (x < 256) ? 0 : (x < 512) ? 1 : 2;
+int row = (y < 256) ? 0 : (y < 512) ? 1 : 2;
+quadrant = row * 3 + col;
+```
+
+#### Rendering Modes
+
+**Single-Player Mode:**
+- Renders only the player's kart at OAM slot 41
+- Uses affine matrix 0 for rotation
+- Simpler rendering path for performance
+
+**Multiplayer Mode:**
+- Renders all connected players (slots 41-44)
+- Each car uses its own affine matrix (0-3)
+- Off-screen cars are positioned at (-64, -64)
+- Disconnected players are hidden
+
+**Countdown Rendering:**
+- All cars are rendered during countdown (prevents pop-in)
+- Camera follows player even before race starts
+- Countdown numbers displayed on sub screen
+
+#### Usage
+```c
+// Initialize gameplay screen
+Gameplay_Initialize();
+
+// In main loop (60 FPS)
+while (1) {
+    swiWaitForVBlank();
+    Gameplay_OnVBlank();  // Render frame
+    
+    GameState next = Gameplay_Update();  // Update logic
+    if (next != GAMEPLAY) {
+        Gameplay_Cleanup();
+        // Transition to next state
+        break;
+    }
+}
+
+// In timer interrupt (1000 Hz)
+void timerIRQ(void) {
+    Gameplay_IncrementTimer();
+    Gameplay_UpdateChronoDisplay(
+        Gameplay_GetRaceMin(),
+        Gameplay_GetRaceSec(), 
+        Gameplay_GetRaceMsec()
+    );
+}
+```
+
+#### Public API
+
+**Lifecycle:**
+- `Gameplay_Initialize()` - Set up graphics, load map, initialize race
+- `Gameplay_Update()` - Handle input and state transitions
+- `Gameplay_OnVBlank()` - Render frame (camera, sprites, items, UI)
+- `Gameplay_Cleanup()` - Free sprites and allocated memory
+
+**Timer Access:**
+- `Gameplay_GetRaceMin/Sec/Msec()` - Get current lap time
+- `Gameplay_GetCurrentLap()` - Get lap number (1-indexed)
+- `Gameplay_IncrementTimer()` - Called by timer interrupt (1000 Hz)
+
+**Display Functions:**
+- `Gameplay_UpdateChronoDisplay(min, sec, msec)` - Update race timer
+- `Gameplay_UpdateLapDisplay(current, total)` - Update lap counter
+- `Gameplay_ChangeDisplayColor(color)` - Set sub screen background color
+
+#### Constants (see `game_constants.h`)
+
+**Display Timing:**
+- `FINISH_DISPLAY_FRAMES` - Duration to show final time (150 frames = 2.5s)
+- `COUNTDOWN_NUMBER_DURATION` - Duration for each countdown number (60 frames)
+- `COUNTDOWN_GO_DURATION` - Duration for "GO!" display (60 frames)
+
+**Map & Rendering:**
+- `MAP_SIZE` - Full map size (1024×1024 pixels)
+- `QUAD_SIZE` - Quadrant size (256×256 pixels)
+- `SCREEN_WIDTH/HEIGHT` - Screen dimensions (256×192)
+- `MAX_SCROLL_X/Y` - Maximum scroll positions
+
+**Sprite & OAM:**
+- `CAR_SPRITE_SIZE` - Kart sprite size (32×32)
+- `CAR_SPRITE_CENTER_OFFSET` - Centering offset (16 pixels)
+- OAM slots 41-44 reserved for player karts
+
+#### Design Notes
+
+**Performance Optimization:**
+- **Quadrant streaming**: Only one 256×256 section loaded at a time (saves VRAM)
+- **Palette isolation**: Each quadrant has independent palette to prevent color pollution
+- **Off-screen culling**: Multiplayer cars outside viewport are positioned off-screen
+- **Single update per frame**: All rendering happens in VBlank callback
+
+**Critical Timing:**
+- **Best time saving**: Happens in `Update()`, NOT in `OnVBlank()` (storage is not VBlank-safe)
+- **Timer increment**: Must be called from timer interrupt at 1000 Hz for accurate milliseconds
+- **Display counter**: Uses frame counter for final time display (60 FPS)
+
+**Debug Mode:**
+- Define `CONSOLE_DEBUG_MODE` to enable debug console on sub screen
+- Shows red shell positions, angles, waypoints, and target information
+- Disables normal sub-screen UI when active
+
+**Memory Management:**
+- Kart sprite graphics allocated once, shared by all cars
+- Item graphics loaded by `Items_LoadGraphics()`
+- All sprites freed in `Gameplay_Cleanup()`
+- Item display sprite (sub screen) uses palette slots 32-127
+
+**Multiplayer Considerations:**
+- Camera always follows local player (not necessarily player 0)
+- Other players' karts rendered relative to local player's camera
+- Disconnected players hidden but their OAM slots remain allocated
+- Race completion returns to home (no play-again in multiplayer)
+
+#### State Flow
+```
+Initialize
+    ↓
+Countdown (3-2-1-GO!)
+    ↓
+Racing
+    ↓
+Lap Complete → Reset lap timer, increment lap counter
+    ↓
+Race Complete → Display final time (2.5s)
+    ↓
+→ Play Again (single-player)
+→ Home Page (multiplayer)
+```
+
+#### Item Display System
+
+**Item Sprites:**
+- Loaded to sub-screen OAM at initialization
+- Palette slots: Banana(32), Bomb(48), Green Shell(64), Red Shell(80), Missile(96), Oil(112)
+- Positioned in top-right corner (220, 8) or (208, 8) for larger items
+- Hidden when `player->item == ITEM_NONE`
+
+**Sprite Sizes:**
+- Most items: 16×16
+- Missile: 16×32
+- Oil Slick: 32×32
+
+**Update Frequency:**
+- Updated every frame in `OnVBlank()`
+- Graphics copied dynamically based on current item
+- Automatically hides when race finishes
+
+---
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.

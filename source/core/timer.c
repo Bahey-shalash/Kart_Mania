@@ -49,10 +49,10 @@ void timerISRVblank(void) {
             
             // Only update during normal racing (not countdown, not finished)
             if (!Race_IsCountdownActive() && !Race_IsCompleted()) {
-                updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
+                Gameplay_UpdateChronoDisplay(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
                                     Gameplay_GetRaceMsec());
                 const RaceState* state = Race_GetState();
-                updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
+                Gameplay_UpdateLapDisplay(Gameplay_GetCurrentLap(), state->totalLaps);
             }
             break;
         default:

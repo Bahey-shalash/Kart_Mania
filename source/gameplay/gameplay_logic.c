@@ -11,15 +11,8 @@
 #include "../gameplay/wall_collision.h"
 
 //=============================================================================
-// Constants
+// Private Types
 //=============================================================================
-#define SCREEN_WIDTH 256
-#define SCREEN_HEIGHT 192
-#define MAP_SIZE 1024
-#define COUNTDOWN_NUMBER_DURATION 60
-#define COUNTDOWN_GO_DURATION 60
-#define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
-#define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
 
 typedef enum {
     CP_STATE_START = 0,
@@ -28,6 +21,10 @@ typedef enum {
     CP_STATE_NEED_RIGHT,
     CP_STATE_READY_FOR_LAP
 } CheckpointProgressState;
+
+//=============================================================================
+// Private Constants
+//=============================================================================
 
 static const int MapLaps[] = {
     [NONEMAP] = LAPS_NONE,
@@ -613,8 +610,8 @@ static void clampToMapBounds(Car* car, int carIndex) {
 }
 
 static QuadrantID determineCarQuadrant(int x, int y) {
-    int col = (x < QUAD_OFFSET) ? 0 : (x < 2 * QUAD_OFFSET) ? 1 : 2;
-    int row = (y < QUAD_OFFSET) ? 0 : (y < 2 * QUAD_OFFSET) ? 1 : 2;
+    int col = (x < QUAD_SIZE) ? 0 : (x < 2 * QUAD_SIZE) ? 1 : 2;
+    int row = (y < QUAD_SIZE) ? 0 : (y < 2 * QUAD_SIZE) ? 1 : 2;
     return (QuadrantID)(row * QUADRANT_GRID_SIZE + col);
 }
 

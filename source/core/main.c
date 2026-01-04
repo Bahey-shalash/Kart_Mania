@@ -96,7 +96,7 @@ static GameState update_state(GameState state) {
         case MULTIPLAYER_LOBBY:
             return MultiplayerLobby_Update();
         case GAMEPLAY:
-            return Gameplay_update();
+            return Gameplay_Update();
         case PLAYAGAIN:
             return PlayAgain_Update();
         default:
@@ -117,7 +117,7 @@ static void init_state(GameState state) {
             MultiplayerLobby_Init();
             break;
         case GAMEPLAY:
-            Graphical_Gameplay_initialize();
+            Gameplay_Initialize();
             break;
         case SETTINGS:
             Settings_Initialize();

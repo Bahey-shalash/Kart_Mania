@@ -1,10 +1,15 @@
-// HUGO------
-
 #ifndef GAME_TYPES_H
 #define GAME_TYPES_H
+
 #include <nds.h>
 #include <stdbool.h>
+
 #include "../math/fixedmath2d.h"
+
+//=============================================================================
+// Game State Types
+//=============================================================================
+
 typedef enum {
     HOME_PAGE,
     MAPSELECTION,
@@ -12,10 +17,23 @@ typedef enum {
     GAMEPLAY,
     PLAYAGAIN,
     SETTINGS,
-    REINIT_HOME  // NEW: Forces home page reinit after WiFi failure
+    REINIT_HOME  // Forces home page reinit after WiFi failure
 } GameState;
 
-typedef enum { NONEMAP, ScorchingSands, AlpinRush, NeonCircuit } Map;
+//=============================================================================
+// Map Types
+//=============================================================================
+
+typedef enum {
+    NONEMAP,
+    ScorchingSands,
+    AlpinRush,
+    NeonCircuit
+} Map;
+
+//=============================================================================
+// Quadrant Types
+//=============================================================================
 
 typedef enum {
     QUAD_TL = 0,  // Top-Left

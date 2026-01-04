@@ -137,6 +137,15 @@
 // Rendering & Display Constants
 //=============================================================================
 
+// Screen dimensions
+#define SCREEN_WIDTH 256   // Screen width in pixels
+#define SCREEN_HEIGHT 192  // Screen height in pixels
+
+// Map dimensions
+#define MAP_SIZE 1024              // Map size in pixels (1024x1024)
+#define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)   // Maximum scroll X position
+#define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)  // Maximum scroll Y position
+
 // VRAM & Memory
 #define VRAM_BANK_SIZE (128 * 1024)  // DS VRAM bank size in bytes
 #define PALETTE_SIZE 512             // Palette memory size
@@ -369,6 +378,14 @@
 
 // Personal best times storage limits
 #define STORAGE_MAX_MAP_RECORDS 10
+
+//=============================================================================
+// Countdown Constants
+//=============================================================================
+
+#define COUNTDOWN_NUMBER_DURATION 60  // Duration for each countdown number (3, 2, 1)
+#define COUNTDOWN_GO_DURATION 60      // Duration for "GO!" display
+#define FINISH_DELAY_FRAMES (5 * 60)  // Frames to wait before showing finish menu (5 seconds)
 
 //=============================================================================
 // Terrain Detection Constants
