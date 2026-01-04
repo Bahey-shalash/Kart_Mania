@@ -383,8 +383,8 @@ Examples:
 
     parser.add_argument('--player-id', type=int, default=0,
                        help='Player ID to simulate (0-7, default: 0 = Player 1)')
-    parser.add_argument('--target', type=str, default='192.168.0.100',
-                       help='Target IP address (default: 192.168.0.100)')
+    parser.add_argument('--target', type=str, default='255.255.255.255',
+                       help='Target IP address (default: 255.255.255.255 - broadcast)')
     parser.add_argument('--port', type=int, default=GAME_PORT,
                        help=f'UDP port (default: {GAME_PORT})')
     parser.add_argument('--race', action='store_true',
