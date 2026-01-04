@@ -116,34 +116,29 @@ typedef struct {
 
 // Probability distributions by rank
 static const ItemProbability ITEM_PROBABILITIES[8] = {
-    // 1st place - Defensive items
-    //{30, 30, 10, 10, 0, 0, 15, 5},  // Banana, oil, bomb dominant
+    // 1st place - Defensive tilt, balanced spread (no missile)
+    {20, 20, 5, 15, 10, 0, 5, 25},
 
-    //{0, 0, 0, 0, 0, 0, 0, 100}, for debugging speed boost
-    {0, 0, 0, 0, 100, 0, 0, 0},  // redshell debug
-
-    //{0, 0, 0, 50, 50, 0, 0, 0},
-    // 2nd place - Mostly defensive
-    {0, 0, 0, 0, 100, 0, 0, 0}, // for debugging
-    //{25, 25, 15, 15, 5, 0, 10, 5},
+    // 2nd place - Mostly defensive, still balanced
+    {18, 18, 5, 16, 12, 0, 6, 25},
 
     // 3rd place - Balanced
-    {20, 20, 10, 20, 15, 0, 10, 5},
+    {15, 15, 5, 15, 15, 0, 10, 25},
 
     // 4th place - Slightly offensive
-    {15, 15, 10, 20, 20, 5, 10, 5},
+    {13, 13, 5, 17, 17, 0, 10, 25},
 
     // 5th place - Offensive
-    {10, 10, 10, 15, 25, 10, 10, 10},
+    {12, 12, 5, 18, 18, 0, 10, 25},
 
     // 6th place - More offensive
-    {5, 5, 5, 15, 30, 15, 10, 15},
+    {10, 10, 5, 18, 18, 0, 14, 25},
 
-    // 7th place - Very offensive
-    {5, 5, 5, 10, 25, 25, 5, 20},
+    // 7th place - Very offensive (still no missile)
+    {8, 8, 5, 18, 18, 0, 18, 25},
 
-    // 8th+ place - Maximum offense
-    {5, 5, 5, 15, 25, 25, 0, 20}};
+    // 8th+ place - Maximum offense with rare missile
+    {7, 7, 5, 17, 17, 5, 17, 25}};
 
 //=============================================================================
 // Data Structures
@@ -171,9 +166,9 @@ typedef struct {
     int shooterCarIndex;  // Who fired this projectile (-1 = no shooter)
     int immunityTimer;    // Frames of immunity remaining
 
-    //Lap-based immunity (single player only) red shell hits you 
-    int startingWaypoint;      // Waypoint where projectile spawned
-    bool hasCompletedLap;      // True after completing full lap
+    // Lap-based immunity (single player only) red shell hits you
+    int startingWaypoint;  // Waypoint where projectile spawned
+    bool hasCompletedLap;  // True after completing full lap
 } TrackItem;
 
 // Item box spawn location
