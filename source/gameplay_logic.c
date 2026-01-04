@@ -140,12 +140,11 @@ void Race_Init(Map map, GameMode mode) {
     }
 
     KartMania.currentMap = map;
-    KartMania.totalLaps = MapLaps[map];
     KartMania.gameMode = mode;
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
     itemButtonHeldLast = false;
-    
+
     // Initialize finish tracking
     KartMania.finishDelayTimer = 0;
     KartMania.finalTimeMin = 0;
@@ -159,6 +158,13 @@ void Race_Init(Map map, GameMode mode) {
 
     // NEW: Check if this is a multiplayer race
     isMultiplayerRace = (mode == MultiPlayer);
+
+    // Set lap count: 5 laps for multiplayer Scorching Sands, use map defaults otherwise
+    if (isMultiplayerRace && map == ScorchingSands) {
+        KartMania.totalLaps = 5;//change to a def constant
+    } else {
+        KartMania.totalLaps = MapLaps[map];
+    }
 
     if (isMultiplayerRace) {
         // Multiplayer mode
