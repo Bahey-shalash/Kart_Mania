@@ -227,4 +227,117 @@
 #define PA_NO_RECT_X_END 27
 #define PA_NO_RECT_Y_END 20
 
+//=============================================================================
+// UI Constants - Settings Screen
+//=============================================================================
+
+// Palette indices for selection highlighting
+#define SETTINGS_SELECTION_PAL_BASE 244
+
+// Toggle rectangle parameters (for WiFi/Music/Sound FX pills)
+#define SETTINGS_TOGGLE_START_X 21
+#define SETTINGS_TOGGLE_WIDTH 9
+
+// WiFi toggle Y coordinates
+#define SETTINGS_WIFI_TOGGLE_Y_START 1
+#define SETTINGS_WIFI_TOGGLE_Y_END 5
+
+// Music toggle Y coordinates
+#define SETTINGS_MUSIC_TOGGLE_Y_START 5
+#define SETTINGS_MUSIC_TOGGLE_Y_END 9
+
+// Sound FX toggle Y coordinates
+#define SETTINGS_SOUNDFX_TOGGLE_Y_START 9
+#define SETTINGS_SOUNDFX_TOGGLE_Y_END 13
+
+// WiFi selection rectangle tile coordinates
+#define SETTINGS_WIFI_RECT_X_START 2
+#define SETTINGS_WIFI_RECT_Y_START 1
+#define SETTINGS_WIFI_RECT_X_END 7
+#define SETTINGS_WIFI_RECT_Y_END 4
+
+// Music selection rectangle tile coordinates
+#define SETTINGS_MUSIC_RECT_X_START 2
+#define SETTINGS_MUSIC_RECT_Y_START 5
+#define SETTINGS_MUSIC_RECT_X_END 9
+#define SETTINGS_MUSIC_RECT_Y_END 8
+
+// Sound FX selection rectangle tile coordinates
+#define SETTINGS_SOUNDFX_RECT_X_START 2
+#define SETTINGS_SOUNDFX_RECT_Y_START 9
+#define SETTINGS_SOUNDFX_RECT_X_END 13
+#define SETTINGS_SOUNDFX_RECT_Y_END 12
+
+// Save button selection rectangle tile coordinates
+#define SETTINGS_SAVE_RECT_X_START 4
+#define SETTINGS_SAVE_RECT_Y_START 15
+#define SETTINGS_SAVE_RECT_X_END 14
+#define SETTINGS_SAVE_RECT_Y_END 23
+
+// Back button selection rectangle tile coordinates
+#define SETTINGS_BACK_RECT_X_START 12
+#define SETTINGS_BACK_RECT_Y_START 15
+#define SETTINGS_BACK_RECT_X_END 20
+#define SETTINGS_BACK_RECT_Y_END 23
+
+// Home button selection rectangle tile coordinates
+#define SETTINGS_HOME_RECT_X_START 20
+#define SETTINGS_HOME_RECT_Y_START 15
+#define SETTINGS_HOME_RECT_X_END 28
+#define SETTINGS_HOME_RECT_Y_END 23
+
+// WiFi text touch hitbox (pixels)
+#define SETTINGS_WIFI_TEXT_X_MIN 23
+#define SETTINGS_WIFI_TEXT_X_MAX 53
+#define SETTINGS_WIFI_TEXT_Y_MIN 10
+#define SETTINGS_WIFI_TEXT_Y_MAX 25
+
+// WiFi pill touch hitbox (pixels)
+#define SETTINGS_WIFI_PILL_X_MIN 175
+#define SETTINGS_WIFI_PILL_X_MAX 240
+#define SETTINGS_WIFI_PILL_Y_MIN 10
+#define SETTINGS_WIFI_PILL_Y_MAX 37
+
+// Music text touch hitbox (pixels)
+#define SETTINGS_MUSIC_TEXT_X_MIN 24
+#define SETTINGS_MUSIC_TEXT_X_MAX 69
+#define SETTINGS_MUSIC_TEXT_Y_MIN 40
+#define SETTINGS_MUSIC_TEXT_Y_MAX 55
+
+// Music pill touch hitbox (pixels)
+#define SETTINGS_MUSIC_PILL_X_MIN 175
+#define SETTINGS_MUSIC_PILL_X_MAX 240
+#define SETTINGS_MUSIC_PILL_Y_MIN 40
+#define SETTINGS_MUSIC_PILL_Y_MAX 67
+
+// Sound FX text touch hitbox (pixels)
+#define SETTINGS_SOUNDFX_TEXT_X_MIN 23
+#define SETTINGS_SOUNDFX_TEXT_X_MAX 99
+#define SETTINGS_SOUNDFX_TEXT_Y_MIN 70
+#define SETTINGS_SOUNDFX_TEXT_Y_MAX 85
+
+// Sound FX pill touch hitbox (pixels)
+#define SETTINGS_SOUNDFX_PILL_X_MIN 175
+#define SETTINGS_SOUNDFX_PILL_X_MAX 240
+#define SETTINGS_SOUNDFX_PILL_Y_MIN 70
+#define SETTINGS_SOUNDFX_PILL_Y_MAX 97
+
+// Save button touch hitbox (circle: center=64,152 diameter=48)
+#define SETTINGS_SAVE_TOUCH_X_MIN 40
+#define SETTINGS_SAVE_TOUCH_X_MAX 88
+#define SETTINGS_SAVE_TOUCH_Y_MIN 128
+#define SETTINGS_SAVE_TOUCH_Y_MAX 176
+
+// Back button touch hitbox (circle: center=128,152 diameter=48)
+#define SETTINGS_BACK_TOUCH_X_MIN 104
+#define SETTINGS_BACK_TOUCH_X_MAX 152
+#define SETTINGS_BACK_TOUCH_Y_MIN 128
+#define SETTINGS_BACK_TOUCH_Y_MAX 176
+
+// Home button touch hitbox (circle: center=192,152 diameter=48)
+#define SETTINGS_HOME_TOUCH_X_MIN 168
+#define SETTINGS_HOME_TOUCH_X_MAX 216
+#define SETTINGS_HOME_TOUCH_Y_MIN 128
+#define SETTINGS_HOME_TOUCH_Y_MAX 176
+
 #endif  // GAME_CONSTANTS_H

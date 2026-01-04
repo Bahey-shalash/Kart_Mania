@@ -66,6 +66,73 @@ while (1) {
 
 ---
 
+### Settings Screen (`ui/settings.c`)
+
+#### Purpose
+Configuration screen for WiFi, music, and sound effects settings with persistent storage.
+
+#### Features
+- **Three toggle settings**: WiFi, Music, Sound FX (ON/OFF pills)
+- **Save functionality**: Persist settings to storage (START+SELECT to reset to defaults)
+- **Back/Home buttons**: Return to main menu
+- **Dual-screen UI**: Bitmap graphics on top screen, interactive controls on bottom screen
+
+#### Architecture
+
+**Graphics System:**
+- **Main Screen (Top)**: Static bitmap showing settings title/logo
+- **Sub Screen (Bottom)**:
+  - **BG0 (Priority 0)**: Main settings interface graphics
+  - **BG1 (Priority 1)**: Toggle pills (red=OFF, green=ON) and selection highlights
+- Uses palette indices 244-249 for selection highlighting
+- Uses palette indices 254-255 for toggle pills (red/green)
+
+**Input Handling:**
+
+| Input | Action |
+|-------|--------|
+| UP / DOWN | Cycle through buttons |
+| LEFT / RIGHT | Navigate bottom row (Save/Back/Home) |
+| A Button | Toggle setting or activate button |
+| Touch | Select by touching text labels or pills |
+| START + SELECT + A | Reset to default settings |
+
+**State Management:**
+- Tracks current and previous selection for highlighting
+- Settings changes are immediate (visual + functional)
+- Persists to storage only when Save button is pressed
+
+#### Usage
+```c
+// Initialize the screen
+Settings_Initialize();
+
+// In main loop
+while (1) {
+    GameState next = Settings_Update();
+    if (next == HOME_PAGE) {
+        // Return to menu
+    }
+}
+```
+
+#### Constants (see `game_constants.h`)
+- `SETTINGS_SELECTION_PAL_BASE` - Palette base index (244)
+- `SETTINGS_TOGGLE_START_X/WIDTH` - Toggle pill position and size
+- `SETTINGS_WIFI/MUSIC/SOUNDFX_TOGGLE_Y_START/END` - Toggle pill Y coordinates
+- `SETTINGS_WIFI/MUSIC/SOUNDFX_RECT_*` - Selection rectangle tile coordinates
+- `SETTINGS_SAVE/BACK/HOME_RECT_*` - Button selection rectangle coordinates
+- `SETTINGS_*_TEXT/PILL_X/Y_MIN/MAX` - Touch hitbox coordinates
+
+#### Design Notes
+- **Dual hitboxes**: Each toggle has two touch areas (text label + pill) for better UX
+- **Sound FX timing**: Plays ding sound *before* potentially muting itself
+- **Secret reset**: Hold START+SELECT while pressing A on Save to reset to defaults
+- **Immediate application**: Settings take effect immediately, but only persist on explicit save
+- **Long function split**: Touch input handling split into 4 helper functions for maintainability
+
+---
+
 ## Getting started
 
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
