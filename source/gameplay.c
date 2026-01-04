@@ -38,7 +38,7 @@
 #define FINISH_DISPLAY_FRAMES 150 // 2.5 seconds at 60fps to show final time
 
 //! DEBUGGING FLAG
-#define console_on_debug  // Uncomment to enable debug console on sub screen 
+//#define console_on_debug  // Uncomment to enable debug console on sub screen 
 //! DEBUGGING FLAG
 //=============================================================================
 // Private State
