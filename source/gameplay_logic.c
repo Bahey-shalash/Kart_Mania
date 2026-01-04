@@ -163,21 +163,48 @@ void Race_Init(Map map, GameMode mode) {
     if (isMultiplayerRace) {
         // Multiplayer mode
         KartMania.playerIndex = Multiplayer_GetMyPlayerID();
-        // In multiplayer, we need all 8 car slots because player IDs are 0-7
-        // (a sparse array where only connected players' cars are used)
         KartMania.carCount = MAX_CARS;
+        
+        // CHANGED: Build sorted list of connected player indices for spawn positioning
+        int connectedIndices[MAX_CARS];
+        int connectedCount = 0;
+        
+        for (int i = 0; i < MAX_CARS; i++) {
+            if (Multiplayer_IsPlayerConnected(i)) {
+                connectedIndices[connectedCount++] = i;
+            }
+        }
+        
+        // Initialize all cars
+        for (int i = 0; i < MAX_CARS; i++) {
+            if (Multiplayer_IsPlayerConnected(i)) {
+                // Find this player's spawn position (rank among connected players)
+                int spawnPosition = 0;
+                for (int j = 0; j < connectedCount; j++) {
+                    if (connectedIndices[j] == i) {
+                        spawnPosition = j;
+                        break;
+                    }
+                }
+                initCarAtSpawn(&KartMania.cars[i], spawnPosition);
+            } else {
+                // Disconnected players - initialize off-map
+                initCarAtSpawn(&KartMania.cars[i], -1);
+            }
+            collisionLockoutTimer[i] = 0;
+        }
     } else {
         // Single player mode
         KartMania.playerIndex = 0;
-        KartMania.carCount = 1;  // Only 1 car in single player
+        KartMania.carCount = 1;
+        
+        for (int i = 0; i < KartMania.carCount; i++) {
+            initCarAtSpawn(&KartMania.cars[i], i);
+            collisionLockoutTimer[i] = 0;
+        }
     }
 
     KartMania.checkpointCount = 0;
-
-    for (int i = 0; i < KartMania.carCount; i++) {
-        initCarAtSpawn(&KartMania.cars[i], i);
-        collisionLockoutTimer[i] = 0;
-    }
 
     // Initialize items system
     Items_Init(map);
@@ -453,10 +480,28 @@ static void applyTerrainEffects(Car* car) {
 //=============================================================================
 // Private Implementation
 //=============================================================================
-static void initCarAtSpawn(Car* car, int index) {
-    int column = (index % 2);  // 0 = left (even), 1 = right (odd) 
+static void initCarAtSpawn(Car* car, int spawnPosition) {
+    // Handle disconnected players or invalid positions
+    if (spawnPosition < 0) {
+        // Place off-map for disconnected players
+        Vec2 offMapPos = Vec2_FromInt(-1000, -1000);
+        car->position = offMapPos;
+        car->speed = 0;
+        car->angle512 = START_FACING_ANGLE;
+        car->Lap = 0;
+        car->lastCheckpoint = 0;
+        car->rank = 99;
+        car->item = ITEM_NONE;
+        car->maxSpeed = SPEED_50CC;
+        car->accelRate = ACCEL_50CC;
+        car->friction = FRICTION_50CC;
+        return;
+    }
+    
+    // Normal spawning logic for connected players
+    int column = (spawnPosition % 2);  // 0 = left (even), 1 = right (odd) 
     int x = START_LINE_X + (column * 32);  // Left column at 904, right at 936
-    int y = START_LINE_Y + (index * 24);     
+    int y = START_LINE_Y + (spawnPosition * 24);     
     
     Vec2 spawnPos = Vec2_FromInt(x, y);
     car->position = spawnPos;
@@ -464,16 +509,16 @@ static void initCarAtSpawn(Car* car, int index) {
     car->angle512 = START_FACING_ANGLE;
     car->Lap = 0;
     car->lastCheckpoint = 0;
-    car->rank = index + 1;
+    car->rank = spawnPosition + 1;
     car->item = ITEM_NONE;
     car->maxSpeed = SPEED_50CC;
     car->accelRate = ACCEL_50CC;
     car->friction = FRICTION_50CC;
-    wasAboveFinishLine[index] = false;
-    hasCompletedFirstCrossing[index] = false;
-    cpState[index] = CP_STATE_START;
-    wasOnLeftSide[index] = false;
-    wasOnTopSide[index] = false;
+    wasAboveFinishLine[spawnPosition] = false;
+    hasCompletedFirstCrossing[spawnPosition] = false;
+    cpState[spawnPosition] = CP_STATE_START;
+    wasOnLeftSide[spawnPosition] = false;
+    wasOnTopSide[spawnPosition] = false;
 }
 
 static void handlePlayerInput(Car* player, int carIndex) {
