@@ -205,29 +205,14 @@ int openSocket() {
     sa_out.sin_family = AF_INET;        // Type of address (Inet)
     sa_out.sin_port = htons(OUT_PORT);  // set output port (same as input)
 
-    // Derive broadcast address from current IP/mask (endian-correct)
-    struct in_addr gateway, snmask, dns1, dns2;
-    Wifi_GetIPInfo(&gateway, &snmask, &dns1, &dns2);
-
-    unsigned long ip_host = Wifi_GetIP();            // DSWifi returns host-order
-    unsigned long mask_host = ntohl(snmask.s_addr);  // Convert mask to host order
-    unsigned long broadcast_host = ip_host | ~mask_host;
-
-    // Fallback in case Wifi_GetIP() returns 0 unexpectedly
-    if (ip_host == 0) {
-        broadcast_host = 0xFFFFFFFF;
-    }
-
-    sa_out.sin_addr.s_addr = htonl(broadcast_host);
+    // Use 255.255.255.255 instead of calculated subnet broadcast
+    sa_out.sin_addr.s_addr = htonl(0xFFFFFFFF);
 
     // DEBUG: Print network info
+    unsigned long ip_host = Wifi_GetIP();
     iprintf("IP: %lu.%lu.%lu.%lu\n", (ip_host & 0xFF), ((ip_host >> 8) & 0xFF),
             ((ip_host >> 16) & 0xFF), ((ip_host >> 24) & 0xFF));
-    iprintf("Mask: %lu.%lu.%lu.%lu\n", (mask_host & 0xFF), ((mask_host >> 8) & 0xFF),
-            ((mask_host >> 16) & 0xFF), ((mask_host >> 24) & 0xFF));
-    iprintf("Broadcast: %lu.%lu.%lu.%lu\n", (broadcast_host & 0xFF),
-            ((broadcast_host >> 8) & 0xFF), ((broadcast_host >> 16) & 0xFF),
-            ((broadcast_host >> 24) & 0xFF));
+    iprintf("Broadcast: 255.255.255.255\n");
 
     // Enable broadcast permission on the socket
     int broadcast_permission = 1;
