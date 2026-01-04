@@ -84,7 +84,8 @@ static bool isItemNearScreen(Vec2 itemPos, int scrollX, int scrollY);
 
 // Internal item placement functions (for network synchronization)
 static void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
-                                   int targetCarIndex, bool sendNetwork);
+                                   int targetCarIndex, bool sendNetwork,
+                                   int shooterCarIndex);
 static void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork);
 
 //=============================================================================
@@ -125,7 +126,8 @@ void Items_Update(void) {
             if (itemData.speed > 0) {
                 fireProjectileInternal(itemData.itemType, itemData.position,
                                        itemData.angle512, itemData.speed,
-                                       INVALID_CAR_INDEX, false);
+                                       INVALID_CAR_INDEX, false,
+                                       itemData.shooterCarIndex);
             } else {
                 placeHazardInternal(itemData.itemType, itemData.position, false);
             }
@@ -273,7 +275,8 @@ void Items_UsePlayerItem(Car* player, bool fireForward) {
             Q16_8 shellSpeed = FixedMul(player->maxSpeed, RED_SHELL_SPEED_MULT);
 
             // Red shell follows the racing line and locks onto any nearby car
-            // targetCarIndex = INVALID_CAR_INDEX means "attack first car you get close to"
+            // targetCarIndex = INVALID_CAR_INDEX means "attack first car you get close
+            // to"
             Items_FireProjectile(ITEM_RED_SHELL, spawnPos, fireAngle, shellSpeed,
                                  INVALID_CAR_INDEX);
             break;
@@ -359,15 +362,14 @@ Item Items_GetRandomItem(int playerRank) {
 //=============================================================================
 // Item Spawning
 //=============================================================================
-// Items.c
 static void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
-                                   int targetCarIndex, bool sendNetwork) {
+                                   int targetCarIndex, bool sendNetwork,
+                                   int shooterCarIndex) {
+    const RaceState* state = Race_GetState();
+
     // In multiplayer, broadcast item placement to other players
-    if (sendNetwork) {
-        const RaceState* state = Race_GetState();
-        if (state->gameMode == MultiPlayer) {
-            Multiplayer_SendItemPlacement(type, pos, angle512, speed);
-        }
+    if (sendNetwork && state->gameMode == MultiPlayer) {
+        Multiplayer_SendItemPlacement(type, pos, angle512, speed, state->playerIndex);
     }
 
     int slot = findInactiveItemSlot();
@@ -384,11 +386,14 @@ static void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 spee
     item->active = true;
     item->lifetime_ticks = PROJECTILE_LIFETIME_SECONDS * RACE_TICK_FREQ;
 
-    const RaceState* state = Race_GetState();
+    int resolvedShooter = shooterCarIndex;
+    if (resolvedShooter < 0 || resolvedShooter >= state->carCount) {
+        resolvedShooter = -1;
+    }
 
     // Initialize shooter immunity and navigation
     if (type == ITEM_RED_SHELL || type == ITEM_MISSILE) {
-        item->shooterCarIndex = state->playerIndex;
+        item->shooterCarIndex = resolvedShooter;
 
         // Use lap-based immunity for both single player and multiplayer
         // This ensures shells complete ~1 lap before they can hit the shooter
@@ -428,7 +433,9 @@ static void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 spee
 
 void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
                           int targetCarIndex) {
-    fireProjectileInternal(type, pos, angle512, speed, targetCarIndex, true);
+    const RaceState* state = Race_GetState();
+    fireProjectileInternal(type, pos, angle512, speed, targetCarIndex, true,
+                           state->playerIndex);
 }
 
 static void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork) {
@@ -436,7 +443,8 @@ static void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork) {
     if (sendNetwork) {
         const RaceState* state = Race_GetState();
         if (state->gameMode == MultiPlayer) {
-            Multiplayer_SendItemPlacement(type, pos, 0, 0);  // Hazards don't move
+            Multiplayer_SendItemPlacement(type, pos, 0, 0,
+                                          state->playerIndex);  // Hazards don't move
         }
     }
 
@@ -485,8 +493,8 @@ static void placeHazardOld_DELETE_ME(Item type, Vec2 pos) {
     // In multiplayer, broadcast item placement to other players
     const RaceState* state = Race_GetState();
     if (state->gameMode == MultiPlayer) {
-        Multiplayer_SendItemPlacement(type, pos, 0, 0);  // Hazards don't move, so
-angle/speed = 0
+        Multiplayer_SendItemPlacement(type, pos, 0, 0, state->playerIndex);  // Hazards
+don't move, so angle/speed = 0
     }
 
     int slot = findInactiveItemSlot();
@@ -874,18 +882,27 @@ static void updateProjectile(TrackItem* item, const Car* cars, int carCount) {
     }
 }
 
-// Items.c (replace existing updateHoming function)
-
 static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
     const RaceState* state = Race_GetState();
+    bool isMultiplayer = (state->gameMode == MultiPlayer);
+
+    // Never keep the shooter as a target in multiplayer
+    if (isMultiplayer && item->targetCarIndex == item->shooterCarIndex) {
+        item->targetCarIndex = INVALID_CAR_INDEX;
+    }
 
     // If no target is locked, scan for nearby cars to attack
     if (item->targetCarIndex == INVALID_CAR_INDEX) {
         Q16_8 lockOnRadius = IntToFixed(100);  // 100 pixels detection range
 
         for (int i = 0; i < carCount; i++) {
-            // Skip the shooter (immunity still active)
-            if (item->immunityTimer != 0 && i == item->shooterCarIndex) {
+            if (isMultiplayer && i == item->shooterCarIndex) {
+                continue;  // Never lock onto the shooter in multiplayer
+            }
+
+            // Single player keeps the old immunity-based skip
+            if (!isMultiplayer && item->immunityTimer != 0 &&
+                i == item->shooterCarIndex) {
                 continue;
             }
 
@@ -903,17 +920,22 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
 
     // If we have a locked target, check if we should stay locked
     if (item->targetCarIndex >= 0 && item->targetCarIndex < carCount) {
-        const Car* target = &cars[item->targetCarIndex];
-        Q16_8 distToTarget = Vec2_Distance(item->position, target->position);
-
-        // If target is too far away, unlock and return to path following
-        if (distToTarget > IntToFixed(150)) {  // 150 pixel leash
+        if (isMultiplayer && item->targetCarIndex == item->shooterCarIndex) {
             item->targetCarIndex = INVALID_CAR_INDEX;
             item->usePathFollowing = true;
         } else {
-            // Stay locked - aim directly at target
-            targetPoint = target->position;
-            item->usePathFollowing = false;
+            const Car* target = &cars[item->targetCarIndex];
+            Q16_8 distToTarget = Vec2_Distance(item->position, target->position);
+
+            // If target is too far away, unlock and return to path following
+            if (distToTarget > IntToFixed(150)) {  // 150 pixel leash
+                item->targetCarIndex = INVALID_CAR_INDEX;
+                item->usePathFollowing = true;
+            } else {
+                // Stay locked - aim directly at target
+                targetPoint = target->position;
+                item->usePathFollowing = false;
+            }
         }
     }
 
@@ -950,7 +972,6 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
 
     item->angle512 = (item->angle512 + angleDiff) & ANGLE_MASK;
 }
-
 static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
     // Get race state to check if we're in multiplayer mode
     const RaceState* state = Race_GetState();
@@ -962,13 +983,18 @@ static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
             continue;
         }
 
-        // Skip shooter while immunity is active
+        // In multiplayer, never collide with the shooter
+        if (isMultiplayer && i == item->shooterCarIndex) {
+            continue;
+        }
+
         // immunityTimer > 0: multiplayer time-based immunity
         // immunityTimer == -1 AND !hasCompletedLap: single player lap-based immunity
         bool hasImmunity = (item->immunityTimer > 0) ||
                            (item->immunityTimer == -1 && !item->hasCompletedLap);
 
-        if (hasImmunity && i == item->shooterCarIndex) {
+        // In single player, keep the old immunity-based shooter skip
+        if (!isMultiplayer && hasImmunity && i == item->shooterCarIndex) {
             continue;  // Can't hit the shooter yet
         }
 
@@ -1147,7 +1173,7 @@ static int findCarAhead(int currentRank, int carCount) {
 
     // Use the player's current facing direction to find targets ahead
     return findCarInDirection(player->position, player->angle512, playerIndex,
-                            state->cars, carCount);
+                              state->cars, carCount);
 }
 
 static QuadrantID getQuadrantFromPos(Vec2 pos) {
