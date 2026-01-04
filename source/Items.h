@@ -62,7 +62,7 @@ typedef struct Car Car;
 
 // Speed multipliers (relative to car max speed)
 #define GREEN_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))  // 1.5x
-#define RED_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))    // 1.5x
+#define RED_SHELL_SPEED_MULT FixedDiv(IntToFixed(6), IntToFixed(5))    // 1.2x
 #define MISSILE_SPEED_MULT FixedDiv(IntToFixed(17), IntToFixed(10))    // 1.7x
 #define SPEED_BOOST_MULT \
     IntToFixed(2)  // x2 //FixedDiv(IntToFixed(3), IntToFixed(2))  // 1.5x max speed
@@ -116,13 +116,15 @@ typedef struct {
 // Probability distributions by rank
 static const ItemProbability ITEM_PROBABILITIES[8] = {
     // 1st place - Defensive items
-    {30, 30, 10, 10, 0, 0, 15, 5},  // Banana, oil, bomb dominant
+    //{30, 30, 10, 10, 0, 0, 15, 5},  // Banana, oil, bomb dominant
 
     //{0, 0, 0, 0, 0, 0, 0, 100}, for debugging speed boost
+    {0, 0, 0, 0, 100, 0, 0, 0},  // redshell debug
 
     //{0, 0, 0, 50, 50, 0, 0, 0},
     // 2nd place - Mostly defensive
-    {25, 25, 15, 15, 5, 0, 10, 5},
+    {0, 0, 0, 0, 100, 0, 0, 0}, // for debugging
+    //{25, 25, 15, 15, 5, 0, 10, 5},
 
     // 3rd place - Balanced
     {20, 20, 10, 20, 15, 0, 10, 5},
@@ -159,6 +161,18 @@ typedef struct {
     int targetCarIndex;  // For homing missiles/red shells (-1 = none)
     bool active;
     u16* gfx;  // Sprite graphics pointer
+
+    int currentWaypoint;    // Which waypoint we're heading toward
+    int waypointsVisited;   // Counter to prevent infinite loops
+    bool usePathFollowing;  // true = follow waypoints, false = direct homing
+
+    // Shooter immunity (for homing projectiles only)
+    int shooterCarIndex;  // Who fired this projectile (-1 = no shooter)
+    int immunityTimer;    // Frames of immunity remaining
+
+    //Lap-based immunity (single player only) red shell hits you 
+    int startingWaypoint;      // Waypoint where projectile spawned
+    bool hasCompletedLap;      // True after completing full lap
 } TrackItem;
 
 // Item box spawn location

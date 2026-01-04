@@ -11,7 +11,6 @@
  * rendering constants, and other numeric values used throughout the codebase.
  */
 
-
 //=============================================================================
 // Rendering & Display Constants
 //=============================================================================
@@ -19,7 +18,8 @@
 // Sprite constants
 #define CAR_SPRITE_SIZE 32
 #define CAR_SPRITE_CENTER_OFFSET 16  // Half of sprite size for centering
-#define CAR_RADIUS 12  // Collision radius (adjust if needed - currently undefined in your code)
+#define CAR_RADIUS \
+    12  // Collision radius (adjust if needed - currently undefined in your code)
 
 //=============================================================================
 // Physics & Movement Constants
@@ -38,26 +38,25 @@
 // Race Physics (Q16.8 - see fixedmath2d.h for format)
 //=============================================================================
 
-#define TURN_STEP_50CC 3              // Steering delta per input for 50cc
-#define SPEED_50CC (FIXED_ONE * 3)    // Max speed: 3.0 px/frame in Q16.8
-#define ACCEL_50CC IntToFixed(1)      // Acceleration: 1.0 px/frame^2 in Q16.8
-#define FRICTION_50CC 240             // Base friction (240/256 = 0.9375)
-#define COLLISION_LOCKOUT_FRAMES 60   // Frames to disable accel after wall hit
+#define TURN_STEP_50CC 3             // Steering delta per input for 50cc
+#define SPEED_50CC (FIXED_ONE * 3)   // Max speed: 3.0 px/frame in Q16.8
+#define ACCEL_50CC IntToFixed(1)     // Acceleration: 1.0 px/frame^2 in Q16.8
+#define FRICTION_50CC 240            // Base friction (240/256 = 0.9375)
+#define COLLISION_LOCKOUT_FRAMES 60  // Frames to disable accel after wall hit
 
 // Terrain modifiers (Q16.8 where noted)
 #define SAND_FRICTION 150  // Sand friction (150/256 = 0.586)
-#define SAND_MAX_SPEED \
-    (SPEED_50CC / SAND_SPEED_DIVISOR)  // Cap on sand, Q16.8 units
+#define SAND_MAX_SPEED (SPEED_50CC / SAND_SPEED_DIVISOR)  // Cap on sand, Q16.8 units
 
 //=============================================================================
 // Angle Helpers (binary angle, 0-511)
 //=============================================================================
 
-#define ANGLE_RIGHT 0                           // 0°
-#define ANGLE_DOWN ANGLE_QUARTER                // 90°
-#define ANGLE_LEFT ANGLE_HALF                   // 180°
-#define ANGLE_UP (ANGLE_HALF + ANGLE_QUARTER)   // 270°
-#define ANGLE_DOWN_RIGHT (ANGLE_QUARTER / 2)    // 45°
+#define ANGLE_RIGHT 0                                    // 0°
+#define ANGLE_DOWN ANGLE_QUARTER                         // 90°
+#define ANGLE_LEFT ANGLE_HALF                            // 180°
+#define ANGLE_UP (ANGLE_HALF + ANGLE_QUARTER)            // 270°
+#define ANGLE_DOWN_RIGHT (ANGLE_QUARTER / 2)             // 45°
 #define ANGLE_DOWN_LEFT (ANGLE_HALF - ANGLE_DOWN_RIGHT)  // 135°
 #define ANGLE_UP_LEFT (ANGLE_HALF + ANGLE_DOWN_RIGHT)    // 225°
 #define ANGLE_UP_RIGHT (ANGLE_FULL - ANGLE_DOWN_RIGHT)   // 315°
@@ -105,7 +104,7 @@
 
 // Projectile & hazard lifetimes (in seconds)
 #define PROJECTILE_LIFETIME_SECONDS \
-    10                             // Max lifetime for green/red shells and missiles
+    20                             // Max lifetime for green/red shells and missiles
 #define BOMB_LIFETIME_SECONDS 5    // Time until bomb auto-explodes
 #define ITEM_LIFETIME_INFINITE -1  // Marker for items that never expire
 
@@ -122,6 +121,18 @@
 
 // Projectile homing
 #define HOMING_TURN_RATE 5  // Max turn rate per frame for homing projectiles (degrees)
+
+// Projectile homing behavior
+#define ATTACK_RADIUS IntToFixed(150)  // 150 pixels - switch to direct homing
+#define MAX_WAYPOINT_VISITS 150        // Safety limit to prevent infinite loops
+
+// Projectile immunity
+#define SHOOTER_IMMUNITY_FRAMES 120           // 2 seconds at 60fps (multiplayer)
+#define IMMUNITY_MIN_DISTANCE IntToFixed(50)  // Must be 50px away to lose immunity
+
+// NEW: Lap detection for projectiles (single player debug feature)
+#define WAYPOINT_LAP_THRESHOLD \
+    10  // Must pass within 10 waypoints of start to count as lap
 
 //=============================================================================
 // Rendering & Display Constants

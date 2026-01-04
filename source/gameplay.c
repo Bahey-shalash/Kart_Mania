@@ -37,6 +37,9 @@
 //=============================================================================
 #define FINISH_DISPLAY_FRAMES 150 // 2.5 seconds at 60fps to show final time
 
+//! DEBUGGING FLAG
+#define console_on_debug  // Uncomment to enable debug console on sub screen 
+//! DEBUGGING FLAG
 //=============================================================================
 // Private State
 //=============================================================================
@@ -50,8 +53,10 @@ static int scrollY = 0;
 static QuadrantID currentQuadrant = QUAD_BR;
 
 // Sprite graphics pointer (allocated during configureSprite)
-static u16 *kartGfx = NULL;
-static u16 *itemDisplayGfx_Sub = NULL;
+static u16* kartGfx = NULL;
+#ifndef console_on_debug
+static u16* itemDisplayGfx_Sub = NULL;
+#endif
 
 static bool countdownCleared = false;
 static int finishDisplayCounter = 0; // NEW: Count frames showing final time
@@ -105,15 +110,19 @@ static void configureGraphics(void);
 static void configureBackground(void);
 static void configureSprite(void);
 static void freeSprites(void);
-// static void configureConsole(void);
+#ifdef console_on_debug
+static void configureConsole(void);
+#endif
 static void loadQuadrant(QuadrantID quad);
 static QuadrantID determineQuadrant(int x, int y);
 static void renderCountdown(CountdownState state);
 static void clearCountdownDisplay(void);
 static void displayFinalTime(int min, int sec, int msec);
-void printDigit(u16 *map, int number, int x, int y);
-static void loadItemDisplay_Sub(void);   // NEW
-static void updateItemDisplay_Sub(void); // NEW
+void printDigit(u16* map, int number, int x, int y);
+#ifndef console_on_debug
+static void loadItemDisplay_Sub(void);    // NEW
+static void updateItemDisplay_Sub(void);  // NEW
+#endif
 
 //=============================================================================
 // Timer Getters
@@ -207,9 +216,11 @@ void Graphical_Gameplay_initialize(void)
     isNewRecord = false;
 
     // Clear any leftover display from previous race
-    u16 *map = BG_MAP_RAM_SUB(0);
+#ifndef console_on_debug
+    u16* map = BG_MAP_RAM_SUB(0);
     memset(map, 32, 32 * 32 * 2);
-    changeColorDisp_Sub(ARGB16(1, 0, 0, 0)); // Reset to black
+    changeColorDisp_Sub(ARGB16(1, 0, 0, 0));  // Reset to black
+#endif
 
     Race_Init(selectedMap, mode);
 
@@ -435,6 +446,35 @@ void Gameplay_OnVBlank(void)
         return;
     }
 
+#ifdef console_on_debug
+    // Debug: Print red shell positions
+    consoleClear();
+    printf("=== RED SHELL DEBUG ===\n");
+
+    int itemCount = 0;
+    const TrackItem* items = Items_GetActiveItems(&itemCount);
+
+    int redShellCount = 0;
+    for (int i = 0; i < itemCount; i++) {
+        if (items[i].active && items[i].type == ITEM_RED_SHELL) {
+            int x = FixedToInt(items[i].position.x);
+            int y = FixedToInt(items[i].position.y);
+            printf("Shell %d: (%d, %d)\n", redShellCount, x, y);
+            printf("  Angle: %d\n", items[i].angle512);
+            printf("  Target: %d\n", items[i].targetCarIndex);
+            printf("  Waypoint: %d\n", items[i].currentWaypoint);
+            redShellCount++;
+        }
+    }
+
+    if (redShellCount == 0) {
+        printf("No red shells active\n");
+    }
+    printf("\nPlayer: (%d, %d)\n",
+           FixedToInt(player->position.x),
+           FixedToInt(player->position.y));
+#endif
+
     // Check if countdown is active
     if (Race_IsCountdownActive())
     {
@@ -554,11 +594,13 @@ void Gameplay_OnVBlank(void)
             // RACE COMPLETED!
             Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
             finishDisplayCounter = 0;
+#ifndef console_on_debug
             // NEW: Hide item sprite when race finishes
             oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,
                    SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false,
                    false, false, false);
             oamUpdate(&oamSub);
+#endif
         }
     }
 
@@ -653,26 +695,29 @@ void Gameplay_OnVBlank(void)
     }
 
     Items_Render(scrollX, scrollY);
+#ifndef console_on_debug
     updateItemDisplay_Sub();
+#endif
     oamUpdate(&oamMain);
 }
 void Gameplay_Cleanup(void)
 {
     freeSprites();
-    if (itemDisplayGfx_Sub)
-    {
+#ifndef console_on_debug
+    if (itemDisplayGfx_Sub) {
         oamFreeGfx(&oamSub, itemDisplayGfx_Sub);
         itemDisplayGfx_Sub = NULL;
     }
+#endif
 }
 
 //=============================================================================
 // Display Functions
 //=============================================================================
 
-static void displayFinalTime(int min, int sec, int msec)
-{
-    u16 *map = BG_MAP_RAM_SUB(0);
+static void displayFinalTime(int min, int sec, int msec) {
+#ifndef console_on_debug
+    u16* map = BG_MAP_RAM_SUB(0);
 
     // Clear screen
     memset(map, 32, 32 * 32 * 2);
@@ -743,14 +788,15 @@ static void displayFinalTime(int min, int sec, int msec)
     {
         changeColorDisp_Sub(ARGB16(1, 0, 0, 0));
     }
+#endif
 }
 
 //=============================================================================
 // Countdown Display Functions
 //=============================================================================
-static void renderCountdown(CountdownState state)
-{
-    u16 *map = BG_MAP_RAM_SUB(0);
+static void renderCountdown(CountdownState state) {
+#ifndef console_on_debug
+    u16* map = BG_MAP_RAM_SUB(0);
 
     // Clear previous countdown display
     for (int i = 16; i < 24; i++)
@@ -782,11 +828,12 @@ static void renderCountdown(CountdownState state)
     case COUNTDOWN_FINISHED:
         break;
     }
+#endif
 }
 
-static void clearCountdownDisplay(void)
-{
-    u16 *map = BG_MAP_RAM_SUB(0);
+static void clearCountdownDisplay(void) {
+#ifndef console_on_debug
+    u16* map = BG_MAP_RAM_SUB(0);
 
     for (int i = 16; i < 24; i++)
     {
@@ -795,6 +842,7 @@ static void clearCountdownDisplay(void)
             map[i * 32 + j] = 32;
         }
     }
+#endif
 }
 
 //=============================================================================
@@ -806,11 +854,17 @@ static void configureGraphics(void)
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
 
-    // CHANGED: Enable sprites on sub screen
+#ifdef console_on_debug
+    // Debug mode: Set up console on sub screen
+    REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE;
+    VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
+#else
+    // Normal mode: Enable sprites on sub screen
     REG_DISPCNT_SUB =
         MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
-    VRAM_D_CR = VRAM_ENABLE | VRAM_D_SUB_SPRITE;
+    VRAM_D_CR = VRAM_ENABLE | VRAM_D_SUB_SPRITE;  // NEW: Sub sprite VRAM
+#endif
 }
 
 static void configureBackground(void)
@@ -819,8 +873,14 @@ static void configureBackground(void)
     if (selectedMap != ScorchingSands)
         return;
 
-    BGCTRL[0] = BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
-    // Sub screen setup with numbers tileset
+    BGCTRL[0] =
+        BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
+
+#ifdef console_on_debug
+    // Debug mode: Set up console
+    configureConsole();
+#else
+    // Normal mode: Sub screen setup with numbers tileset
     BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
     swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
     swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
@@ -829,6 +889,7 @@ static void configureBackground(void)
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
     updateChronoDisp_Sub(-1, -1, -1);
     loadItemDisplay_Sub();
+#endif
 }
 
 static void configureSprite(void)
@@ -865,22 +926,22 @@ static void freeSprites(void)
     Items_FreeGraphics();
 }
 
-/*
+#ifdef console_on_debug
 // DEBUG Console setup (active for gameplay debug)
 static void configureConsole(void) {
-    // Use sub screen BG1 so we don't clobber gameplay BGs/palettes
-    consoleInit(NULL, 1, BgType_Text4bpp, BgSize_T_256x256, 31, 2, false, true);
+    // Use sub screen BG0 for console
+    consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
     printf("\x1b[2J");
     printf("=== KART DEBUG ===\n");
     printf("SELECT = exit\n\n");
 }
-*/
+#endif
 
 //=============================================================================
 // Sub Screen Item Display
 //=============================================================================
-static void loadItemDisplay_Sub(void)
-{
+#ifndef console_on_debug
+static void loadItemDisplay_Sub(void) {
     // Initialize sub screen OAM
     oamInit(&oamSub, SpriteMapping_1D_32, false);
 
@@ -991,6 +1052,7 @@ static void updateItemDisplay_Sub(void)
 
     oamUpdate(&oamSub);
 }
+#endif
 
 //=============================================================================
 // Private Functions - Quadrant Management
