@@ -140,6 +140,7 @@ GameState MultiplayerLobby_Update(void) {
         countdownTimer--;
         if (countdownTimer <= 0) {
             // Countdown finished - start race!
+            Multiplayer_StartRace();  // Clear pending lobby ACKs
             GameContext_SetMap(ScorchingSands);  // not sure about this
             return GAMEPLAY;
         }

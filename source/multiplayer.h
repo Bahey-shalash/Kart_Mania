@@ -120,6 +120,13 @@ void Multiplayer_SetReady(bool ready);
 //=============================================================================
 
 /**
+ * Prepare for race start
+ * - Clears pending lobby ACK queues
+ * - Call this once when transitioning from lobby to race
+ */
+void Multiplayer_StartRace(void);
+
+/**
  * Send my car state to all players
  * - Call every 4 frames (15Hz) during race
  * - Sends: position, speed, angle, lap, item

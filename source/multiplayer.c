@@ -91,6 +91,7 @@ typedef struct {
 typedef struct {
     NetworkPacket packet;        // The packet awaiting ACK
     uint32_t lastSendTime;       // When we last sent this packet
+    int retryCount;              // Number of times we've retried
     bool active;                 // Is this slot in use?
 } PendingAck;
 
@@ -173,6 +174,7 @@ static void sendReliableLobbyMessage(NetworkPacket* packet) {
             if (!players[i].pendingAcks[j].active) {
                 players[i].pendingAcks[j].packet = *packet;
                 players[i].pendingAcks[j].lastSendTime = currentTime;
+                players[i].pendingAcks[j].retryCount = 0;
                 players[i].pendingAcks[j].active = true;
                 break;
             }
@@ -219,12 +221,17 @@ static void retransmitUnackedPackets(void) {
 
             // Check if timeout elapsed
             if (currentTime - pending->lastSendTime >= ACK_TIMEOUT_MS) {
+                pending->retryCount++;
+
+                // Give up after MAX_RETRIES
+                if (pending->retryCount >= MAX_RETRIES) {
+                    pending->active = false;  // Stop retrying this packet
+                    continue;
+                }
+
                 // Resend the packet
                 sendData((char*)&pending->packet, sizeof(NetworkPacket));
                 pending->lastSendTime = currentTime;
-
-                // Note: In a full implementation, you'd track retry count
-                // and give up after MAX_RETRIES. For simplicity, we keep retrying.
             }
         }
     }
@@ -474,6 +481,19 @@ static void resetLobbyState(void) {
     lastLobbyBroadcastMs = 0;
     myPlayerID = -1;
 } */
+
+/**
+ * Clear all pending ACK queues
+ * Call this when transitioning from lobby to race
+ * This prevents old lobby packets from being retransmitted during the race
+ */
+static void clearPendingAcks(void) {
+    for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
+        for (int j = 0; j < MAX_PENDING_ACKS; j++) {
+            players[i].pendingAcks[j].active = false;
+        }
+    }
+}
 
 void Multiplayer_Cleanup(void) {
     if (!initialized) {
@@ -748,6 +768,15 @@ void Multiplayer_SetReady(bool ready) {
 //=============================================================================
 // Public API - Race
 //=============================================================================
+
+/**
+ * Clear pending lobby ACKs when starting race
+ * Call this once when transitioning from lobby to race
+ * Prevents old lobby messages from being retransmitted during gameplay
+ */
+void Multiplayer_StartRace(void) {
+    clearPendingAcks();
+}
 
 void Multiplayer_SendCarState(const Car* car) {
     NetworkPacket packet = {.version = PROTOCOL_VERSION,
