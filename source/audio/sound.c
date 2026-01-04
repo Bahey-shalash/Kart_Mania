@@ -1,54 +1,79 @@
+/**
+ * File: sound.c
+ * --------------
+ * Implementation of the sound system using the MaxMod9 audio library.
+ * Manages sound effects (.wav files) and background music (.xm files)
+ * located in the audio folder.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
+ */
+
 #include "sound.h"
 
 #include <maxmod9.h>
-// BAHEY------
+
 #include "../core/game_constants.h"
 #include "soundbank.h"
 #include "soundbank_bin.h"
 
 void initSoundLibrary(void) {
-    // Init the sound library
     mmInitDefaultMem((mm_addr)soundbank_bin);
 }
 
+//=============================================================================
+// SOUND EFFECTS
+//=============================================================================
+
 void LoadClickSoundFX(void) {
-    // Load the click sound effect
     mmLoadEffect(SFX_CLICK);
 }
 
 void UnloadClickSoundFX(void) {
-    // Unload the click sound effect
     mmUnloadEffect(SFX_CLICK);
 }
 
 void PlayCLICKSFX(void) {
-    // Play the click sound
     mmEffect(SFX_CLICK);
 }
 
 void LoadDingSoundFX(void) {
-    // Load the ding sound effect
     mmLoadEffect(SFX_DING);
 }
+
 void UnloadDingSoundFX(void) {
-    // Unload the ding sound effect
     mmUnloadEffect(SFX_DING);
 }
 
 void PlayDingSFX(void) {
-    // Play the ding sound
     mmEffect(SFX_DING);
 }
-void cleanSound_home_page(void) {
-    UnloadClickSoundFX();
+
+void LoadBoxSoundFx(void) {
+    mmLoadEffect(SFX_BOX);
 }
+
+void UnloadBoxSoundFx(void) {
+    mmUnloadEffect(SFX_BOX);
+}
+
+void PlayBoxSFX(void) {
+    mmEffect(SFX_BOX);
+}
+
+// Screen-specific cleanup functions
+void cleanSound_home_page(void) {
+    UnloadClickSoundFX();  // Home page only uses click sound for menu navigation
+}
+
 void cleanSound_settings(void) {
-    UnloadClickSoundFX();
-    UnloadDingSoundFX();
+    UnloadClickSoundFX();  // Click for back/home buttons
+    UnloadDingSoundFX();   // Ding for toggling settings (wifi, music, sound fx)
 }
 
 void cleanSound_MapSelection(void) {
-    UnloadClickSoundFX();
+    UnloadClickSoundFX();  // Map selection only uses click sound
 }
 
 void LoadALLSoundFX(void) {
@@ -71,18 +96,8 @@ void SOUNDFX_OFF(void) {
     mmSetEffectsVolume(VOLUME_MUTE);
 }
 
-void LoadBoxSoundFx(void) {
-    mmLoadEffect(SFX_BOX);
-}
-void UnloadBoxSoundFx(void) {
-    mmUnloadEffect(SFX_BOX);
-}
-void PlayBoxSFX(void) {
-    mmEffect(SFX_BOX);
-}
-
 void cleanSound_gamePlay(void) {
-    UnloadBoxSoundFx();
+    UnloadBoxSoundFx();  // Gameplay uses box sound for item pickups
 }
 
 //=============================================================================
@@ -95,7 +110,7 @@ void loadMUSIC(void) {
 
 void MusicSetEnabled(bool enabled) {
     if (enabled) {
-        mmStart(MOD_TROPICAL, MM_PLAY_LOOP);
+        mmStart(MOD_TROPICAL, MM_PLAY_LOOP);  // Start looping tropical theme
         mmSetModuleVolume(MUSIC_VOLUME);
     } else {
         mmStop();
