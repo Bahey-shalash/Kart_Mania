@@ -1,5 +1,3 @@
-// HUGO------
-
 #ifndef GAME_CONSTANTS_H
 #define GAME_CONSTANTS_H
 
@@ -198,5 +196,35 @@
 
 #define CAR_NAME_MAX_LENGTH \
     31  // Maximum length for car name (without null terminator)
+
+//=============================================================================
+// UI Constants - Play Again Screen
+//=============================================================================
+
+// Palette indices for selection highlighting
+#define PA_SELECTION_PAL_BASE 240  // Base palette index for selection tiles
+
+// YES button touch hitbox (pixels)
+#define PA_YES_TOUCH_X_MIN 50
+#define PA_YES_TOUCH_X_MAX 120
+#define PA_YES_TOUCH_Y_MIN 85
+#define PA_YES_TOUCH_Y_MAX 175
+
+// NO button touch hitbox (pixels)
+#define PA_NO_TOUCH_X_MIN 136
+#define PA_NO_TOUCH_X_MAX 206
+#define PA_NO_TOUCH_Y_MIN 85
+#define PA_NO_TOUCH_Y_MAX 175
+
+// Selection rectangle tile coordinates
+#define PA_YES_RECT_X_START 6
+#define PA_YES_RECT_Y_START 10
+#define PA_YES_RECT_X_END 16
+#define PA_YES_RECT_Y_END 20
+
+#define PA_NO_RECT_X_START 17
+#define PA_NO_RECT_Y_START 10
+#define PA_NO_RECT_X_END 27
+#define PA_NO_RECT_Y_END 20
 
 #endif  // GAME_CONSTANTS_H

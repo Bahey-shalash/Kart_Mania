@@ -38,8 +38,7 @@ void timerISRVblank(void) {
             Map_selection_OnVBlank();
             break;
             
-        case PLAYAGAIN:  // ADD THIS CASE
-            PlayAgain_OnVBlank();
+        case PLAYAGAIN:
             break;
             
         case GAMEPLAY: 

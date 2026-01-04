@@ -1,6 +1,70 @@
 # Kart Mania
 
+A Nintendo DS kart racing game with single-player and multiplayer support.
 
+---
+
+## Code Documentation
+
+### Play Again Screen (`ui/play_again.c`)
+
+#### Purpose
+Post-race screen allowing players to restart the race or return to the main menu.
+
+#### Features
+- **YES/NO button selection** with visual highlighting
+- **Multiple input methods**: D-pad, touchscreen, and SELECT button
+- **Automatic cleanup**: Stops race timers and cleans up multiplayer sessions when exiting
+
+#### Architecture
+
+**Graphics System:**
+- **BG0 (Priority 0)**: Main "Play Again?" screen graphics
+- **BG1 (Priority 1)**: Selection highlight layer (blue for YES, red for NO)
+- Uses palette indices 240-241 for dynamic highlight tinting
+
+**Input Handling:**
+
+| Input | Action |
+|-------|--------|
+| LEFT / RIGHT | Select YES / NO |
+| UP / DOWN | Toggle selection |
+| A Button | Confirm selection |
+| Touch | Select button by touching hitbox |
+| SELECT | Quit directly to home (skip confirmation) |
+
+**State Management:**
+- Tracks current and previous selection to update highlights efficiently
+- Only one button can be selected at a time
+
+#### Usage
+```c
+// Initialize the screen
+PlayAgain_Initialize();
+
+// In main loop
+while (1) {
+    GameState next = PlayAgain_Update();
+    if (next == GAMEPLAY) {
+        // Restart race
+    } else if (next == HOME_PAGE) {
+        // Return to menu
+    }
+}
+```
+
+#### Constants (see `game_constants.h`)
+- `PA_SELECTION_PAL_BASE` - Palette base index (240)
+- `PA_YES_TOUCH_X/Y_MIN/MAX` - YES button touchscreen hitbox
+- `PA_NO_TOUCH_X/Y_MIN/MAX` - NO button touchscreen hitbox
+- `PA_YES/NO_RECT_X/Y_START/END` - Selection rectangle tile coordinates
+
+#### Design Notes
+- **Critical cleanup order**: Race timers must be stopped *before* multiplayer cleanup to avoid race conditions
+- **Highlight rendering**: Uses BG layer instead of sprites for smooth, flicker-free highlighting
+- **Touch validation**: Coordinates are checked against screen bounds before processing
+
+---
 
 ## Getting started
 

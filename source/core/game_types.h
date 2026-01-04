@@ -4,7 +4,6 @@
 #define GAME_TYPES_H
 #include <nds.h>
 #include <stdbool.h>
-
 #include "../math/fixedmath2d.h"
 typedef enum {
     HOME_PAGE,
