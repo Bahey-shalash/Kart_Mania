@@ -1,7 +1,66 @@
+/**
+ * File: WiFi_minilib.c
+ * --------------------
+ * Description: Implementation of WiFi and UDP socket library for Nintendo DS.
+ *              This file contains adapted code from EPFL ESL Lab educational
+ *              materials with critical bug fixes and improvements for production
+ *              use in multiplayer racing games.
+ *
+ * Original Source: EPFL ESL Lab (Moodle educational materials)
+ * Adapted by: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
+ *
+ * Major Adaptations from Original:
+ *
+ * 1. TIMEOUT WATCHDOGS (Critical Fix)
+ *    Problem: Original code used infinite loops for AP scanning and connection.
+ *             If WiFi was off or AP unavailable, the game would freeze forever.
+ *    Solution: Added WIFI_SCAN_TIMEOUT_FRAMES (5s) and WIFI_CONNECT_TIMEOUT_FRAMES (10s)
+ *              with frame-based watchdog counters. Game now returns gracefully on timeout.
+ *
+ * 2. WIFI LIFECYCLE MANAGEMENT (Hardware Bug Fix)
+ *    Problem: Original called Wifi_InitDefault() in initWiFi(), causing "works once"
+ *             bugs where reconnection would fail on real DS hardware.
+ *    Solution: Wifi_InitDefault() is now called ONCE at game startup (init.c).
+ *              initWiFi() only calls Wifi_EnableWifi() and disconnectFromWiFi()
+ *              keeps the stack alive (no Wifi_DisableWifi()).
+ *
+ * 3. SOCKET RECONNECTION SUPPORT
+ *    Problem: Original didn't support reopening sockets after disconnect.
+ *             Port 8888 would be "in use" when trying to reconnect.
+ *    Solution: Added SO_REUSEADDR socket option and memset() to clear sockaddr
+ *              structures before reuse. Added force-close if somehow still open.
+ *
+ * 4. BROADCAST ADDRESS CHANGE
+ *    Problem: Original calculated subnet broadcast (e.g., 192.168.1.255) which
+ *             could fail across different network configurations.
+ *    Solution: Changed to 255.255.255.255 (limited broadcast) which works on
+ *              all IPv4 networks and is what broadcast multiplayer expects.
+ *
+ * 5. DEBUG INSTRUMENTATION
+ *    Problem: Original had no way to diagnose multiplayer connectivity issues.
+ *    Solution: Added debug statistics (total_recvfrom_calls, total_filtered_own)
+ *              and iprintf() debug messages for socket/WiFi lifecycle events.
+ *
+ * 6. MINOR FIXES
+ *    - Changed ~MSG_PEEK to 0 (standard non-blocking receive)
+ *    - Removed shutdown() call (can hang on DS hardware)
+ *    - Added SO_BROADCAST explicit permission
+ *    - Added Wifi_Update() calls during scanning/connection for stability
+ *
+ * Original Library Behavior (Preserved):
+ *   - UDP broadcast protocol on port 8888
+ *   - Non-blocking I/O
+ *   - Self-packet filtering (compares sender IP to own IP)
+ *   - Single SSID ("MES-NDS") connection
+ *   - DHCP for IP assignment
+ */
+
 #include "WiFi_minilib.h"
 #include <stdio.h>
-// BAHEY------
-// Socket port
+
+// Socket port configuration
 #define LOCAL_PORT 8888
 #define OUT_PORT 8888
 

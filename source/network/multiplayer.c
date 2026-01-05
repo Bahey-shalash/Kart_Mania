@@ -1,9 +1,79 @@
+/**
+ * File: multiplayer.c
+ * -------------------
+ * Description: Implementation of peer-to-peer multiplayer racing system using
+ *              UDP broadcast networking. Handles WiFi connection, player discovery,
+ *              lobby synchronization (with Selective Repeat ARQ), car state updates,
+ *              and item synchronization across 2-8 Nintendo DS units.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
+ *
+ * Key Implementation Details:
+ *
+ * 1. PLAYER ID ASSIGNMENT (MAC Address-Based)
+ *    - Uses last byte of WiFi MAC address modulo 8
+ *    - Prevents collisions from sequential DHCP IPs (e.g., .100, .108 → both % 8 = 4)
+ *    - Hardware-unique and deterministic (same DS always gets same ID)
+ *    - See lines 245-317 for full problem analysis and solution
+ *
+ * 2. NETWORK PROTOCOL (32-Byte Fixed Packets)
+ *    - Packet format: 4-byte header + 28-byte payload
+ *    - Message types: LOBBY_JOIN, LOBBY_UPDATE, READY, LOBBY_ACK, CAR_UPDATE,
+ *                     ITEM_PLACED, ITEM_BOX_PICKUP, DISCONNECT
+ *    - Version field for future protocol compatibility
+ *    - Sequence numbers for ACK tracking (lobby only)
+ *
+ * 3. SELECTIVE REPEAT ARQ (Lobby Reliability)
+ *    - Lobby messages sent with sequence numbers
+ *    - Receivers send MSG_LOBBY_ACK acknowledging sequence number
+ *    - Sender retransmits if no ACK after 500ms (up to 5 retries)
+ *    - Pending ACK queue (4 slots per remote player)
+ *    - Race messages intentionally unreliable (high frequency, loss tolerable)
+ *
+ * 4. LOBBY DISCOVERY (Aggressive Join Broadcasting)
+ *    - First 2 seconds: Resend JOIN every 300ms (fast discovery)
+ *    - Ongoing: Heartbeat every 1000ms (keep-alive)
+ *    - On receiving JOIN: Immediately respond with own state
+ *    - Prevents "ghost players" by resetting lobby state on entry
+ *
+ * 5. TIMEOUT & DISCONNECT DETECTION
+ *    - 3 seconds without packets = player timed out
+ *    - Explicit MSG_DISCONNECT sent 3x on cleanup (UDP unreliability)
+ *    - Timeouts clear pending ACK queues (stop waiting for dead player)
+ *
+ * 6. RACE SYNCHRONIZATION
+ *    - Car states broadcast at 15Hz (every 4 frames at 60 FPS)
+ *    - Unreliable (no ACKs, no retransmits) - high frequency compensates
+ *    - Direct update of cars array (no buffering)
+ *    - Player[i].car = car[i] (1:1 mapping by player ID)
+ *
+ * 7. ITEM SYNCHRONIZATION
+ *    - Items placed/thrown: Broadcast MSG_ITEM_PLACED with position/angle/speed
+ *    - Item boxes picked up: Broadcast MSG_ITEM_BOX_PICKUP with box index
+ *    - Buffered packet queues (16 items, 16 boxes) for processing
+ *    - Each DS creates items locally from broadcast data (no authoritative server)
+ *
+ * 8. TIMING & FRAME COUNTING
+ *    - msCounter approximates time (increments ~16ms per getTimeMs() call)
+ *    - Not real-time accurate, but sufficient for timeouts/heartbeats
+ *    - Wraps every ~49 days (acceptable for game sessions)
+ *
+ * Critical Bug Fixes:
+ *   - MAC-based player ID prevents DHCP collisions
+ *   - Lobby state reset prevents "ghost players" from previous sessions
+ *   - ACK queue clearing on race start prevents lobby retransmits during gameplay
+ *   - Multiple disconnect broadcasts compensate for UDP unreliability
+ *   - Aggressive JOIN resending ensures fast initial discovery
+ */
+
 #include "multiplayer.h"
 
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
-// BAHEY------
+
 #include "WiFi_minilib.h"
 
 // Access WiFi/socket status flags from WiFi_minilib
