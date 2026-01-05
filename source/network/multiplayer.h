@@ -1,27 +1,84 @@
+/**
+ * File: multiplayer.h
+ * -------------------
+ * Description: Peer-to-peer multiplayer racing system for Nintendo DS. Implements
+ *              UDP broadcast-based networking for 2-8 players on local WiFi, with
+ *              lobby synchronization, car state updates, and item synchronization.
+ *              Uses Selective Repeat ARQ for reliable lobby messaging.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
+ *
+ * Architecture Overview:
+ *   - Peer-to-peer (no dedicated server)
+ *   - Each DS runs full game independently
+ *   - Each player controls ONE car (identified by player ID)
+ *   - UDP broadcast on 255.255.255.255:8888
+ *   - Non-blocking I/O (doesn't freeze game loop)
+ *
+ * Network Protocol:
+ *   - Packet size: 32 bytes fixed (efficient for DS WiFi)
+ *   - Lobby messages: Reliable (Selective Repeat ARQ with ACKs)
+ *   - Car updates: Unreliable (15Hz, loss is acceptable)
+ *   - Item events: Unreliable broadcast (best effort)
+ *   - Player ID: Assigned by MAC address (hardware-unique, deterministic)
+ *
+ * Synchronization Strategy:
+ *   - Lobby: Wait for all players to press "ready" before race start
+ *   - Race: Each DS broadcasts car state every 4 frames (15Hz at 60 FPS)
+ *   - Items: Broadcast placement/pickup, each DS creates items locally
+ *   - Timeout: 3 seconds without packets = player disconnected
+ *
+ * Usage Flow:
+ *   1. Home Page:   Call Multiplayer_Init() → Connects WiFi, assigns player ID
+ *   2. Lobby:       Call Multiplayer_JoinLobby() → Discovers other players
+ *                   Call Multiplayer_UpdateLobby() every frame
+ *                   Call Multiplayer_SetReady(true) when player presses SELECT
+ *   3. Race Start:  Call Multiplayer_StartRace() → Clears lobby ACK queues
+ *   4. Race:        Call Multiplayer_SendCarState() every 4 frames
+ *                   Call Multiplayer_ReceiveCarStates() every 4 frames
+ *                   Call item sync functions when placing/picking up items
+ *   5. Race End:    Call Multiplayer_Cleanup() → Disconnects, frees resources
+ */
+
 #ifndef MULTIPLAYER_H
 #define MULTIPLAYER_H
-// BAHEY------
+
 #include <stdbool.h>
 
 #include "../gameplay/Car.h"
 #include "../core/game_types.h"
 
 //=============================================================================
-// Multiplayer System
+// MULTIPLAYER SYSTEM OVERVIEW
 //=============================================================================
-// Peer-to-peer multiplayer racing for 2-8 players.
+// Peer-to-peer multiplayer racing for 2-8 players over local WiFi.
 //
-// Architecture:
-//   - Each DS runs the full game independently
-//   - Each DS controls ONE car (the player car)
-//   - Car states are broadcast at 15Hz (every 4 physics frames)
-//   - Player ID is auto-assigned based on IP address
+// Network Architecture:
+//   - Protocol: UDP broadcast (255.255.255.255:8888)
+//   - Player ID: MAC address-based (0-7, hardware-unique, deterministic)
+//   - Car updates: 15Hz unreliable broadcast (position, speed, angle, lap, item)
+//   - Lobby: Reliable Selective Repeat ARQ (join, ready, heartbeat, ACK)
+//   - Items: Best-effort broadcast (placement, box pickup)
 //
-// Flow:
-//   1. Home page: Call Multiplayer_Init()
-//   2. Lobby: Call Multiplayer_JoinLobby(), wait for all ready
-//   3. Race: Call Multiplayer_SendCarState() and ReceiveCarStates() every 4 frames
-//   4. End: Call Multiplayer_Cleanup()
+// Synchronization:
+//   - Each DS runs full game independently (no authoritative server)
+//   - Player 0-7 controls car 0-7 (1:1 mapping)
+//   - Lobby waits for all players to be "ready" before starting race
+//   - Timeout: 3s without packets = player disconnected
+//   - Race start synchronized when all lobby players mark ready
+//
+// Reliability Strategy:
+//   - Lobby messages: Selective Repeat ARQ (500ms timeout, 5 retries, ACK-based)
+//   - Car updates: Unreliable (15Hz is fast enough to tolerate packet loss)
+//   - Items: Unreliable (visual only, loss is acceptable)
+//
+// Key Design Decisions:
+//   - MAC-based player ID (not IP) prevents collisions from sequential DHCP
+//   - 32-byte fixed packet size (efficient for DS WiFi hardware)
+//   - Lobby uses ARQ, race doesn't (tradeoff: reliability vs. overhead)
+//   - Item sync via broadcast (simpler than client-server authoritative model)
 //=============================================================================
 
 //=============================================================================
