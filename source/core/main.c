@@ -1,164 +1,47 @@
-/*
- * Kart Mania - Main Source File
+/**
+ * File: main.c
+ * ------------
+ * Description: Main entry point for Kart Mania. Contains only the main game loop
+ *              that handles state transitions and frame synchronization.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
  */
+
 #include <nds.h>
 #include <dswifi9.h>
-#include "context.h"
-#include "game_types.h"
-#include "../gameplay/gameplay.h"
-#include "../gameplay/gameplay_logic.h"
+
 #include "../graphics/graphics.h"
-#include "../ui/home_page.h"
-#include "../ui/map_selection.h"
-#include "../network/multiplayer.h"
-#include "../ui/multiplayer_lobby.h"
-#include "../ui/settings.h"
-#include "../audio/sound.h"
-#include "../storage/storage.h"
-#include "../ui/play_again.h"
-// BAHEY------
-//=============================================================================
-// PROTOTYPES
-//=============================================================================
-static GameState update_state(GameState state);
-static void init_state(GameState state);
-static void cleanup_state(GameState state, GameState nextState);
+#include "context.h"
+#include "init.h"
+#include "state_machine.h"
 
-//=============================================================================
-// MAIN
-//=============================================================================
 int main(void) {
-    // Initialize storage first (includes fatInitDefault)
-    bool storageAvailable = Storage_Init();
+    // Perform one-time initialization of all subsystems
+    InitGame();
 
-    // Initialize context with hardcoded defaults
-    GameContext_InitDefaults();
     GameContext* ctx = GameContext_Get();
 
-    // If storage available, load saved settings (overwrites defaults)
-    if (storageAvailable) {
-        Storage_LoadSettings();
-    }
-
-    initSoundLibrary();
-    LoadALLSoundFX();
-    loadMUSIC();
-
-    // enables Music because default sound effect is true
-    GameContext_SetMusicEnabled(ctx->userSettings.musicEnabled);
-
-    // sound Fx
-
-    if (!ctx->userSettings.soundFxEnabled) {
-        SOUNDFX_OFF();
-    }
-
-    // Initialize WiFi stack ONCE at program start (critical for reconnection)
-    // DO NOT call Wifi_InitDefault() again later - just connect/disconnect
-    Wifi_InitDefault(false);
-
-    init_state(ctx->currentGameState);
-
+    // Main game loop
     while (true) {
-        // Update DSWifi state (critical for multiplayer)
+        // Update DSWifi state machine every frame (critical for multiplayer)
         Wifi_Update();
 
-        GameState nextState = update_state(ctx->currentGameState);
+        // Run current state's update logic (returns next state)
+        GameState nextState = StateMachine_Update(ctx->currentGameState);
 
+        // Handle state transitions
         if (nextState != ctx->currentGameState) {
-            cleanup_state(ctx->currentGameState, nextState);
+            StateMachine_Cleanup(ctx->currentGameState, nextState);
             ctx->currentGameState = nextState;
-            // Note: Multiplayer_NukeConnectivity() is called by HomePage_initialize()
-            // No need to call it here - let each state handle its own init
             video_nuke();
-            init_state(nextState);
+            StateMachine_Init(nextState);
         }
 
+        // Wait for vertical blank (60Hz synchronization)
         swiWaitForVBlank();
     }
 
-    UnloadALLSoundFX();
     return 0;
-}
-
-//=============================================================================
-// IMPLEMENTATION
-//=============================================================================
-static GameState update_state(GameState state) {
-    switch (state) {
-        case HOME_PAGE:
-        case REINIT_HOME:  // NEW: Treat same as HOME_PAGE
-            return HomePage_Update();
-        case SETTINGS:
-            return Settings_Update();
-        case MAPSELECTION:
-            return Map_selection_update();
-        case MULTIPLAYER_LOBBY:
-            return MultiplayerLobby_Update();
-        case GAMEPLAY:
-            return Gameplay_Update();
-        case PLAYAGAIN:
-            return PlayAgain_Update();
-        default:
-            return state;
-    }
-}
-
-static void init_state(GameState state) {
-    switch (state) {
-        case HOME_PAGE:
-        case REINIT_HOME:  // NEW: Both initialize the same way
-            HomePage_Initialize();
-            break;
-        case MAPSELECTION:
-            Map_Selection_initialize();
-            break;
-        case MULTIPLAYER_LOBBY:
-            MultiplayerLobby_Init();
-            break;
-        case GAMEPLAY:
-            Gameplay_Initialize();
-            break;
-        case SETTINGS:
-            Settings_Initialize();
-            break;
-        case PLAYAGAIN:
-            PlayAgain_Initialize();
-            break;
-    }
-}
-
-static void cleanup_state(GameState state, GameState nextState) {
-    switch (state) {
-        case HOME_PAGE:
-        case REINIT_HOME:  // NEW: Both cleanup the same way
-            HomePage_Cleanup();
-            break;
-        case MAPSELECTION:
-            break;
-        case MULTIPLAYER_LOBBY:
-            // Keep connection alive only when heading into gameplay
-            if (nextState != GAMEPLAY && GameContext_IsMultiplayerMode()) {
-                Multiplayer_Cleanup();
-                GameContext_SetMultiplayerMode(false);
-            }
-            break;
-        case GAMEPLAY:
-            RaceTick_TimerStop();  // Stop physics/race timers
-            Gameplay_Cleanup();
-            Race_Stop();
-            // Only cleanup multiplayer if we were in multiplayer mode
-            if (GameContext_IsMultiplayerMode()) {
-                Multiplayer_Cleanup();
-                GameContext_SetMultiplayerMode(false);
-            }
-            break;
-        case SETTINGS:
-            break;
-        case PLAYAGAIN:
-            // IMPORTANT: Don't cleanup multiplayer here either!
-            // The player might choose "YES" to play again, and we need
-            // to keep the WiFi connection alive
-            break;
-    }
 }
