@@ -31,7 +31,7 @@ GameState StateMachine_Update(GameState state) {
     switch (state) {
         case HOME_PAGE:
         case REINIT_HOME:  // REINIT_HOME treated same as HOME_PAGE
-            return HomePage_update();
+            return HomePage_Update();
 
         case SETTINGS:
             return Settings_Update();
@@ -61,7 +61,7 @@ void StateMachine_Init(GameState state) {
     switch (state) {
         case HOME_PAGE:
         case REINIT_HOME:  // Both initialize the same way
-            HomePage_initialize();
+            HomePage_Initialize();
             break;
 
         case MAPSELECTION:
