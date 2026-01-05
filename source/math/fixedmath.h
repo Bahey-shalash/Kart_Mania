@@ -1,8 +1,18 @@
 
-// BAHEY------
-/*
- * fixedmath2d.h - Fixed-point 2D vector math for Nintendo DS
+/**
+ * File: fixedmath.h
+ * -----------------
+ * Description: Fixed-point 2D vector math library for Nintendo DS. Provides Q16.8
+ *              fixed-point arithmetic, 2D vectors, 2x2 matrices, and trigonometric
+ *              functions using lookup tables. Designed for fast, deterministic math
+ *              without floating-point operations.
  *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
+ */
+
+/*
  * =============================================================================
  * FIXED-POINT FORMAT: Q16.8
  * =============================================================================
@@ -78,8 +88,8 @@
  *
  */
 
-#ifndef VECT2_H
-#define VECT2_H
+#ifndef FIXED_MATH_H
+#define FIXED_MATH_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -94,7 +104,15 @@ typedef int32_t Q16_8;
 #define FIXED_ONE (1 << FIXED_SHIFT)
 #define FIXED_HALF (1 << (FIXED_SHIFT - 1))
 
-/* Conversion macros */
+/**
+ * Conversion Macros
+ * -----------------
+ * IntToFixed(i)    - Convert integer to Q16.8 fixed-point
+ * FixedToInt(f)    - Convert Q16.8 fixed-point to integer (truncates)
+ * FixedMul(a, b)   - Multiply two Q16.8 values (uses 64-bit intermediate)
+ * FixedDiv(a, b)   - Divide two Q16.8 values (uses 64-bit intermediate)
+ * FixedAbs(a)      - Absolute value of Q16.8
+ */
 #define IntToFixed(i) ((Q16_8)((i) << FIXED_SHIFT))
 #define FixedToInt(f) ((int)((f) >> FIXED_SHIFT))
 #define FixedMul(a, b) ((Q16_8)(((int64_t)(a) * (int64_t)(b)) >> FIXED_SHIFT))
@@ -119,44 +137,62 @@ typedef struct {
     Q16_8 y;
 } Vec2;
 
-/* Constructors */
+/**
+ * Vec2 Constructors
+ * -----------------
+ */
+
+/** Creates a 2D vector from Q16.8 fixed-point coordinates */
 static inline Vec2 Vec2_Create(Q16_8 x, Q16_8 y) {
     return (Vec2){x, y};
 }
 
+/** Creates a zero vector (0, 0) */
 static inline Vec2 Vec2_Zero(void) {
     return (Vec2){0, 0};
 }
 
+/** Creates a 2D vector from integer coordinates (converts to Q16.8) */
 static inline Vec2 Vec2_FromInt(int x, int y) {
     return (Vec2){IntToFixed(x), IntToFixed(y)};
 }
 
-/* Basic operations */
+/**
+ * Vec2 Basic Operations
+ * ---------------------
+ */
+
+/** Vector addition: a + b */
 static inline Vec2 Vec2_Add(Vec2 a, Vec2 b) {
     return Vec2_Create(a.x + b.x, a.y + b.y);
 }
 
+/** Vector subtraction: a - b */
 static inline Vec2 Vec2_Sub(Vec2 a, Vec2 b) {
     return Vec2_Create(a.x - b.x, a.y - b.y);
 }
 
+/** Vector negation: -a */
 static inline Vec2 Vec2_Neg(Vec2 a) {
     return Vec2_Create(-a.x, -a.y);
 }
 
+/** Vector scalar multiplication: a * s */
 static inline Vec2 Vec2_Scale(Vec2 a, Q16_8 s) {
     return Vec2_Create(FixedMul(a.x, s), FixedMul(a.y, s));
 }
 
+/** Dot product: a · b (returns Q16.8) */
 static inline Q16_8 Vec2_Dot(Vec2 a, Vec2 b) {
     return FixedMul(a.x, b.x) + FixedMul(a.y, b.y);
 }
 
+/** Squared length of vector (avoids expensive sqrt, good for comparisons) */
 static inline Q16_8 Vec2_LenSquared(Vec2 a) {
     return Vec2_Dot(a, a);
 }
 
+/** Checks if vector is exactly zero */
 static inline bool Vec2_IsZero(Vec2 a) {
     return (a.x == 0 && a.y == 0);
 }
@@ -174,19 +210,23 @@ typedef struct {
     Q16_8 m10, m11;
 } Mat2;
 
+/** Creates a 2x2 matrix from Q16.8 components */
 static inline Mat2 Mat2_Create(Q16_8 m00, Q16_8 m01, Q16_8 m10, Q16_8 m11) {
     return (Mat2){m00, m01, m10, m11};
 }
 
+/** Creates an identity matrix (1 on diagonal, 0 elsewhere) */
 static inline Mat2 Mat2_Identity(void) {
     return Mat2_Create(FIXED_ONE, 0, 0, FIXED_ONE);
 }
 
+/** Matrix-vector multiplication: M * v */
 static inline Vec2 Mat2_MulVec(Mat2 m, Vec2 v) {
     return Vec2_Create(FixedMul(m.m00, v.x) + FixedMul(m.m01, v.y),
                        FixedMul(m.m10, v.x) + FixedMul(m.m11, v.y));
 }
 
+/** Matrix-matrix multiplication: A * B */
 static inline Mat2 Mat2_Mul(Mat2 a, Mat2 b) {
     return Mat2_Create(FixedMul(a.m00, b.m00) + FixedMul(a.m01, b.m10),
                        FixedMul(a.m00, b.m01) + FixedMul(a.m01, b.m11),
@@ -198,26 +238,49 @@ static inline Mat2 Mat2_Mul(Mat2 a, Mat2 b) {
  * VEC2: Additional Operations (inline)
  *===========================================================================*/
 
-/* Distance squared - cheap, no sqrt, good for comparisons */
+/**
+ * Function: Vec2_DistanceSquared
+ * -------------------------------
+ * Squared distance between two points (avoids expensive sqrt).
+ * Good for distance comparisons without needing exact distance.
+ *
+ * Returns: Distance squared in Q16.8
+ */
 static inline Q16_8 Vec2_DistanceSquared(Vec2 a, Vec2 b) {
     Vec2 diff = Vec2_Sub(a, b);
     return Vec2_LenSquared(diff);
 }
 
-/* Perpendicular - CCW 90° rotation: (x, y) -> (-y, x) */
+/**
+ * Function: Vec2_Perp
+ * -------------------
+ * Counter-clockwise 90° rotation: (x, y) → (-y, x)
+ */
 static inline Vec2 Vec2_Perp(Vec2 v) {
     return Vec2_Create(-v.y, v.x);
 }
 
-/* Perpendicular - CW 90° rotation: (x, y) -> (y, -x) */
+/**
+ * Function: Vec2_PerpCW
+ * ---------------------
+ * Clockwise 90° rotation: (x, y) → (y, -x)
+ */
 static inline Vec2 Vec2_PerpCW(Vec2 v) {
     return Vec2_Create(v.y, -v.x);
 }
 
-/*
- * Reflect vector off surface with given normal.
+/**
+ * Function: Vec2_Reflect
+ * ----------------------
+ * Reflects vector off surface with given normal.
+ *
  * Formula: v - 2 * dot(v, n) * n
- * Note: normal should be normalized for correct results.
+ *
+ * Parameters:
+ *   v      - Incident vector
+ *   normal - Surface normal (should be normalized for correct results)
+ *
+ * Returns: Reflected vector
  */
 static inline Vec2 Vec2_Reflect(Vec2 v, Vec2 normal) {
     Q16_8 dot2 = FixedMul(Vec2_Dot(v, normal), IntToFixed(2));
@@ -225,31 +288,78 @@ static inline Vec2 Vec2_Reflect(Vec2 v, Vec2 normal) {
 }
 
 /*=============================================================================
- * FUNCTION PROTOTYPES (implemented in vect2.c)
+ * FUNCTION PROTOTYPES (implemented in fixedmath.c)
  *===========================================================================*/
 
-/* Trig (LUT-based) */
+/**
+ * Trigonometry Functions (LUT-based)
+ * -----------------------------------
+ * All trig functions use a 129-entry quarter-wave lookup table.
+ * Angles are in binary format (0-511 = 0-360°).
+ */
+
+/** Sine function using quarter-wave LUT. Angle in binary (0-511) */
 Q16_8 Fixed_Sin(int angle);
+
+/** Cosine function using quarter-wave LUT. Angle in binary (0-511) */
 Q16_8 Fixed_Cos(int angle);
 
-/* Vec2 heavy operations */
+/**
+ * Vec2 Heavy Operations
+ * ---------------------
+ * These functions involve square roots or normalization (expensive operations).
+ */
+
+/** Length of vector (uses sqrt, expensive) */
 Q16_8 Vec2_Len(Vec2 a);
+
+/** Normalize vector to unit length (length = 1.0) */
 Vec2 Vec2_Normalize(Vec2 a);
+
+/** Clamp vector length to maxLen (preserves direction) */
 Vec2 Vec2_ClampLen(Vec2 v, Q16_8 maxLen);
 
-/* Vec2 angle operations */
+/**
+ * Vec2 Angle Operations
+ * ---------------------
+ * Convert between vectors and binary angles (0-511).
+ */
+
+/** Create unit vector from binary angle (0-511) */
 Vec2 Vec2_FromAngle(int angle);
+
+/** Convert vector to binary angle (0-511) using atan2 */
 int Vec2_ToAngle(Vec2 v);
+
+/** Rotate vector by binary angle (0-511) */
 Vec2 Vec2_Rotate(Vec2 v, int angle);
 
-/* Mat2 constructors */
+/**
+ * Mat2 Constructors
+ * -----------------
+ */
+
+/** Create scaling matrix with separate X/Y scale factors */
 Mat2 Mat2_Scale(Q16_8 sx, Q16_8 sy);
+
+/** Create rotation matrix from binary angle (0-511) */
 Mat2 Mat2_Rotate(int angle);
 
-/* Vec2 additional operations */
+/**
+ * Vec2 Additional Operations
+ * ---------------------------
+ */
+
+/** Distance between two points (uses sqrt, expensive) */
 Q16_8 Vec2_Distance(Vec2 a, Vec2 b);
+
+/** Rotate point around pivot by binary angle */
 Vec2 Vec2_RotateAround(Vec2 point, Vec2 pivot, int angle);
+
+/** Project vector v onto vector 'onto' */
 Vec2 Vec2_Project(Vec2 v, Vec2 onto);
+
+/** Reject vector v from vector 'from' (orthogonal component) */
 Vec2 Vec2_Reject(Vec2 v, Vec2 from);
 
-#endif  // VECT2_H
+#endif  // FIXED_MATH_H

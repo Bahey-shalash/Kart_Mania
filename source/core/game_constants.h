@@ -3,7 +3,7 @@
 #ifndef GAME_CONSTANTS_H
 #define GAME_CONSTANTS_H
 
-#include "../math/fixedmath2d.h"
+#include "../math/fixedmath.h"
 
 /*
  * game_constants.h
@@ -37,7 +37,7 @@
 #define OIL_SPEED_DIVISOR 2     // Speed reduced by /2 when hit by oil slick
 
 //=============================================================================
-// Race Physics (Q16.8 - see fixedmath2d.h for format)
+// Race Physics (Q16.8 - see fixedmath.h for format)
 //=============================================================================
 
 #define TURN_STEP_50CC 3             // Steering delta per input for 50cc

@@ -2,7 +2,7 @@
 #ifndef ITEM_NAVIGATION_H
 #define ITEM_NAVIGATION_H
 // BAHEY------
-#include "../../math/fixedmath2d.h"
+#include "../../math/fixedmath.h"
 #include "../../core/game_types.h"
 
 // Waypoint for projectile path following
