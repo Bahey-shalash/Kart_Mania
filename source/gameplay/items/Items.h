@@ -35,7 +35,7 @@
 #include <nds.h>
 #include <stdbool.h>
 
-#include "../../math/fixedmath2d.h"
+#include "../../math/fixedmath.h"
 #include "../../core/game_types.h"
 #include "../../core/timer.h"
 

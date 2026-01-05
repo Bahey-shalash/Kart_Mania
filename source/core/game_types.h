@@ -4,12 +4,11 @@
 #include <nds.h>
 #include <stdbool.h>
 
-#include "../math/fixedmath2d.h"
-
 //=============================================================================
 // Game State Types
 //=============================================================================
 
+#include "../math/fixedmath.h"
 typedef enum {
     HOME_PAGE,
     MAPSELECTION,

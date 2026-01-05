@@ -1,18 +1,23 @@
-
-// BAHEY------
-/*
- * fixedmath2d.c - Implementation of heavy vector operations
+/**
+ * File: fixedmath.c
+ * -----------------
+ * Description: Implementation of heavy fixed-point vector operations. Includes
+ *              trigonometric functions (sin/cos) using quarter-wave lookup table,
+ *              integer square root, vector length/normalization, angle conversions,
+ *              and matrix constructors. All operations use Q16.8 fixed-point format.
  *
- * Contains:
- *   - Quarter-wave sin LUT (129 entries)
- *   - Fixed_Sin, Fixed_Cos
- *   - Integer square root
- *   - Vec2_Len, Vec2_Normalize, Vec2_ClampLen
- *   - Vec2_FromAngle, Vec2_ToAngle, Vec2_Rotate
- *   - Mat2_Scale, Mat2_Rotate
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
+ *
+ * Implementation Details:
+ *   - Quarter-wave sin LUT (129 entries) for fast trig
+ *   - Integer square root (no floating point)
+ *   - Binary search atan2 approximation for Vec2_ToAngle
+ *   - All operations optimized for Nintendo DS (no FPU)
  */
 
-#include "fixedmath2d.h"
+#include "fixedmath.h"
 
 /*=============================================================================
  * SIN/COS LOOKUP TABLE
@@ -48,6 +53,23 @@ static const int16_t sin_lut[129] = {
  * TRIG FUNCTIONS
  *===========================================================================*/
 
+/**
+ * Function: Fixed_Sin
+ * -------------------
+ * Computes sine using quarter-wave lookup table with symmetry.
+ *
+ * Parameters:
+ *   angle - Binary angle (0-511 representing 0-360°)
+ *
+ * Returns: Sine value in Q16.8 format (-256 to 256, representing -1.0 to 1.0)
+ *
+ * Implementation:
+ *   - Wraps angle to 0-511 using ANGLE_MASK
+ *   - Determines quadrant (0-3) and index within quadrant
+ *   - Uses symmetry to mirror/negate values from quarter-wave LUT
+ *   - Quadrants 1,3: mirror lookup (count down from 128)
+ *   - Quadrants 2,3: negate result
+ */
 Q16_8 Fixed_Sin(int angle) {
     /* Wrap to 0-511 */
     int a = angle & ANGLE_MASK;
@@ -75,6 +97,16 @@ Q16_8 Fixed_Sin(int angle) {
     return val;
 }
 
+/**
+ * Function: Fixed_Cos
+ * -------------------
+ * Computes cosine using phase-shifted sine: cos(x) = sin(x + 90°)
+ *
+ * Parameters:
+ *   angle - Binary angle (0-511 representing 0-360°)
+ *
+ * Returns: Cosine value in Q16.8 format (-256 to 256, representing -1.0 to 1.0)
+ */
 Q16_8 Fixed_Cos(int angle) {
     /* cos(x) = sin(x + 90°) */
     return Fixed_Sin(angle + ANGLE_QUARTER);
@@ -82,11 +114,24 @@ Q16_8 Fixed_Cos(int angle) {
 
 /*=============================================================================
  * INTEGER SQUARE ROOT
- *
- * Classic bitwise algorithm. No floating point.
- * Returns floor(sqrt(n)).
  *===========================================================================*/
 
+/**
+ * Function: isqrt (private)
+ * -------------------------
+ * Integer square root using classic bitwise algorithm.
+ * No floating point operations required.
+ *
+ * Parameters:
+ *   n - Input value (64-bit unsigned)
+ *
+ * Returns: floor(sqrt(n)) as 32-bit unsigned integer
+ *
+ * Algorithm:
+ *   - Starts with highest power of 4 <= 2^64
+ *   - Computes square root bit by bit
+ *   - Each iteration tests if adding current bit makes result too large
+ */
 static uint32_t isqrt(uint64_t n) {
     uint64_t res = 0;
     uint64_t bit = 1ull << 62; /* Highest power of 4 <= 2^64 */
@@ -114,6 +159,22 @@ static uint32_t isqrt(uint64_t n) {
  * VEC2 HEAVY OPERATIONS
  *===========================================================================*/
 
+/**
+ * Function: Vec2_Len
+ * ------------------
+ * Computes length (magnitude) of a vector using integer square root.
+ *
+ * Parameters:
+ *   a - Input vector
+ *
+ * Returns: Length in Q16.8 format
+ *
+ * Implementation:
+ *   - Computes len² using Vec2_LenSquared (cheap)
+ *   - Shifts to Q24.16 for proper sqrt scaling
+ *   - Uses integer sqrt to get Q16.8 result
+ *   - Avoids floating point entirely
+ */
 Q16_8 Vec2_Len(Vec2 a) {
     Q16_8 len2 = Vec2_LenSquared(a);
     if (len2 <= 0) {
@@ -131,6 +192,18 @@ Q16_8 Vec2_Len(Vec2 a) {
     return (Q16_8)sqrt_result;
 }
 
+/**
+ * Function: Vec2_Normalize
+ * ------------------------
+ * Normalizes vector to unit length (length = 1.0 in Q16.8 = 256).
+ *
+ * Parameters:
+ *   a - Input vector
+ *
+ * Returns: Normalized vector, or zero vector if input is zero
+ *
+ * Note: Expensive operation due to length calculation and division
+ */
 Vec2 Vec2_Normalize(Vec2 a) {
     if (Vec2_IsZero(a)) {
         return Vec2_Zero();
@@ -144,6 +217,19 @@ Vec2 Vec2_Normalize(Vec2 a) {
     return Vec2_Create(FixedDiv(a.x, len), FixedDiv(a.y, len));
 }
 
+/**
+ * Function: Vec2_ClampLen
+ * -----------------------
+ * Clamps vector length to maximum value, preserving direction.
+ *
+ * Parameters:
+ *   v      - Input vector
+ *   maxLen - Maximum length in Q16.8 format
+ *
+ * Returns: Vector with same direction but clamped length
+ *
+ * Optimization: Compares len² to avoid sqrt if length is already within bounds
+ */
 Vec2 Vec2_ClampLen(Vec2 v, Q16_8 maxLen) {
     if (maxLen <= 0) {
         return Vec2_Zero();
@@ -165,28 +251,46 @@ Vec2 Vec2_ClampLen(Vec2 v, Q16_8 maxLen) {
  * VEC2 ANGLE OPERATIONS
  *===========================================================================*/
 
+/**
+ * Function: Vec2_FromAngle
+ * ------------------------
+ * Creates a unit vector pointing in the given direction.
+ *
+ * Parameters:
+ *   angle - Binary angle (0-511 representing 0-360°)
+ *
+ * Returns: Unit vector with x = cos(angle), y = sin(angle)
+ */
 Vec2 Vec2_FromAngle(int angle) {
     return Vec2_Create(Fixed_Cos(angle), Fixed_Sin(angle));
 }
 
+/**
+ * Function: Vec2_ToAngle
+ * ----------------------
+ * Converts a vector to its direction angle using atan2 approximation.
+ *
+ * Parameters:
+ *   v - Input vector
+ *
+ * Returns: Binary angle (0-511 representing 0-360°)
+ *
+ * Implementation:
+ *   - Uses binary search on sin LUT instead of atan2 (no floating point)
+ *   - Computes sin(angle) = |y| / length
+ *   - Binary searches first quadrant (0-128) for matching sin value
+ *   - Adjusts for actual quadrant based on x/y signs:
+ *     * Quadrant 1 (x≥0, y≥0): 0-128
+ *     * Quadrant 2 (x<0, y≥0): 128-256
+ *     * Quadrant 3 (x<0, y<0): 256-384
+ *     * Quadrant 4 (x≥0, y<0): 384-512
+ */
 int Vec2_ToAngle(Vec2 v) {
     if (Vec2_IsZero(v)) {
         return 0;
     }
 
-    /*
-     * Compute atan2 using binary search on the sin/cos LUT.
-     * This is approximate but avoids floating point.
-     *
-     * Strategy:
-     *   1. Normalize to unit vector
-     *   2. Determine quadrant from signs
-     *   3. Binary search in first quadrant
-     *   4. Adjust for actual quadrant
-     */
-
     /* Get absolute values for first-quadrant lookup */
-    // Q16_8 ax = FixedAbs(v.x);
     Q16_8 ay = FixedAbs(v.y);
 
     /* Normalize (approximately - we just need the ratio) */
@@ -228,6 +332,21 @@ int Vec2_ToAngle(Vec2 v) {
     return angle & ANGLE_MASK;
 }
 
+/**
+ * Function: Vec2_Rotate
+ * ---------------------
+ * Rotates a vector by a given angle using rotation matrix.
+ *
+ * Parameters:
+ *   v     - Input vector
+ *   angle - Binary angle (0-511 representing 0-360°)
+ *
+ * Returns: Rotated vector
+ *
+ * Implementation:
+ *   Uses rotation matrix: | cos -sin | * | x |
+ *                         | sin  cos |   | y |
+ */
 Vec2 Vec2_Rotate(Vec2 v, int angle) {
     Q16_8 c = Fixed_Cos(angle);
     Q16_8 s = Fixed_Sin(angle);
@@ -240,10 +359,33 @@ Vec2 Vec2_Rotate(Vec2 v, int angle) {
  * MAT2 CONSTRUCTORS
  *===========================================================================*/
 
+/**
+ * Function: Mat2_Scale
+ * --------------------
+ * Creates a scaling matrix with separate X and Y scale factors.
+ *
+ * Parameters:
+ *   sx - X scale factor (Q16.8)
+ *   sy - Y scale factor (Q16.8)
+ *
+ * Returns: Scaling matrix | sx  0  |
+ *                         |  0  sy |
+ */
 Mat2 Mat2_Scale(Q16_8 sx, Q16_8 sy) {
     return Mat2_Create(sx, 0, 0, sy);
 }
 
+/**
+ * Function: Mat2_Rotate
+ * ---------------------
+ * Creates a rotation matrix from binary angle.
+ *
+ * Parameters:
+ *   angle - Binary angle (0-511 representing 0-360°)
+ *
+ * Returns: Rotation matrix | cos  -sin |
+ *                          | sin   cos |
+ */
 Mat2 Mat2_Rotate(int angle) {
     Q16_8 c = Fixed_Cos(angle);
     Q16_8 s = Fixed_Sin(angle);
@@ -260,11 +402,41 @@ Mat2 Mat2_Rotate(int angle) {
  * VEC2 ADDITIONAL OPERATIONS
  *===========================================================================*/
 
+/**
+ * Function: Vec2_Distance
+ * -----------------------
+ * Computes Euclidean distance between two points.
+ *
+ * Parameters:
+ *   a - First point
+ *   b - Second point
+ *
+ * Returns: Distance in Q16.8 format
+ *
+ * Note: Expensive (uses sqrt). Use Vec2_DistanceSquared for comparisons.
+ */
 Q16_8 Vec2_Distance(Vec2 a, Vec2 b) {
     Vec2 diff = Vec2_Sub(a, b);
     return Vec2_Len(diff);
 }
 
+/**
+ * Function: Vec2_RotateAround
+ * ---------------------------
+ * Rotates a point around a pivot by given angle.
+ *
+ * Parameters:
+ *   point - Point to rotate
+ *   pivot - Center of rotation
+ *   angle - Binary angle (0-511 representing 0-360°)
+ *
+ * Returns: Rotated point
+ *
+ * Implementation:
+ *   1. Translate point so pivot is at origin
+ *   2. Rotate around origin
+ *   3. Translate back
+ */
 Vec2 Vec2_RotateAround(Vec2 point, Vec2 pivot, int angle) {
     /* Translate point so pivot is at origin */
     Vec2 offset = Vec2_Sub(point, pivot);
@@ -276,13 +448,20 @@ Vec2 Vec2_RotateAround(Vec2 point, Vec2 pivot, int angle) {
     return Vec2_Add(rotated, pivot);
 }
 
+/**
+ * Function: Vec2_Project
+ * ----------------------
+ * Projects vector v onto another vector.
+ *
+ * Parameters:
+ *   v    - Vector to project
+ *   onto - Vector to project onto
+ *
+ * Returns: Component of v that lies along 'onto'
+ *
+ * Formula: (dot(v, onto) / dot(onto, onto)) * onto
+ */
 Vec2 Vec2_Project(Vec2 v, Vec2 onto) {
-    /*
-     * Project v onto another vector.
-     * Formula: (dot(v, onto) / dot(onto, onto)) * onto
-     *
-     * Returns the component of v that lies along onto.
-     */
     if (Vec2_IsZero(onto)) {
         return Vec2_Zero();
     }
@@ -294,13 +473,20 @@ Vec2 Vec2_Project(Vec2 v, Vec2 onto) {
     return Vec2_Scale(onto, scalar);
 }
 
+/**
+ * Function: Vec2_Reject
+ * ---------------------
+ * Computes rejection of v from another vector (perpendicular component).
+ *
+ * Parameters:
+ *   v    - Vector to reject
+ *   from - Vector to reject from
+ *
+ * Returns: Component of v perpendicular to 'from'
+ *
+ * Formula: v - project(v, from)
+ */
 Vec2 Vec2_Reject(Vec2 v, Vec2 from) {
-    /*
-     * Reject v from another vector (component perpendicular to from).
-     * Formula: v - project(v, from)
-     *
-     * Returns the component of v that is perpendicular to from.
-     */
     Vec2 projected = Vec2_Project(v, from);
     return Vec2_Sub(v, projected);
 }
