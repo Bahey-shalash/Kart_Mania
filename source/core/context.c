@@ -1,16 +1,25 @@
-// BAHEY------
-
+/**
+ * File: context.c
+ * --------------
+ * Description: Implementation of the global game context singleton. Manages
+ *              application-wide state and provides controlled access to settings
+ *              and game state with automatic side effects (e.g., changing music
+ *              settings immediately starts/stops playback).
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
+ */
 #include "context.h"
 
 #include "../audio/sound.h"
 
-static GameContext gGameContext;  // actual game context
+static GameContext gGameContext;  // Singleton instance
 
 GameContext* GameContext_Get(void) {
     return &gGameContext;
 }
-// should make const to stop things like GameContext_Get()->userSettings.musicEnabled =
-// false
+// TODO: Return const pointer to prevent direct modification via GameContext_Get()
 
 void GameContext_InitDefaults(void) {
     gGameContext.userSettings.wifiEnabled = true;
@@ -19,12 +28,16 @@ void GameContext_InitDefaults(void) {
 
     gGameContext.currentGameState = HOME_PAGE;
     gGameContext.SelectedMap = NONEMAP;
-    gGameContext.isMultiplayerMode = false;  // Default to single player
+    gGameContext.isMultiplayerMode = false;
 }
+
+//=============================================================================
+// SETTINGS MANAGEMENT
+//=============================================================================
 
 void GameContext_SetMusicEnabled(bool enabled) {
     gGameContext.userSettings.musicEnabled = enabled;
-    MusicSetEnabled(enabled);  // side-effect lives here
+    MusicSetEnabled(enabled);  // Immediately apply music change
 }
 
 void GameContext_SetSoundFxEnabled(bool enabled) {
@@ -37,8 +50,14 @@ void GameContext_SetSoundFxEnabled(bool enabled) {
 
 void GameContext_SetWifiEnabled(bool enabled) {
     gGameContext.userSettings.wifiEnabled = enabled;
-    // later: actually enable/disable wifi here
+    // Note: WiFi stack is initialized once at startup and kept alive throughout
+    // the program lifetime. This setting only controls the user preference, not
+    // the actual WiFi hardware state (see documentation for more info)
 }
+
+//=============================================================================
+// GAME STATE MANAGEMENT
+//=============================================================================
 
 void GameContext_SetMap(Map SelectedMap) {
     gGameContext.SelectedMap = SelectedMap;
