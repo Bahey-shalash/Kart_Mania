@@ -45,4 +45,5 @@ typedef enum {
     QUAD_BC = 7,  // Bottom-Center
     QUAD_BR = 8   // Bottom-Right
 } QuadrantID;
+
 #endif  // GAME_TYPES_H
