@@ -34,7 +34,7 @@ GameState StateMachine_Update(GameState state) {
             return HomePage_update();
 
         case SETTINGS:
-            return Settings_update();
+            return Settings_Update();
 
         case MAPSELECTION:
             return Map_selection_update();
@@ -77,7 +77,7 @@ void StateMachine_Init(GameState state) {
             break;
 
         case SETTINGS:
-            Settings_initialize();
+            Settings_Initialize();
             break;
 
         case PLAYAGAIN:

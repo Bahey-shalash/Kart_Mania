@@ -1,29 +1,51 @@
+/**
+ * File: settings.c
+ * ----------------
+ * Description: Implementation of the Settings screen. Provides interactive
+ *              controls for WiFi, music, and sound effects with visual toggle
+ *              indicators (green pill = ON, red pill = OFF). Supports touch
+ *              and D-pad input with selection highlighting. Handles persistent
+ *              storage save/load and factory reset via START+SELECT combo.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 05.01.2026
+ */
+
 #include "settings.h"
 
 #include <nds.h>
 #include <string.h>
 
-#include "../graphics/color.h"
+#include "../audio/sound.h"
 #include "../core/context.h"
+#include "../graphics/color.h"
+#include "../storage/storage.h"
 #include "nds_settings.h"
 #include "settings_top.h"
-#include "../audio/sound.h"
-#include "../storage/storage.h"
-// HUGO-----
 
 //=============================================================================
-// CONSTANTS
+// PRIVATE CONSTANTS
 //=============================================================================
 
-#define SETTINGS_SELECTION_PAL_BASE 244
+#define SETTINGS_SELECTION_PAL_BASE 244  // Base palette index for selection tiles
 
 //=============================================================================
-// ASSETS / TABLES
+// PRIVATE STATE
 //=============================================================================
 
+static SettingsButtonSelected selected = SETTINGS_BTN_NONE;
+static SettingsButtonSelected lastSelected = SETTINGS_BTN_NONE;
+
+//=============================================================================
+// PRIVATE ASSETS
+//=============================================================================
+
+// Toggle indicator tiles (mapped to palette indices 254=red, 255=green)
 static const u8 RedTile[64] = {[0 ... 63] = 254};
 static const u8 GreenTile[64] = {[0 ... 63] = 255};
 
+// Selection highlight tiles (one per button, mapped to sequential palettes)
 static const u8 selectionTile0[64] = {[0 ... 63] = 244};
 static const u8 selectionTile1[64] = {[0 ... 63] = 245};
 static const u8 selectionTile2[64] = {[0 ... 63] = 246};
@@ -32,63 +54,47 @@ static const u8 selectionTile4[64] = {[0 ... 63] = 248};
 static const u8 selectionTile5[64] = {[0 ... 63] = 249};
 
 //=============================================================================
-// MODULE STATE
+// PRIVATE FUNCTION PROTOTYPES
 //=============================================================================
 
-static SettingsButtonSelected selected = SETTINGS_BTN_NONE;
-static SettingsButtonSelected lastSelected = SETTINGS_BTN_NONE;
-
-//=============================================================================
-// PRIVATE PROTOTYPES
-//=============================================================================
-
-static void configureGraphics_MAIN_Settings(void);
-static void configBG_Main_Settings(void);
-
-static void configGraphics_Sub_SETTINGS(void);
-static void configBackground_Sub_SETTINGS(void);
-
-static void handleDPadInputSettings(void);
-static void handleTouchInputSettings(void);
-
-static void Settings_setSelectionTint(SettingsButtonSelected btn, bool show);
-static void drawSelectionRect(SettingsButtonSelected btn, u16 tileIndex);
-
-static void drawToggleRect(SettingsButtonSelected btn, bool enabled);
-
-static void refreshSettingsUI(void);
-static void onSavePressed(void);
+static void Settings_ConfigureGraphicsMain(void);
+static void Settings_ConfigureBackgroundMain(void);
+static void Settings_ConfigureGraphicsSub(void);
+static void Settings_ConfigureBackgroundSub(void);
+static void Settings_HandleDPadInput(void);
+static void Settings_HandleTouchInput(void);
+static void Settings_SetSelectionTint(SettingsButtonSelected btn, bool show);
+static void Settings_DrawSelectionRect(SettingsButtonSelected btn, u16 tileIndex);
+static void Settings_DrawToggleRect(SettingsButtonSelected btn, bool enabled);
+static void Settings_RefreshUI(void);
+static void Settings_OnSavePressed(void);
 
 //=============================================================================
 // PUBLIC API
 //=============================================================================
 
-void Settings_initialize(void) {
+void Settings_Initialize(void) {
     selected = SETTINGS_BTN_NONE;
     lastSelected = SETTINGS_BTN_NONE;
-
-    // Main Screen
-    configureGraphics_MAIN_Settings();
-    configBG_Main_Settings();
-
-    // Sub Screen
-    configGraphics_Sub_SETTINGS();
-    configBackground_Sub_SETTINGS();
+    Settings_ConfigureGraphicsMain();
+    Settings_ConfigureBackgroundMain();
+    Settings_ConfigureGraphicsSub();
+    Settings_ConfigureBackgroundSub();
 }
 
-GameState Settings_update(void) {
+GameState Settings_Update(void) {
     scanKeys();
-    handleDPadInputSettings();
-    handleTouchInputSettings();
+    Settings_HandleDPadInput();
+    Settings_HandleTouchInput();
 
     GameContext* ctx = GameContext_Get();
 
     // Update highlight when selection changes
     if (selected != lastSelected) {
         if (lastSelected != SETTINGS_BTN_NONE)
-            Settings_setSelectionTint(lastSelected, false);
+            Settings_SetSelectionTint(lastSelected, false);
         if (selected != SETTINGS_BTN_NONE)
-            Settings_setSelectionTint(selected, true);
+            Settings_SetSelectionTint(selected, true);
         lastSelected = selected;
     }
 
@@ -98,7 +104,7 @@ GameState Settings_update(void) {
             case SETTINGS_BTN_WIFI: {
                 bool wifiShouldBeEnabled = !ctx->userSettings.wifiEnabled;
                 GameContext_SetWifiEnabled(wifiShouldBeEnabled);
-                drawToggleRect(SETTINGS_BTN_WIFI, wifiShouldBeEnabled);
+                Settings_DrawToggleRect(SETTINGS_BTN_WIFI, wifiShouldBeEnabled);
                 PlayDingSFX();
                 break;
             }
@@ -106,21 +112,21 @@ GameState Settings_update(void) {
             case SETTINGS_BTN_MUSIC: {
                 bool musicShouldBeEnabled = !ctx->userSettings.musicEnabled;
                 GameContext_SetMusicEnabled(musicShouldBeEnabled);
-                drawToggleRect(SETTINGS_BTN_MUSIC, musicShouldBeEnabled);
+                Settings_DrawToggleRect(SETTINGS_BTN_MUSIC, musicShouldBeEnabled);
                 PlayDingSFX();
                 break;
             }
 
             case SETTINGS_BTN_SOUND_FX: {
                 bool soundFxShouldBeEnabled = !ctx->userSettings.soundFxEnabled;
-                PlayDingSFX();  // play before potentially muting
+                PlayDingSFX();  // Play before potentially muting
                 GameContext_SetSoundFxEnabled(soundFxShouldBeEnabled);
-                drawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxShouldBeEnabled);
+                Settings_DrawToggleRect(SETTINGS_BTN_SOUND_FX, soundFxShouldBeEnabled);
                 break;
             }
 
             case SETTINGS_BTN_SAVE:
-                onSavePressed();
+                Settings_OnSavePressed();
                 PlayDingSFX();
                 break;
 
@@ -140,16 +146,16 @@ GameState Settings_update(void) {
     return SETTINGS;
 }
 //=============================================================================
-// IMPLEMENTATION
+// SETTINGS MANAGEMENT
 //=============================================================================
 
-static void refreshSettingsUI(void) {
+static void Settings_RefreshUI(void) {
     GameContext* ctx = GameContext_Get();
 
     // Update toggle visuals
-    drawToggleRect(SETTINGS_BTN_WIFI, ctx->userSettings.wifiEnabled);
-    drawToggleRect(SETTINGS_BTN_MUSIC, ctx->userSettings.musicEnabled);
-    drawToggleRect(SETTINGS_BTN_SOUND_FX, ctx->userSettings.soundFxEnabled);
+    Settings_DrawToggleRect(SETTINGS_BTN_WIFI, ctx->userSettings.wifiEnabled);
+    Settings_DrawToggleRect(SETTINGS_BTN_MUSIC, ctx->userSettings.musicEnabled);
+    Settings_DrawToggleRect(SETTINGS_BTN_SOUND_FX, ctx->userSettings.soundFxEnabled);
 
     // Apply settings (triggers side effects)
     GameContext_SetWifiEnabled(ctx->userSettings.wifiEnabled);
@@ -157,25 +163,25 @@ static void refreshSettingsUI(void) {
     GameContext_SetSoundFxEnabled(ctx->userSettings.soundFxEnabled);
 }
 
-static void onSavePressed(void) {
+static void Settings_OnSavePressed(void) {
     if ((keysHeld() & KEY_START) && (keysHeld() & KEY_SELECT)) {
         Storage_ResetToDefaults();
-        refreshSettingsUI();
+        Settings_RefreshUI();
     } else {
         Storage_SaveSettings();
     }
 }
 
 //=============================================================================
-// MAIN ENGINE (Top Screen)
+// GRAPHICS SETUP - MAIN SCREEN
 //=============================================================================
 
-static void configureGraphics_MAIN_Settings(void) {
+static void Settings_ConfigureGraphicsMain(void) {
     REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
-static void configBG_Main_Settings(void) {
+static void Settings_ConfigureBackgroundMain(void) {
     BGCTRL[2] = BG_BMP_BASE(0) | BgSize_B8_256x256;
     dmaCopy(settings_topBitmap, BG_BMP_RAM(0), settings_topBitmapLen);
     dmaCopy(settings_topPal, BG_PALETTE, settings_topPalLen);
@@ -186,10 +192,10 @@ static void configBG_Main_Settings(void) {
 }
 
 //=============================================================================
-// TOGGLE STATE LAYER (pills - bitmap mode)
+// TOGGLE RENDERING
 //=============================================================================
 
-static void drawToggleRect(SettingsButtonSelected btn, bool enabled) {
+static void Settings_DrawToggleRect(SettingsButtonSelected btn, bool enabled) {
     u16* map = BG_MAP_RAM_SUB(1);
     u16 tile = enabled ? TILE_GREEN : TILE_RED;
 
@@ -216,10 +222,10 @@ static void drawToggleRect(SettingsButtonSelected btn, bool enabled) {
 }
 
 //=============================================================================
-// SELECTION HIGHLIGHT TILES (BG2)
+// SELECTION RENDERING
 //=============================================================================
 
-static void drawSelectionRect(SettingsButtonSelected btn, u16 tileIndex) {
+static void Settings_DrawSelectionRect(SettingsButtonSelected btn, u16 tileIndex) {
     u16* map = BG_MAP_RAM_SUB(1);
     int startX, startY, endX, endY;
 
@@ -261,7 +267,7 @@ static void drawSelectionRect(SettingsButtonSelected btn, u16 tileIndex) {
             endY = 23;
             break;
         default:
-            return;  // includes SETTINGS_BTN_NONE
+            return;
     }
 
     for (int row = startY; row < endY; row++)
@@ -269,7 +275,7 @@ static void drawSelectionRect(SettingsButtonSelected btn, u16 tileIndex) {
             map[row * 32 + col] = tileIndex;
 }
 
-static void Settings_setSelectionTint(SettingsButtonSelected btn, bool show) {
+static void Settings_SetSelectionTint(SettingsButtonSelected btn, bool show) {
     if (btn < 0 || btn >= SETTINGS_BTN_COUNT)
         return;
     int paletteIndex = SETTINGS_SELECTION_PAL_BASE + btn;
@@ -277,37 +283,35 @@ static void Settings_setSelectionTint(SettingsButtonSelected btn, bool show) {
 }
 
 //=============================================================================
-// SUB ENGINE (Bottom Screen)
+// GRAPHICS SETUP - SUB SCREEN
 //=============================================================================
-static void configGraphics_Sub_SETTINGS(void) {
+
+static void Settings_ConfigureGraphicsSub(void) {
     REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 }
 
-static void configBackground_Sub_SETTINGS(void) {
-    // BG0: Menu layer (front)
+static void Settings_ConfigureBackgroundSub(void) {
+    // BG0: Menu layer (front) - Static graphics with setting labels
     BGCTRL_SUB[0] =
         BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(0);
     dmaCopy(nds_settingsPal, BG_PALETTE_SUB, nds_settingsPalLen);
     dmaCopy(nds_settingsTiles, BG_TILE_RAM_SUB(1), nds_settingsTilesLen);
     dmaCopy(nds_settingsMap, BG_MAP_RAM_SUB(0), nds_settingsMapLen);
 
+    // BG1: Toggle and selection layer (back) - Dynamic highlights
     BGCTRL_SUB[1] =
         BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(1) | BG_TILE_BASE(2) | BG_PRIORITY(1);
 
+    // Load toggle indicator tiles
     dmaCopy(RedTile, (u8*)BG_TILE_RAM_SUB(2) + (3 * 64), 64);
     dmaCopy(GreenTile, (u8*)BG_TILE_RAM_SUB(2) + (4 * 64), 64);
 
-    BG_PALETTE_SUB[254] = TOGGLE_OFF_COLOR;  // Red
-    BG_PALETTE_SUB[255] = TOGGLE_ON_COLOR;   // Green
+    // Set toggle palette colors
+    BG_PALETTE_SUB[254] = TOGGLE_OFF_COLOR;
+    BG_PALETTE_SUB[255] = TOGGLE_ON_COLOR;
 
-    /* for (int row = 0; row < 24; row++)
-        for (int col = 0; col < 32; col++)
-            BG_MAP_RAM_SUB(1)[row * 32 + col] = ((row * 32 + col + (row % 2)) % 2) + 3;
-     */
-    // for testing only
-
-    // Load selection tiles
+    // Load selection highlight tiles
     dmaCopy(selectionTile0, (u8*)BG_TILE_RAM_SUB(2) + (5 * 64), 64);
     dmaCopy(selectionTile1, (u8*)BG_TILE_RAM_SUB(2) + (6 * 64), 64);
     dmaCopy(selectionTile2, (u8*)BG_TILE_RAM_SUB(2) + (7 * 64), 64);
@@ -321,106 +325,111 @@ static void configBackground_Sub_SETTINGS(void) {
     GameContext* ctx = GameContext_Get();
 
     // Draw initial toggle states
-    drawToggleRect(SETTINGS_BTN_WIFI, ctx->userSettings.wifiEnabled);
-    drawToggleRect(SETTINGS_BTN_MUSIC, ctx->userSettings.musicEnabled);
-    drawToggleRect(SETTINGS_BTN_SOUND_FX, ctx->userSettings.soundFxEnabled);
+    Settings_DrawToggleRect(SETTINGS_BTN_WIFI, ctx->userSettings.wifiEnabled);
+    Settings_DrawToggleRect(SETTINGS_BTN_MUSIC, ctx->userSettings.musicEnabled);
+    Settings_DrawToggleRect(SETTINGS_BTN_SOUND_FX, ctx->userSettings.soundFxEnabled);
 
-    // Draw selection areas
-    drawSelectionRect(SETTINGS_BTN_WIFI, TILE_SEL_WIFI);
-    drawSelectionRect(SETTINGS_BTN_MUSIC, TILE_SEL_MUSIC);
-    drawSelectionRect(SETTINGS_BTN_SOUND_FX, TILE_SEL_SOUNDFX);
-    drawSelectionRect(SETTINGS_BTN_SAVE, TILE_SEL_SAVE);
-    drawSelectionRect(SETTINGS_BTN_BACK, TILE_SEL_BACK);
-    drawSelectionRect(SETTINGS_BTN_HOME, TILE_SEL_HOME);
+    // Draw selection regions for all buttons
+    Settings_DrawSelectionRect(SETTINGS_BTN_WIFI, TILE_SEL_WIFI);
+    Settings_DrawSelectionRect(SETTINGS_BTN_MUSIC, TILE_SEL_MUSIC);
+    Settings_DrawSelectionRect(SETTINGS_BTN_SOUND_FX, TILE_SEL_SOUNDFX);
+    Settings_DrawSelectionRect(SETTINGS_BTN_SAVE, TILE_SEL_SAVE);
+    Settings_DrawSelectionRect(SETTINGS_BTN_BACK, TILE_SEL_BACK);
+    Settings_DrawSelectionRect(SETTINGS_BTN_HOME, TILE_SEL_HOME);
 }
 
 //=============================================================================
 // INPUT HANDLING
 //=============================================================================
 
-static void handleDPadInputSettings(void) {
+static void Settings_HandleDPadInput(void) {
     int keys = keysDown();
 
-    if (keys & KEY_UP) {
+    if (keys & KEY_UP)
         selected = (selected - 1 + SETTINGS_BTN_COUNT) % SETTINGS_BTN_COUNT;
-    }
 
-    if (keys & KEY_DOWN) {
+    if (keys & KEY_DOWN)
         selected = (selected + 1) % SETTINGS_BTN_COUNT;
-    }
 
     if (keys & KEY_LEFT) {
-        if (selected == SETTINGS_BTN_SAVE) {
-            selected = SETTINGS_BTN_HOME;  // wrap to right
-        } else if (selected == SETTINGS_BTN_BACK) {
+        if (selected == SETTINGS_BTN_SAVE)
+            selected = SETTINGS_BTN_HOME;
+        else if (selected == SETTINGS_BTN_BACK)
             selected = SETTINGS_BTN_SAVE;
-        } else if (selected == SETTINGS_BTN_HOME) {
+        else if (selected == SETTINGS_BTN_HOME)
             selected = SETTINGS_BTN_BACK;
-        }
     }
 
     if (keys & KEY_RIGHT) {
-        if (selected == SETTINGS_BTN_SAVE) {
+        if (selected == SETTINGS_BTN_SAVE)
             selected = SETTINGS_BTN_BACK;
-        } else if (selected == SETTINGS_BTN_BACK) {
+        else if (selected == SETTINGS_BTN_BACK)
             selected = SETTINGS_BTN_HOME;
-        } else if (selected == SETTINGS_BTN_HOME) {
-            selected = SETTINGS_BTN_SAVE;  // wrap to left
-        }
+        else if (selected == SETTINGS_BTN_HOME)
+            selected = SETTINGS_BTN_SAVE;
     }
 }
 
-static void handleTouchInputSettings(void) {
+static void Settings_HandleTouchInput(void) {
     if (!(keysHeld() & KEY_TOUCH))
         return;
 
     touchPosition touch;
     touchRead(&touch);
 
-    if (touch.px < 0 || touch.px > 256 || touch.py < 0 || touch.py > 192) {
-        return;  // sanity check
-    }
-    // wifi text
+    // Validate touch coordinates
+    if (touch.px < 0 || touch.px > 256 || touch.py < 0 || touch.py > 192)
+        return;
+
+    // WiFi text label
     if (touch.px > 23 && touch.px < 53 && touch.py > 10 && touch.py < 25) {
         selected = SETTINGS_BTN_WIFI;
         return;
     }
-    // wifi pill
+
+    // WiFi toggle pill
     if (touch.px > 175 && touch.px < 240 && touch.py > 10 && touch.py < 37) {
         selected = SETTINGS_BTN_WIFI;
         return;
     }
-    // music text
+
+    // Music text label
     if (touch.px > 24 && touch.px < 69 && touch.py > 40 && touch.py < 55) {
         selected = SETTINGS_BTN_MUSIC;
         return;
     }
-    // music pill
+
+    // Music toggle pill
     if (touch.px > 175 && touch.px < 240 && touch.py > 40 && touch.py < 67) {
         selected = SETTINGS_BTN_MUSIC;
         return;
     }
-    // sound fx text
+
+    // Sound FX text label
     if (touch.px > 23 && touch.px < 99 && touch.py > 70 && touch.py < 85) {
         selected = SETTINGS_BTN_SOUND_FX;
         return;
     }
-    // sound fx pill
+
+    // Sound FX toggle pill
     if (touch.px > 175 && touch.px < 240 && touch.py > 70 && touch.py < 97) {
         selected = SETTINGS_BTN_SOUND_FX;
         return;
     }
-    // save button (circle: center=64,152 diameter=48)
+
+    // Save button (circular hitbox: center=64,152, diameter=48)
     if (touch.px > 40 && touch.px < 88 && touch.py > 128 && touch.py < 176) {
         selected = SETTINGS_BTN_SAVE;
         return;
     }
-    // back button (circle: center=128,152 diameter=48)
+
+    // Back button (circular hitbox: center=128,152, diameter=48)
     if (touch.px > 104 && touch.px < 152 && touch.py > 128 && touch.py < 176) {
         selected = SETTINGS_BTN_BACK;
         return;
     }
-    // home button (circle: center=192,152 diameter=48)
+
+    // Home button (circular hitbox: center=192,152, diameter=48)
     if (touch.px > 168 && touch.px < 216 && touch.py > 128 && touch.py < 176) {
         selected = SETTINGS_BTN_HOME;
         return;
