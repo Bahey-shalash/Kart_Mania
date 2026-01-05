@@ -31,10 +31,10 @@ GameState StateMachine_Update(GameState state) {
     switch (state) {
         case HOME_PAGE:
         case REINIT_HOME:  // REINIT_HOME treated same as HOME_PAGE
-            return HomePage_update();
+            return HomePage_Update();
 
         case SETTINGS:
-            return Settings_update();
+            return Settings_Update();
 
         case MAPSELECTION:
             return Map_selection_update();
@@ -43,7 +43,7 @@ GameState StateMachine_Update(GameState state) {
             return MultiplayerLobby_Update();
 
         case GAMEPLAY:
-            return Gameplay_update();
+            return Gameplay_Update();
 
         case PLAYAGAIN:
             return PlayAgain_Update();
@@ -61,7 +61,7 @@ void StateMachine_Init(GameState state) {
     switch (state) {
         case HOME_PAGE:
         case REINIT_HOME:  // Both initialize the same way
-            HomePage_initialize();
+            HomePage_Initialize();
             break;
 
         case MAPSELECTION:
@@ -73,11 +73,11 @@ void StateMachine_Init(GameState state) {
             break;
 
         case GAMEPLAY:
-            Graphical_Gameplay_initialize();  // Sets up graphics, starts race timers
+            Gameplay_Initialize();  // Sets up graphics, starts race timers
             break;
 
         case SETTINGS:
-            Settings_initialize();
+            Settings_Initialize();
             break;
 
         case PLAYAGAIN:

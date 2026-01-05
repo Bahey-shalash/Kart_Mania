@@ -10,7 +10,7 @@
 
 #include "../core/game_types.h"
 #include "../gameplay/wall_collision.h"
-#include "../math/Car.h"
+#include "../gameplay/Car.h"
 
 //=============================================================================
 // Constants

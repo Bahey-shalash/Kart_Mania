@@ -8,7 +8,7 @@
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
-
+#include "../graphics/color.h"
 #include "../core/context.h"
 #include "../core/game_constants.h"
 #include "../core/game_types.h"
