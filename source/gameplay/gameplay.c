@@ -609,7 +609,8 @@ void Gameplay_OnVBlank(void) {
         oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
 
         // Render player sprite (OAM slot 41, affine matrix 0)
-        oamSet(&oamMain, 41, screenX, screenY, 0, 0, SpriteSize_32x32,
+        // Priority 0 (highest) so kart appears above oil slicks and other items
+        oamSet(&oamMain, 41, screenX, screenY, OBJPRIORITY_0, 0, SpriteSize_32x32,
                SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
                false);
     } else {
@@ -618,7 +619,7 @@ void Gameplay_OnVBlank(void) {
             int oamSlot = 41 + i;
 
             if (!Multiplayer_IsPlayerConnected(i)) {
-                oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_32x32,
+                oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_0, 0, SpriteSize_32x32,
                        SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
                        false);
                 continue;
@@ -637,11 +638,12 @@ void Gameplay_OnVBlank(void) {
                              carScreenY >= -32 && carScreenY < SCREEN_HEIGHT);
 
             if (onScreen) {
-                oamSet(&oamMain, oamSlot, carScreenX, carScreenY, 0, 0,
+                // Priority 0 (highest) so karts appear above oil slicks and other items
+                oamSet(&oamMain, oamSlot, carScreenX, carScreenY, OBJPRIORITY_0, 0,
                        SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i, true,
                        false, false, false, false);
             } else {
-                oamSet(&oamMain, oamSlot, -64, -64, 0, 0, SpriteSize_32x32,
+                oamSet(&oamMain, oamSlot, -64, -64, OBJPRIORITY_0, 0, SpriteSize_32x32,
                        SpriteColorFormat_16Color, car->gfx, i, true, false, false,
                        false, false);
             }
@@ -815,8 +817,9 @@ static void configureBackground(void) {
     if (selectedMap != ScorchingSands)
         return;
 
+    // Priority 3 (lowest) so all sprites appear above the background
     BGCTRL[0] =
-        BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
+        BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(3);
 
 #ifdef console_on_debug
     // Debug mode: Set up console
