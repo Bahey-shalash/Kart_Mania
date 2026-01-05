@@ -571,6 +571,7 @@ static void Gameplay_ConfigureMainBackground(void) {
         return;
     }
 
+    // Priority 3 (lowest) so all sprites appear above the background
     BGCTRL[0] =
         BG_64x64 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
 }

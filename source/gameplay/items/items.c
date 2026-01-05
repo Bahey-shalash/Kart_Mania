@@ -621,7 +621,7 @@ void Items_Render(int scrollX, int scrollY) {
 
         if (!itemBoxSpawns[i].active) {
             // Hide inactive item boxes
-            oamSet(&oamMain, oamSlot, 0, 192, 0, 1, SpriteSize_8x8,
+            oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_2, 1, SpriteSize_8x8,
                    SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, true, false,
                    false, false, false);
             continue;
@@ -635,12 +635,13 @@ void Items_Render(int scrollX, int scrollY) {
 
         // Render if on-screen, otherwise hide
         if (screenX >= -16 && screenX < 256 && screenY >= -16 && screenY < 192) {
-            oamSet(&oamMain, oamSlot, screenX, screenY, 0, 1, SpriteSize_8x8,
+            // Priority 2 so item boxes appear at same layer as track items but below karts
+            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, 1, SpriteSize_8x8,
                    SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, false, false,
                    false, false, false);
         } else {
             // Hide offscreen boxes
-            oamSet(&oamMain, oamSlot, 0, 192, 0, 1, SpriteSize_8x8,
+            oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_2, 1, SpriteSize_8x8,
                    SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, true, false,
                    false, false, false);
         }
@@ -653,7 +654,7 @@ void Items_Render(int scrollX, int scrollY) {
     // Clear/hide all track item OAM slots
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         int oamSlot = TRACK_ITEM_OAM_START + i;
-        oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_16x16,
+        oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_2, 0, SpriteSize_16x16,
                SpriteColorFormat_16Color, NULL, -1, true, false, false, false, false);
     }
 
@@ -729,12 +730,14 @@ void Items_Render(int scrollX, int scrollY) {
             int rotation = -(item->angle512 << 6);  // Convert to DS angle
 
             oamRotateScale(&oamMain, affineSlot, rotation, (1 << 8), (1 << 8));
-            oamSet(&oamMain, oamSlot, screenX, screenY, 0, paletteNum, spriteSize,
+            // Priority 2 so items appear below karts (priority 0) but above background (priority 1)
+            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, paletteNum, spriteSize,
                    SpriteColorFormat_16Color, item->gfx, affineSlot, false, false,
                    false, false, false);
         } else {
-            // No rotation - static sprites
-            oamSet(&oamMain, oamSlot, screenX, screenY, 0, paletteNum, spriteSize,
+            // No rotation - static sprites (oil, bananas, bombs)
+            // Priority 2 so items appear below karts (priority 0) but above background (priority 1)
+            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, paletteNum, spriteSize,
                    SpriteColorFormat_16Color, item->gfx, -1, false, false, false,
                    false, false);
         }
