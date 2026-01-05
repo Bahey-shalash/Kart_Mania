@@ -1,5 +1,18 @@
+/**
+ * File: graphics.c
+ * ----------------
+ * Description: Graphics utility implementations. Provides video_nuke(), a
+ *              defensive reset that wipes displays, sprites, palettes, VRAM
+ *              banks, and BG registers so the next screen can start from a
+ *              clean state.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 04.01.2026
+ */
+
 #include "graphics.h"
-// BAHEY------
+
 #include <nds.h>
 #include <string.h>
 
@@ -29,10 +42,12 @@ void video_nuke(void) {
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
+    VRAM_D_CR = VRAM_ENABLE | VRAM_D_SUB_SPRITE;
 
     memset((void*)VRAM_A, 0, VRAM_BANK_SIZE);
     memset((void*)VRAM_B, 0, VRAM_BANK_SIZE);
     memset((void*)VRAM_C, 0, VRAM_BANK_SIZE);
+    memset((void*)VRAM_D, 0, VRAM_BANK_SIZE);
 
     // 5) Reset BG control regs (optional but clean)
     for (int i = 0; i < 4; i++) {

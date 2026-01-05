@@ -50,8 +50,9 @@ typedef struct {
 //=============================================================================
 // Private Constants
 //=============================================================================
-
 #define FINISH_DISPLAY_FRAMES 150  // 2.5 seconds at 60fps to show final time
+// TODO: Make these kinds of variables dependent on the game frequency,
+// so if we change the frequency, everything updates accordingly.
 
 // Uncomment to enable debug console on sub screen
 // #define CONSOLE_DEBUG_MODE
@@ -86,6 +87,10 @@ static u16* kartGfx = NULL;
 #ifndef CONSOLE_DEBUG_MODE
 static u16* itemDisplayGfx = NULL;
 #endif
+
+//=============================================================================
+// Private State - Race Progress
+//=============================================================================
 
 //=============================================================================
 // Private State - Race Progress
@@ -212,8 +217,11 @@ void Gameplay_Initialize(void) {
     Gameplay_LoadQuadrant(currentQuadrant);
 }
 
-/** Update gameplay screen logic */
+/* Update gameplay screen logic */
 GameState Gameplay_Update(void) {
+//=============================================================================
+// Public API - Update
+//=============================================================================
     scanKeys();
 
     // Allow exit anytime with SELECT
@@ -575,9 +583,8 @@ static void Gameplay_ConfigureSubBackground(void) {
     BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
     swiCopy(numbersTiles, BG_TILE_RAM_SUB(1), numbersTilesLen);
     swiCopy(numbersPal, BG_PALETTE_SUB, numbersPalLen);
-    BG_PALETTE_SUB[0] = ARGB16(1, 0, 0, 0);
-    BG_PALETTE_SUB[255] = ARGB16(1, 20, 20, 20);
-    // Clear entire map to prevent garbage
+    BG_PALETTE_SUB[0] = BLACK;
+    BG_PALETTE_SUB[255] = DARK_GRAY;  // neutral sub background
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
     // Initialize displays
     Gameplay_UpdateChronoDisplay(0, 0, 0);

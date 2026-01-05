@@ -185,9 +185,11 @@ static void PlayAgain_SetSelectionTint(PlayAgainButton btn, bool show) {
 
     if (show) {
         if (btn == PA_BTN_YES) {
-            BG_PALETTE_SUB[paletteIndex] = ARGB16(1, 0, 20, 31);  // Blue
+            // Blue/cyan highlight for YES
+            BG_PALETTE_SUB[paletteIndex] = TEAL;  // Blue
         } else {
-            BG_PALETTE_SUB[paletteIndex] = ARGB16(1, 31, 0, 0);   // Red
+            // Red highlight for NO
+            BG_PALETTE_SUB[paletteIndex] = RED;  // Red
         }
     } else {
         BG_PALETTE_SUB[paletteIndex] = BLACK;  // Transparent
