@@ -43,7 +43,7 @@ void initTimer(void) {
 
 void timerISRVblank(void) {
     GameContext* ctx = GameContext_Get();
-    UpdatePauseDebounce();  // Update pause button state every frame
+    Race_UpdatePauseDebounce();  // Update pause button state every frame
 
     switch (ctx->currentGameState) {
         case HOME_PAGE:
@@ -66,10 +66,10 @@ void timerISRVblank(void) {
 
             // Update lap/time displays only during active racing
             if (!Race_IsCountdownActive() && !Race_IsCompleted()) {
-                updateChronoDisp_Sub(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
-                                     Gameplay_GetRaceMsec());
+                Gameplay_UpdateChronoDisplay(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
+                                              Gameplay_GetRaceMsec());
                 const RaceState* state = Race_GetState();
-                updateLapDisp_Sub(Gameplay_GetCurrentLap(), state->totalLaps);
+                Gameplay_UpdateLapDisplay(Gameplay_GetCurrentLap(), state->totalLaps);
             }
             break;
 

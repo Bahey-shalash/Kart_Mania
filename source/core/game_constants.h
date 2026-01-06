@@ -187,6 +187,15 @@
 #define MS_PER_SECOND 1000     // Milliseconds per second
 #define SECONDS_PER_MINUTE 60  // Seconds per minute
 #define CHRONO_FREQ_HZ 1000    // Chronometer frequency in Hz
+#define RACE_TICK_FREQ 60      // Race physics tick rate in Hz
+
+//=============================================================================
+// Race Display & UI Timing
+//=============================================================================
+
+#define FINISH_DISPLAY_FRAMES 150        // 2.5 seconds at 60fps for final time display
+#define FINISH_DELAY_FRAMES (5 * 60)     // 5 seconds at 60fps before showing end screen
+#define COUNTDOWN_FRAMES_PER_STEP 60     // 1 second per countdown number at 60fps
 
 //=============================================================================
 // Special Values & Sentinels

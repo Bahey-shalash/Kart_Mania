@@ -43,7 +43,7 @@ GameState StateMachine_Update(GameState state) {
             return MultiplayerLobby_Update();
 
         case GAMEPLAY:
-            return Gameplay_update();
+            return Gameplay_Update();
 
         case PLAYAGAIN:
             return PlayAgain_Update();
@@ -73,7 +73,7 @@ void StateMachine_Init(GameState state) {
             break;
 
         case GAMEPLAY:
-            Graphical_Gameplay_initialize();  // Sets up graphics, starts race timers
+            Gameplay_Initialize();  // Sets up graphics, starts race timers
             break;
 
         case SETTINGS:

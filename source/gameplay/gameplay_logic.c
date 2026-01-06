@@ -1,4 +1,16 @@
-// HUGO------
+/**
+ * File: gameplay_logic.c
+ * ----------------------
+ * Description: Core racing logic and physics simulation. Manages race state,
+ *              car updates, countdown system, checkpoint progression, finish
+ *              line detection, and multiplayer synchronization. Separate from
+ *              graphics (gameplay.c handles rendering).
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "gameplay_logic.h"
 
 #include <nds.h>
@@ -45,7 +57,6 @@ static bool hasCompletedFirstCrossing[MAX_CARS] = {false};
 static CheckpointProgressState cpState[MAX_CARS] = {CP_STATE_START};
 static bool wasOnLeftSide[MAX_CARS] = {false};
 static bool wasOnTopSide[MAX_CARS] = {false};
-//static bool isPaused = false;
 static bool itemButtonHeldLast = false;
 
 static int collisionLockoutTimer[MAX_CARS] = {0};
@@ -132,14 +143,11 @@ void Race_UpdateCountdown(void) {
 }
 
 //=============================================================================
-// Public API - Lifecycle
+// Private Helpers - Race Initialization
 //=============================================================================
-void Race_Init(Map map, GameMode mode) {
-    init_pause_interrupt();
-    if (map == NONEMAP || map > NeonCircuit) {
-        return;
-    }
 
+// Helper: Initialize race state variables
+static void Race_InitState(Map map, GameMode mode) {
     KartMania.currentMap = map;
     KartMania.gameMode = mode;
     KartMania.raceStarted = true;
@@ -157,63 +165,83 @@ void Race_Init(Map map, GameMode mode) {
     countdownTimer = 0;
     raceCanStart = false;
 
-    // NEW: Check if this is a multiplayer race
     isMultiplayerRace = (mode == MultiPlayer);
+}
 
-    // Set lap count: 5 laps for multiplayer Scorching Sands, use map defaults otherwise
+// Helper: Set lap count based on map and mode
+static void Race_ConfigureLaps(Map map) {
     if (isMultiplayerRace && map == ScorchingSands) {
-        KartMania.totalLaps = 5;//change to a def constant
+        KartMania.totalLaps = 5;  // Multiplayer Scorching Sands: 5 laps
     } else {
-        KartMania.totalLaps = MapLaps[map];
+        KartMania.totalLaps = MapLaps[map];  // Use map defaults
+    }
+}
+
+// Helper: Initialize cars for multiplayer mode
+static void Race_InitMultiplayerCars(void) {
+    KartMania.playerIndex = Multiplayer_GetMyPlayerID();
+    KartMania.carCount = MAX_CARS;
+
+    // Build sorted list of connected player indices for spawn positioning
+    int connectedIndices[MAX_CARS];
+    int connectedCount = 0;
+
+    for (int i = 0; i < MAX_CARS; i++) {
+        if (Multiplayer_IsPlayerConnected(i)) {
+            connectedIndices[connectedCount++] = i;
+        }
     }
 
-    if (isMultiplayerRace) {
-        // Multiplayer mode
-        KartMania.playerIndex = Multiplayer_GetMyPlayerID();
-        KartMania.carCount = MAX_CARS;
-        
-        // CHANGED: Build sorted list of connected player indices for spawn positioning
-        int connectedIndices[MAX_CARS];
-        int connectedCount = 0;
-        
-        for (int i = 0; i < MAX_CARS; i++) {
-            if (Multiplayer_IsPlayerConnected(i)) {
-                connectedIndices[connectedCount++] = i;
-            }
-        }
-        
-        // Initialize all cars
-        for (int i = 0; i < MAX_CARS; i++) {
-            if (Multiplayer_IsPlayerConnected(i)) {
-                // Find this player's spawn position (rank among connected players)
-                int spawnPosition = 0;
-                for (int j = 0; j < connectedCount; j++) {
-                    if (connectedIndices[j] == i) {
-                        spawnPosition = j;
-                        break;
-                    }
+    // Initialize all cars
+    for (int i = 0; i < MAX_CARS; i++) {
+        if (Multiplayer_IsPlayerConnected(i)) {
+            // Find spawn position (rank among connected players)
+            int spawnPosition = 0;
+            for (int j = 0; j < connectedCount; j++) {
+                if (connectedIndices[j] == i) {
+                    spawnPosition = j;
+                    break;
                 }
-                initCarAtSpawn(&KartMania.cars[i], spawnPosition);
-            } else {
-                // Disconnected players - initialize off-map
-                initCarAtSpawn(&KartMania.cars[i], -1);
             }
-            collisionLockoutTimer[i] = 0;
+            initCarAtSpawn(&KartMania.cars[i], spawnPosition);
+        } else {
+            initCarAtSpawn(&KartMania.cars[i], -1);  // Off-map
         }
+        collisionLockoutTimer[i] = 0;
+    }
+}
+
+// Helper: Initialize cars for single player mode
+static void Race_InitSinglePlayerCars(void) {
+    KartMania.playerIndex = 0;
+    KartMania.carCount = 1;
+
+    for (int i = 0; i < KartMania.carCount; i++) {
+        initCarAtSpawn(&KartMania.cars[i], i);
+        collisionLockoutTimer[i] = 0;
+    }
+}
+
+//=============================================================================
+// Public API - Lifecycle
+//=============================================================================
+void Race_Init(Map map, GameMode mode) {
+    Race_InitPauseInterrupt();
+
+    if (map == NONEMAP || map > NeonCircuit) {
+        return;
+    }
+
+    Race_InitState(map, mode);
+    Race_ConfigureLaps(map);
+
+    if (isMultiplayerRace) {
+        Race_InitMultiplayerCars();
     } else {
-        // Single player mode
-        KartMania.playerIndex = 0;
-        KartMania.carCount = 1;
-        
-        for (int i = 0; i < KartMania.carCount; i++) {
-            initCarAtSpawn(&KartMania.cars[i], i);
-            collisionLockoutTimer[i] = 0;
-        }
+        Race_InitSinglePlayerCars();
     }
 
     KartMania.checkpointCount = 0;
-
-    // Initialize items system
     Items_Init(map);
 }
 
@@ -250,7 +278,7 @@ void Race_Reset(void) {
 
 void Race_Stop(void) {
     KartMania.raceStarted = false;
-    cleanup_pause_interrupt();  // NEW: Clean up pause interrupt
+    Race_CleanupPauseInterrupt();  // NEW: Clean up pause interrupt
     RaceTick_TimerStop();
 }
 
@@ -267,68 +295,76 @@ void Race_MarkAsCompleted(int min, int sec, int msec) {
 }
 
 //=============================================================================
+// Private Helpers - Game Loop
+//=============================================================================
+
+// Helper: Calculate scroll position for camera (clamped to map bounds)
+static void Race_CalculateScroll(const Car* player, int* outScrollX, int* outScrollY) {
+    int carCenterX = FixedToInt(player->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carCenterY = FixedToInt(player->position.y) + CAR_SPRITE_CENTER_OFFSET;
+
+    *outScrollX = carCenterX - (SCREEN_WIDTH / 2);
+    *outScrollY = carCenterY - (SCREEN_HEIGHT / 2);
+
+    if (*outScrollX < 0) *outScrollX = 0;
+    if (*outScrollY < 0) *outScrollY = 0;
+    if (*outScrollX > MAX_SCROLL_X) *outScrollX = MAX_SCROLL_X;
+    if (*outScrollY > MAX_SCROLL_Y) *outScrollY = MAX_SCROLL_Y;
+}
+
+// Helper: Update network synchronization (multiplayer only)
+static void Race_UpdateNetworkSync(Car* player) {
+    if (!isMultiplayerRace) return;
+
+    networkUpdateCounter++;
+    if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
+        Multiplayer_SendCarState(player);
+        Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
+        networkUpdateCounter = 0;
+    }
+}
+
+//=============================================================================
 // Public API - Game Loop
 //=============================================================================
 void Race_Tick(void) {
-    // Special handling: if race is finished, ONLY count down the delay timer
+    // If race is finished, only count down the delay timer
     if (KartMania.raceFinished) {
         if (KartMania.finishDelayTimer > 0) {
             KartMania.finishDelayTimer--;
         }
-        return;  // Don't process any game logic after completion
-    }
-    
-    // Normal race active check
-    if (!Race_IsActive()) {
         return;
     }
 
+    if (!Race_IsActive()) return;
+
     Car* player = &KartMania.cars[KartMania.playerIndex];
+
+    // Handle player input and environment
     handlePlayerInput(player, KartMania.playerIndex);
     applyTerrainEffects(player);
-
     Items_Update();
 
-    // Calculate scroll position based on car's CENTER (not top-left corner)
-    int carCenterX = FixedToInt(player->position.x) + CAR_SPRITE_CENTER_OFFSET;
-    int carCenterY = FixedToInt(player->position.y) + CAR_SPRITE_CENTER_OFFSET;
-    
-    int scrollX = carCenterX - (SCREEN_WIDTH / 2);
-    int scrollY = carCenterY - (SCREEN_HEIGHT / 2);
-    
-    if (scrollX < 0)
-        scrollX = 0;
-    if (scrollY < 0)
-        scrollY = 0;
-    if (scrollX > MAX_SCROLL_X)
-        scrollX = MAX_SCROLL_X;
-    if (scrollY > MAX_SCROLL_Y)
-        scrollY = MAX_SCROLL_Y;
+    // Calculate scroll position for collision checks
+    int scrollX, scrollY;
+    Race_CalculateScroll(player, &scrollX, &scrollY);
 
+    // Item collision and effects
     Items_CheckCollisions(KartMania.cars, KartMania.carCount, scrollX, scrollY);
     Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
 
+    // Update car physics and check boundaries/checkpoints
     Car_Update(player);
-    clampToMapBounds(player, KartMania.playerIndex);  // This handles wall collision
+    clampToMapBounds(player, KartMania.playerIndex);
     checkCheckpointProgression(player, KartMania.playerIndex);
 
+    // Decrement collision lockout timer
     if (collisionLockoutTimer[KartMania.playerIndex] > 0) {
         collisionLockoutTimer[KartMania.playerIndex]--;
     }
-    
-    // NEW: Network synchronization for multiplayer
-    if (isMultiplayerRace) {
-        networkUpdateCounter++;
-        if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
-            // Send my car state
-            Multiplayer_SendCarState(player);
 
-            // Receive others' car states
-            Multiplayer_ReceiveCarStates(KartMania.cars, KartMania.carCount);
-
-            networkUpdateCounter = 0;
-        }
-    }
+    // Network synchronization for multiplayer
+    Race_UpdateNetworkSync(player);
 }
 
 
@@ -626,15 +662,15 @@ static volatile int debounceFrames = 0;
 
 #define DEBOUNCE_DELAY 15  // ~250ms at 60Hz
 
-void init_pause_interrupt(void) {
+void Race_InitPauseInterrupt(void) {
     // BIT(14) = enable key interrupt
     // Actually, we need to handle this differently - let's use IRQ on press
     REG_KEYCNT = BIT(14) | KEY_START;  // Enable interrupt for START key
-    irqSet(IRQ_KEYS, PauseISR);
+    irqSet(IRQ_KEYS, Race_PauseISR);
     irqEnable(IRQ_KEYS);
 }
 
-void PauseISR(void) {
+void Race_PauseISR(void) {
     // Check if we're in debounce period
     if (debounceFrames > 0) {
         return;  // Ignore bounces
@@ -657,8 +693,7 @@ void PauseISR(void) {
     }
 }
 
-// Add this function to update debounce counter
-void UpdatePauseDebounce(void) {
+void Race_UpdatePauseDebounce(void) {
     if (debounceFrames > 0) {
         debounceFrames--;
     }
@@ -668,7 +703,7 @@ bool IsPaused(void) {
     return isPaused;
 }
 
-void cleanup_pause_interrupt(void) {
+void Race_CleanupPauseInterrupt(void) {
     irqDisable(IRQ_KEYS);
     irqClear(IRQ_KEYS);
     isPaused = false;

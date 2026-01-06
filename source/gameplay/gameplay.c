@@ -1,18 +1,39 @@
+/**
+ * File: gameplay.c
+ * ----------------
+ * Description: Main gameplay screen implementation for racing. Handles graphics
+ *              initialization, VBlank rendering updates, camera management,
+ *              quadrant loading/switching, timer updates, sub-screen display
+ *              (lap counter, chrono, item display), and final time rendering.
+ *              Coordinates with gameplay_logic.c for race state.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "gameplay.h"
 
 #include <nds.h>
 #include <stdio.h>
 #include <string.h>
-// HUGO------
 #include "items/items_api.h"
 #include "../core/context.h"
 #include "../core/game_constants.h"
 #include "../core/game_types.h"
-#include "gameplay_logic.h"
-#include "kart_sprite.h"
+#include "../graphics/color.h"
 #include "../network/multiplayer.h"
-#include "numbers.h"
+#include "../storage/storage_pb.h"
 #include "../ui/play_again.h"
+#include "banana.h"
+#include "bomb.h"
+#include "gameplay_logic.h"
+#include "green_shell.h"
+#include "kart_sprite.h"
+#include "missile.h"
+#include "numbers.h"
+#include "oil_slick.h"
+#include "red_shell.h"
 #include "scorching_sands_BC.h"
 #include "scorching_sands_BL.h"
 #include "scorching_sands_BR.h"
@@ -23,28 +44,18 @@
 #include "scorching_sands_TL.h"
 #include "scorching_sands_TR.h"
 #include "wall_collision.h"
-#include "../storage/storage_pb.h"
-#include "../graphics/color.h"
-
-#include "banana.h"
-#include "bomb.h"
-#include "green_shell.h"
-#include "missile.h"
-#include "oil_slick.h"
-#include "red_shell.h"
 
 //=============================================================================
-// Constants
+// PRIVATE CONSTANTS
 //=============================================================================
-#define FINISH_DISPLAY_FRAMES 150  // 2.5 seconds at 60fps to show final time
-// TODO: Make these kinds of variables dependent on the game frequency,
-// so if we change the frequency, everything updates accordingly.
+// All timing constants moved to game_constants.h
 
 //! DEBUGGING FLAG
 // #define console_on_debug  // Uncomment to enable debug console on sub screen
 //! DEBUGGING FLAG
+
 //=============================================================================
-// Private State
+// PRIVATE STATE
 //=============================================================================
 static int raceMin = 0;
 static int raceSec = 0;
@@ -76,7 +87,7 @@ static bool isNewRecord = false;
 static bool hasSavedBestTime = false;
 
 //=============================================================================
-// Quadrant Data
+// PRIVATE TYPES - Quadrant Data
 //=============================================================================
 typedef struct {
     const unsigned int* tiles;
@@ -105,29 +116,36 @@ static const QuadrantData quadrantData[9] = {
      scorching_sands_BCTilesLen, scorching_sands_BCPalLen},
     {scorching_sands_BRTiles, scorching_sands_BRMap, scorching_sands_BRPal,
      scorching_sands_BRTilesLen, scorching_sands_BRPalLen}};
-//=============================================================================
-// Private Prototypes
-//=============================================================================
-static void configureGraphics(void);
-static void configureBackground(void);
-static void configureSprite(void);
-static void freeSprites(void);
-#ifdef console_on_debug
-static void configureConsole(void);
-#endif
-static void loadQuadrant(QuadrantID quad);
-static QuadrantID determineQuadrant(int x, int y);
-static void renderCountdown(CountdownState state);
-static void clearCountdownDisplay(void);
-static void displayFinalTime(int min, int sec, int msec);
-void printDigit(u16* map, int number, int x, int y);
-#ifndef console_on_debug
-static void loadItemDisplay_Sub(void);    // NEW
-static void updateItemDisplay_Sub(void);  // NEW
-#endif
 
 //=============================================================================
-// Timer Getters
+// PRIVATE HELPER PROTOTYPES
+//=============================================================================
+static void Gameplay_ConfigureGraphics(void);
+static void Gameplay_ConfigureBackground(void);
+static void Gameplay_ConfigureSprite(void);
+static void Gameplay_FreeSprites(void);
+#ifdef console_on_debug
+static void Gameplay_ConfigureConsole(void);
+#endif
+static void Gameplay_LoadQuadrant(QuadrantID quad);
+static QuadrantID Gameplay_DetermineQuadrant(int x, int y);
+static void Gameplay_RenderCountdown(CountdownState state);
+static void Gameplay_ClearCountdownDisplay(void);
+static void Gameplay_DisplayFinalTime(int min, int sec, int msec);
+static void Gameplay_UpdateChronoDisp(u16* map, int min, int sec, int msec);
+#ifndef console_on_debug
+static void Gameplay_LoadItemDisplay_Sub(void);
+static void Gameplay_UpdateItemDisplay_Sub(void);
+#endif
+// VBlank rendering helpers
+static void Gameplay_UpdateCameraPosition(const Car* player);
+static void Gameplay_ApplyCameraScroll(void);
+static void Gameplay_RenderSinglePlayerCar(const Car* player, int carX, int carY);
+static void Gameplay_RenderMultiplayerCars(const RaceState* state);
+static void Gameplay_HandleFinishLineCrossing(const Car* player);
+
+//=============================================================================
+// PUBLIC API - Timer Access
 //=============================================================================
 int Gameplay_GetRaceMin(void) {
     return raceMin;
@@ -170,14 +188,10 @@ void Gameplay_IncrementTimer(void) {
 }
 
 //=============================================================================
-// Public API - Initialization
+// PUBLIC API - Lifecycle
 //=============================================================================
-void Graphical_Gameplay_initialize(void) {
-    configureGraphics();
-    configureBackground();
-    // NOTE: configureSprite() is called from configureBackground() - we need to change
-    // this
-
+// Helper: Reset all race state variables
+static void Gameplay_ResetRaceState(void) {
     raceMin = 0;
     raceSec = 0;
     raceMsec = 0;
@@ -188,56 +202,65 @@ void Graphical_Gameplay_initialize(void) {
     countdownCleared = false;
     finishDisplayCounter = 0;
     hasSavedBestTime = false;
+    isNewRecord = false;
+}
 
-    // Load best time for this map
-    Map selectedMap = GameContext_GetMap();
-
-    // Check context to determine game mode
-    GameContext* ctx = GameContext_Get();
-    GameMode mode = ctx->isMultiplayerMode ? MultiPlayer : SinglePlayer;
-
-    // Initialize race with appropriate mode
-    if (!StoragePB_LoadBestTime(selectedMap, &bestRaceMin, &bestRaceSec,
-                                &bestRaceMsec)) {
+// Helper: Load best time for current map
+static void Gameplay_LoadBestTime(Map map) {
+    if (!StoragePB_LoadBestTime(map, &bestRaceMin, &bestRaceSec, &bestRaceMsec)) {
         bestRaceMin = -1;
         bestRaceSec = -1;
         bestRaceMsec = -1;
     }
-    isNewRecord = false;
+}
 
-    // Clear any leftover display from previous race
-#ifndef console_on_debug
-    u16* map = BG_MAP_RAM_SUB(0);
-    memset(map, 32, 32 * 32 * 2);
-    changeColorDisp_Sub(BLACK);  // Reset to black
-#endif
-
-    Race_Init(selectedMap, mode);
-
-    // NOW call configureSprite (remove it from wherever it's being called before)
-    configureSprite();
-
-    const Car* player = Race_GetPlayerCar();
+// Helper: Initialize camera to player position
+static void Gameplay_InitializeCamera(const Car* player) {
     scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
     scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
 
-    if (scrollX < 0)
-        scrollX = 0;
-    if (scrollY < 0)
-        scrollY = 0;
-    if (scrollX > MAX_SCROLL_X)
-        scrollX = MAX_SCROLL_X;
-    if (scrollY > MAX_SCROLL_Y)
-        scrollY = MAX_SCROLL_Y;
+    if (scrollX < 0) scrollX = 0;
+    if (scrollY < 0) scrollY = 0;
+    if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
+    if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
 
-    currentQuadrant = determineQuadrant(scrollX, scrollY);
-    loadQuadrant(currentQuadrant);
+    currentQuadrant = Gameplay_DetermineQuadrant(scrollX, scrollY);
+    Gameplay_LoadQuadrant(currentQuadrant);
 }
 
-//=============================================================================
-// Public API - Update
-//=============================================================================
-GameState Gameplay_update(void) {
+void Gameplay_Initialize(void) {
+    // Configure graphics and background
+    Gameplay_ConfigureGraphics();
+    Gameplay_ConfigureBackground();
+
+    // Reset race state variables
+    Gameplay_ResetRaceState();
+
+    // Get map and mode from context
+    Map selectedMap = GameContext_GetMap();
+    GameContext* ctx = GameContext_Get();
+    GameMode mode = ctx->isMultiplayerMode ? MultiPlayer : SinglePlayer;
+
+    // Load best time for this map
+    Gameplay_LoadBestTime(selectedMap);
+
+    // Clear sub screen display
+#ifndef console_on_debug
+    u16* map = BG_MAP_RAM_SUB(0);
+    memset(map, 32, 32 * 32 * 2);
+    Gameplay_ChangeDisplayColor(BLACK);
+#endif
+
+    // Initialize race logic and configure sprites
+    Race_Init(selectedMap, mode);
+    Gameplay_ConfigureSprite();
+
+    // Initialize camera to follow player
+    const Car* player = Race_GetPlayerCar();
+    Gameplay_InitializeCamera(player);
+}
+
+GameState Gameplay_Update(void) {
     scanKeys();
     int keysdown = keysDown();
 
@@ -288,290 +311,16 @@ GameState Gameplay_update(void) {
 
     return GAMEPLAY;
 }
+
 //=============================================================================
-// Public API - VBlank (Graphics Update)
+// Helper: Update Camera Position
 //=============================================================================
-// void Gameplay_OnVBlank(void) {
-//     // consoleClear();
+static void Gameplay_UpdateCameraPosition(const Car* player) {
+    int carX = FixedToInt(player->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carY = FixedToInt(player->position.y) + CAR_SPRITE_CENTER_OFFSET;
 
-//     const Car* player = Race_GetPlayerCar();
-//     Vec2 velocityVec =
-//         Vec2_Scale(Vec2_FromAngle(player->angle512), Car_GetSpeed(player));
-
-//     if (Race_CheckFinishLineCross(player)) {
-//         raceMin = 0;
-//         raceSec = 0;
-//         raceMsec = 0;
-
-//         const RaceState* state = Race_GetState();
-//         if (currentLap < state->totalLaps) {
-//             currentLap++;
-//         }
-//     }
-
-//     int carX = FixedToInt(player->position.x);
-//     int carY = FixedToInt(player->position.y);
-
-//     scrollX = carX - (SCREEN_WIDTH / 2);
-//     scrollY = carY - (SCREEN_HEIGHT / 2);
-
-//     if (scrollX < 0)
-//         scrollX = 0;
-//     if (scrollY < 0)
-//         scrollY = 0;
-//     if (scrollX > MAX_SCROLL_X)
-//         scrollX = MAX_SCROLL_X;
-//     if (scrollY > MAX_SCROLL_Y)
-//         scrollY = MAX_SCROLL_Y;
-
-//     QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
-//     if (newQuadrant != currentQuadrant) {
-//         loadQuadrant(newQuadrant);
-//         currentQuadrant = newQuadrant;
-//         Race_SetLoadedQuadrant(newQuadrant);
-//     }
-
-//     int col = currentQuadrant % 3;
-//     int row = currentQuadrant / 3;
-//     BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
-//     BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
-
-//     /* DEBUG: Movement telemetry
-//     int facingAngle = player->angle512;
-//     int velocityAngle = Car_GetVelocityAngle(player);
-//     Q16_8 speed = Car_GetSpeed(player);
-//     bool moving = Car_IsMoving(player);
-//     Vec2 velocityVec = Vec2_Scale(Vec2_FromAngle(player->angle512), speed);
-
-//     consoleClear();
-//     printf("=== CAR DEBUG ===\n");
-//     printf("Facing:   %3d\n", facingAngle);
-//     printf("Velocity: %3d\n", velocityAngle);
-//     printf("Speed:    %d.%02d\n", (int)(speed >> 8), (int)(((speed & 0xFF) * 100) >>
-//     8)); printf("Moving:   %s\n", moving ? "YES" : "NO");
-
-//     if (moving) {
-//         int angleDiff = (velocityAngle - facingAngle) & ANGLE_MASK;
-//         if (angleDiff > 256) angleDiff -= 512;
-//         printf("Diff:     %+4d", angleDiff);
-//         if (angleDiff > 32 || angleDiff < -32) {
-//             iprintf(" <!>");
-//         }
-//         printf("\n");
-//     }
-// */
-//     /*
-//         printf("\nPos: %d,%d\n", carX, carY);
-//         printf("Vel: %d,%d\n", FixedToInt(velocityVec.x),
-//         FixedToInt(velocityVec.y));
-
-//         // Item debug
-//         printf("\nItem: ");
-//         switch (player->item) {
-//             case ITEM_NONE:
-//                 printf("NONE");
-//                 break;
-//             case ITEM_BANANA:
-//                 printf("BANANA");
-//                 break;
-//             case ITEM_OIL:
-//                 printf("OIL");
-//                 break;
-//             case ITEM_BOMB:
-//                 printf("BOMB");
-//                 break;
-//             case ITEM_GREEN_SHELL:
-//                 printf("GREEN_SHELL");
-//                 break;
-//             case ITEM_RED_SHELL:
-//                 printf("RED_SHELL");
-//                 break;
-//             case ITEM_MISSILE:
-//                 printf("MISSILE");
-//                 break;
-//             case ITEM_MUSHROOM:
-//                 printf("MUSHROOM");
-//                 break;
-//             case ITEM_SPEEDBOOST:
-//                 printf("SPEEDBOOST");
-//                 break;
-//             default:
-//                 printf("???");
-//                 break;
-//         }
-//         printf("\n");
-//     */
-//     //---------------
-//     int dsAngle = -(player->angle512 << 6);
-//     oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
-//     // Changed to make the sand interaction better (not too sure why -16 didnt work)
-//     int screenX = carX - scrollX - 32;
-//     int screenY = carY - scrollY - 32;
-
-//     oamSet(&oamMain, 0, screenX, screenY, 0, 0, SpriteSize_32x32,
-//            SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
-//            false);
-//     Items_Render(scrollX, scrollY);
-//     oamUpdate(&oamMain);
-// }
-void Gameplay_OnVBlank(void) {
-    const Car* player = Race_GetPlayerCar();
-
-    // Check if race is finished and showing final time
-    const RaceState* state = Race_GetState();
-    if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES) {
-        // Display final time for 2.5 seconds
-        displayFinalTime(totalRaceMin, totalRaceSec, totalRaceMsec);
-        return;
-    }
-
-#ifdef console_on_debug
-    // Debug: Print red shell positions
-    consoleClear();
-    printf("=== RED SHELL DEBUG ===\n");
-
-    int itemCount = 0;
-    const TrackItem* items = Items_GetActiveItems(&itemCount);
-
-    int redShellCount = 0;
-    for (int i = 0; i < itemCount; i++) {
-        if (items[i].active && items[i].type == ITEM_RED_SHELL) {
-            int x = FixedToInt(items[i].position.x);
-            int y = FixedToInt(items[i].position.y);
-            printf("Shell %d: (%d, %d)\n", redShellCount, x, y);
-            printf("  Angle: %d\n", items[i].angle512);
-            printf("  Target: %d\n", items[i].targetCarIndex);
-            printf("  Waypoint: %d\n", items[i].currentWaypoint);
-            redShellCount++;
-        }
-    }
-
-    if (redShellCount == 0) {
-        printf("No red shells active\n");
-    }
-    printf("\nPlayer: (%d, %d)\n", FixedToInt(player->position.x),
-           FixedToInt(player->position.y));
-#endif
-
-    // Check if countdown is active
-    if (Race_IsCountdownActive()) {
-        Race_UpdateCountdown();
-        renderCountdown(Race_GetCountdownState());
-
-        // Still update camera position during countdown
-        int carX = FixedToInt(player->position.x);
-        int carY = FixedToInt(player->position.y);
-
-        scrollX = carX - (SCREEN_WIDTH / 2);
-        scrollY = carY - (SCREEN_HEIGHT / 2);
-
-        if (scrollX < 0)
-            scrollX = 0;
-        if (scrollY < 0)
-            scrollY = 0;
-        if (scrollX > MAX_SCROLL_X)
-            scrollX = MAX_SCROLL_X;
-        if (scrollY > MAX_SCROLL_Y)
-            scrollY = MAX_SCROLL_Y;
-
-        QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
-        if (newQuadrant != currentQuadrant) {
-            loadQuadrant(newQuadrant);
-            currentQuadrant = newQuadrant;
-            Race_SetLoadedQuadrant(newQuadrant);
-        }
-
-        int col = currentQuadrant % 3;
-        int row = currentQuadrant / 3;
-        BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
-        BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
-
-        // CHANGED: Render all cars during countdown based on game mode
-        if (state->gameMode == SinglePlayer) {
-            // Single player - only render player's car
-            int dsAngle = -(player->angle512 << 6);
-            oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
-            int screenX = carX - scrollX - 16;
-            int screenY = carY - scrollY - 16;
-
-            oamSet(&oamMain, 41, screenX, screenY, 0, 0, SpriteSize_32x32,
-                   SpriteColorFormat_16Color, player->gfx, 0, true, false, false,
-                   false, false);
-        } else {
-            // MULTIPLAYER: Render ALL connected players during countdown
-            for (int i = 0; i < state->carCount; i++) {
-                int oamSlot = 41 + i;
-
-                if (!Multiplayer_IsPlayerConnected(i)) {
-                    // Hide disconnected players
-                    oamSet(&oamMain, oamSlot, 0, 192, 0, 0, SpriteSize_32x32,
-                           SpriteColorFormat_16Color, NULL, -1, true, false, false,
-                           false, false);
-                    continue;
-                }
-
-                const Car* car = &state->cars[i];
-                int carWorldX = FixedToInt(car->position.x);
-                int carWorldY = FixedToInt(car->position.y);
-                int carScreenX = carWorldX - scrollX - 16;
-                int carScreenY = carWorldY - scrollY - 16;
-
-                // Set rotation for this car
-                int dsAngle = -(car->angle512 << 6);
-                oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
-
-                // Check if on screen
-                bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH &&
-                                 carScreenY >= -32 && carScreenY < SCREEN_HEIGHT);
-
-                if (onScreen) {
-                    oamSet(&oamMain, oamSlot, carScreenX, carScreenY, 0, 0,
-                           SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i,
-                           true, false, false, false, false);
-                } else {
-                    // Off-screen cars
-                    oamSet(&oamMain, oamSlot, -64, -64, 0, 0, SpriteSize_32x32,
-                           SpriteColorFormat_16Color, car->gfx, i, true, false, false,
-                           false, false);
-                }
-            }
-        }
-
-        oamUpdate(&oamMain);
-        return;
-    }
-
-    if (!countdownCleared) {
-        clearCountdownDisplay();
-        countdownCleared = true;
-    }
-
-    if (Race_CheckFinishLineCross(player)) {
-        if (currentLap < Race_GetLapCount()) {
-            // Normal lap completion - reset LAP timer (but total keeps running)
-            currentLap++;
-            raceMin = 0;
-            raceSec = 0;
-            raceMsec = 0;
-        } else {
-            // RACE COMPLETED!
-            Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
-            finishDisplayCounter = 0;
-#ifndef console_on_debug
-            // NEW: Hide item sprite when race finishes
-            oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,
-                   SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false,
-                   false, false, false);
-            oamUpdate(&oamSub);
-#endif
-        }
-    }
-
-    int carCenterX = FixedToInt(player->position.x) + CAR_SPRITE_CENTER_OFFSET;
-    int carCenterY = FixedToInt(player->position.y) + CAR_SPRITE_CENTER_OFFSET;
-
-    scrollX = carCenterX - (SCREEN_WIDTH / 2);
-    scrollY = carCenterY - (SCREEN_HEIGHT / 2);
+    scrollX = carX - (SCREEN_WIDTH / 2);
+    scrollY = carY - (SCREEN_HEIGHT / 2);
 
     if (scrollX < 0)
         scrollX = 0;
@@ -581,10 +330,15 @@ void Gameplay_OnVBlank(void) {
         scrollX = MAX_SCROLL_X;
     if (scrollY > MAX_SCROLL_Y)
         scrollY = MAX_SCROLL_Y;
+}
 
-    QuadrantID newQuadrant = determineQuadrant(scrollX, scrollY);
+//=============================================================================
+// Helper: Apply Camera Scroll to Background
+//=============================================================================
+static void Gameplay_ApplyCameraScroll(void) {
+    QuadrantID newQuadrant = Gameplay_DetermineQuadrant(scrollX, scrollY);
     if (newQuadrant != currentQuadrant) {
-        loadQuadrant(newQuadrant);
+        Gameplay_LoadQuadrant(newQuadrant);
         currentQuadrant = newQuadrant;
         Race_SetLoadedQuadrant(newQuadrant);
     }
@@ -593,71 +347,177 @@ void Gameplay_OnVBlank(void) {
     int row = currentQuadrant / 3;
     BG_OFFSET[0].x = scrollX - (col * QUAD_OFFSET);
     BG_OFFSET[0].y = scrollY - (row * QUAD_OFFSET);
+}
 
-    //=========================================================================
-    // Render cars based on game mode
-    //=========================================================================
-    if (state->gameMode == SinglePlayer) {
-        // SINGLE PLAYER: Only render the player's car at OAM slot 41
-        int carX = FixedToInt(player->position.x);
-        int carY = FixedToInt(player->position.y);
-        int screenX = carX - scrollX - 16;
-        int screenY = carY - scrollY - 16;
+//=============================================================================
+// Helper: Render Single Player Car
+//=============================================================================
+static void Gameplay_RenderSinglePlayerCar(const Car* player, int carX, int carY) {
+    int screenX = carX - scrollX - 16;
+    int screenY = carY - scrollY - 16;
 
-        // Setup rotation for player (use affine matrix 0)
-        int dsAngle = -(player->angle512 << 6);
-        oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
+    int dsAngle = -(player->angle512 << 6);
+    oamRotateScale(&oamMain, 0, dsAngle, (1 << 8), (1 << 8));
 
-        // Render player sprite (OAM slot 41, affine matrix 0)
-        // Priority 0 (highest) so kart appears above oil slicks and other items
-        oamSet(&oamMain, 41, screenX, screenY, OBJPRIORITY_0, 0, SpriteSize_32x32,
-               SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
-               false);
-    } else {
-        // MULTIPLAYER: Render all connected players
-        for (int i = 0; i < state->carCount; i++) {
-            int oamSlot = 41 + i;
+    oamSet(&oamMain, 41, screenX, screenY, OBJPRIORITY_0, 0, SpriteSize_32x32,
+           SpriteColorFormat_16Color, player->gfx, 0, true, false, false, false,
+           false);
+}
 
-            if (!Multiplayer_IsPlayerConnected(i)) {
-                oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_0, 0, SpriteSize_32x32,
-                       SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
-                       false);
-                continue;
-            }
+//=============================================================================
+// Helper: Render Multiplayer Cars
+//=============================================================================
+static void Gameplay_RenderMultiplayerCars(const RaceState* state) {
+    for (int i = 0; i < state->carCount; i++) {
+        int oamSlot = 41 + i;
 
-            const Car* car = &state->cars[i];
-            int carWorldX = FixedToInt(car->position.x);
-            int carWorldY = FixedToInt(car->position.y);
-            int carScreenX = carWorldX - scrollX - 16;
-            int carScreenY = carWorldY - scrollY - 16;
+        if (!Multiplayer_IsPlayerConnected(i)) {
+            oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_0, 0, SpriteSize_32x32,
+                   SpriteColorFormat_16Color, NULL, -1, true, false, false, false,
+                   false);
+            continue;
+        }
 
-            int dsAngle = -(car->angle512 << 6);
-            oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
+        const Car* car = &state->cars[i];
+        int carWorldX = FixedToInt(car->position.x);
+        int carWorldY = FixedToInt(car->position.y);
+        int carScreenX = carWorldX - scrollX - 16;
+        int carScreenY = carWorldY - scrollY - 16;
 
-            bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH &&
-                             carScreenY >= -32 && carScreenY < SCREEN_HEIGHT);
+        int dsAngle = -(car->angle512 << 6);
+        oamRotateScale(&oamMain, i, dsAngle, (1 << 8), (1 << 8));
 
-            if (onScreen) {
-                // Priority 0 (highest) so karts appear above oil slicks and other items
-                oamSet(&oamMain, oamSlot, carScreenX, carScreenY, OBJPRIORITY_0, 0,
-                       SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i, true,
-                       false, false, false, false);
-            } else {
-                oamSet(&oamMain, oamSlot, -64, -64, OBJPRIORITY_0, 0, SpriteSize_32x32,
-                       SpriteColorFormat_16Color, car->gfx, i, true, false, false,
-                       false, false);
-            }
+        bool onScreen = (carScreenX >= -32 && carScreenX < SCREEN_WIDTH &&
+                         carScreenY >= -32 && carScreenY < SCREEN_HEIGHT);
+
+        if (onScreen) {
+            oamSet(&oamMain, oamSlot, carScreenX, carScreenY, OBJPRIORITY_0, 0,
+                   SpriteSize_32x32, SpriteColorFormat_16Color, car->gfx, i, true,
+                   false, false, false, false);
+        } else {
+            oamSet(&oamMain, oamSlot, -64, -64, OBJPRIORITY_0, 0, SpriteSize_32x32,
+                   SpriteColorFormat_16Color, car->gfx, i, true, false, false,
+                   false, false);
         }
     }
+}
 
+//=============================================================================
+// Helper: Handle Finish Line Crossing
+//=============================================================================
+static void Gameplay_HandleFinishLineCrossing(const Car* player) {
+    if (!Race_CheckFinishLineCross(player))
+        return;
+
+    if (currentLap < Race_GetLapCount()) {
+        // Normal lap completion - reset LAP timer (but total keeps running)
+        currentLap++;
+        raceMin = 0;
+        raceSec = 0;
+        raceMsec = 0;
+    } else {
+        // RACE COMPLETED!
+        Race_MarkAsCompleted(totalRaceMin, totalRaceSec, totalRaceMsec);
+        finishDisplayCounter = 0;
+#ifndef console_on_debug
+        // Hide item sprite when race finishes
+        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,
+               SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false,
+               false, false, false);
+        oamUpdate(&oamSub);
+#endif
+    }
+}
+
+void Gameplay_OnVBlank(void) {
+    const Car* player = Race_GetPlayerCar();
+    const RaceState* state = Race_GetState();
+
+    // Display final time for 2.5 seconds after race completion
+    if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES) {
+        Gameplay_DisplayFinalTime(totalRaceMin, totalRaceSec, totalRaceMsec);
+        return;
+    }
+
+#ifdef console_on_debug
+    // Debug: Print red shell positions
+    consoleClear();
+    printf("=== RED SHELL DEBUG ===\n");
+    int itemCount = 0;
+    const TrackItem* items = Items_GetActiveItems(&itemCount);
+    int redShellCount = 0;
+    for (int i = 0; i < itemCount; i++) {
+        if (items[i].active && items[i].type == ITEM_RED_SHELL) {
+            printf("Shell %d: (%d, %d)\n", redShellCount,
+                   FixedToInt(items[i].position.x), FixedToInt(items[i].position.y));
+            printf("  Angle: %d, Target: %d, Waypoint: %d\n",
+                   items[i].angle512, items[i].targetCarIndex, items[i].currentWaypoint);
+            redShellCount++;
+        }
+    }
+    if (redShellCount == 0) printf("No red shells active\n");
+    printf("\nPlayer: (%d, %d)\n", FixedToInt(player->position.x),
+           FixedToInt(player->position.y));
+#endif
+
+    // COUNTDOWN PHASE: Update and render countdown (3, 2, 1, GO)
+    if (Race_IsCountdownActive()) {
+        Race_UpdateCountdown();
+        Gameplay_RenderCountdown(Race_GetCountdownState());
+
+        // Update camera during countdown (no car movement yet)
+        int carX = FixedToInt(player->position.x);
+        int carY = FixedToInt(player->position.y);
+        scrollX = carX - (SCREEN_WIDTH / 2);
+        scrollY = carY - (SCREEN_HEIGHT / 2);
+        if (scrollX < 0) scrollX = 0;
+        if (scrollY < 0) scrollY = 0;
+        if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
+        if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+
+        Gameplay_ApplyCameraScroll();
+
+        // Render cars during countdown
+        if (state->gameMode == SinglePlayer) {
+            Gameplay_RenderSinglePlayerCar(player, carX, carY);
+        } else {
+            Gameplay_RenderMultiplayerCars(state);
+        }
+
+        oamUpdate(&oamMain);
+        return;
+    }
+
+    // Clear countdown display once (after countdown finishes)
+    if (!countdownCleared) {
+        Gameplay_ClearCountdownDisplay();
+        countdownCleared = true;
+    }
+
+    // RACING PHASE: Normal gameplay updates
+    Gameplay_HandleFinishLineCrossing(player);
+    Gameplay_UpdateCameraPosition(player);
+    Gameplay_ApplyCameraScroll();
+
+    // Render cars based on game mode
+    if (state->gameMode == SinglePlayer) {
+        int carX = FixedToInt(player->position.x);
+        int carY = FixedToInt(player->position.y);
+        Gameplay_RenderSinglePlayerCar(player, carX, carY);
+    } else {
+        Gameplay_RenderMultiplayerCars(state);
+    }
+
+    // Render items and update OAM
     Items_Render(scrollX, scrollY);
 #ifndef console_on_debug
-    updateItemDisplay_Sub();
+    Gameplay_UpdateItemDisplay_Sub();
 #endif
     oamUpdate(&oamMain);
 }
+
 void Gameplay_Cleanup(void) {
-    freeSprites();
+    Gameplay_FreeSprites();
 #ifndef console_on_debug
     if (itemDisplayGfx_Sub) {
         oamFreeGfx(&oamSub, itemDisplayGfx_Sub);
@@ -667,10 +527,30 @@ void Gameplay_Cleanup(void) {
 }
 
 //=============================================================================
-// Display Functions
+// PRIVATE HELPERS - Final Time Display
 //=============================================================================
 
-static void displayFinalTime(int min, int sec, int msec) {
+// Helper: Display time at given y position (format: MM:SS.D)
+static void Gameplay_PrintTime(u16* map, int min, int sec, int msec, int y) {
+    // Minutes
+    Gameplay_PrintDigit(map, min / 10, 0, y);
+    Gameplay_PrintDigit(map, min % 10, 4, y);
+
+    // Separator ":"
+    Gameplay_PrintDigit(map, 10, 8, y);
+
+    // Seconds
+    Gameplay_PrintDigit(map, sec / 10, 10, y);
+    Gameplay_PrintDigit(map, sec % 10, 14, y);
+
+    // Separator "."
+    Gameplay_PrintDigit(map, 11, 18, y);
+
+    // Milliseconds (only first digit)
+    Gameplay_PrintDigit(map, msec / 100, 20, y);
+}
+
+static void Gameplay_DisplayFinalTime(int min, int sec, int msec) {
 #ifndef console_on_debug
     u16* map = BG_MAP_RAM_SUB(0);
 
@@ -678,74 +558,22 @@ static void displayFinalTime(int min, int sec, int msec) {
     memset(map, 32, 32 * 32 * 2);
 
     // Display FINAL TIME at top (y = 8)
-    int x = 0, y = 8;
-
-    // Minutes
-    printDigit(map, min / 10, x, y);
-    x = 4;
-    printDigit(map, min % 10, x, y);
-
-    // Separator ":"
-    x = 8;
-    printDigit(map, 10, x, y);
-
-    // Seconds
-    x = 10;
-    printDigit(map, sec / 10, x, y);
-    x = 14;
-    printDigit(map, sec % 10, x, y);
-
-    // Separator "."
-    x = 18;
-    printDigit(map, 11, x, y);
-
-    // Milliseconds (only first digit)
-    x = 20;
-    printDigit(map, msec / 100, x, y);
+    Gameplay_PrintTime(map, min, sec, msec, 8);
 
     // Display PERSONAL BEST below (y = 16)
     if (bestRaceMin >= 0) {
-        // Show the best time
-        x = 0;
-        y = 16;
-
-        // Minutes
-        printDigit(map, bestRaceMin / 10, x, y);
-        x = 4;
-        printDigit(map, bestRaceMin % 10, x, y);
-
-        // Separator ":"
-        x = 8;
-        printDigit(map, 10, x, y);
-
-        // Seconds
-        x = 10;
-        printDigit(map, bestRaceSec / 10, x, y);
-        x = 14;
-        printDigit(map, bestRaceSec % 10, x, y);
-
-        // Separator "."
-        x = 18;
-        printDigit(map, 11, x, y);
-
-        // Milliseconds (only first digit)
-        x = 20;
-        printDigit(map, bestRaceMsec / 100, x, y);
+        Gameplay_PrintTime(map, bestRaceMin, bestRaceSec, bestRaceMsec, 16);
     }
 
     // Set background color based on whether it's a new record
-    if (isNewRecord) {
-        changeColorDisp_Sub(DARK_GREEN);  // Green for new record!
-    } else {
-        changeColorDisp_Sub(BLACK);
-    }
+    Gameplay_ChangeDisplayColor(isNewRecord ? DARK_GREEN : BLACK);
 #endif
 }
 
 //=============================================================================
-// Countdown Display Functions
+// PRIVATE HELPERS - Countdown Display
 //=============================================================================
-static void renderCountdown(CountdownState state) {
+static void Gameplay_RenderCountdown(CountdownState state) {
 #ifndef console_on_debug
     u16* map = BG_MAP_RAM_SUB(0);
 
@@ -762,16 +590,16 @@ static void renderCountdown(CountdownState state) {
 
     switch (state) {
         case COUNTDOWN_3:
-            printDigit(map, 3, centerX, centerY);
+            Gameplay_PrintDigit(map, 3, centerX, centerY);
             break;
         case COUNTDOWN_2:
-            printDigit(map, 2, centerX, centerY);
+            Gameplay_PrintDigit(map, 2, centerX, centerY);
             break;
         case COUNTDOWN_1:
-            printDigit(map, 1, centerX, centerY);
+            Gameplay_PrintDigit(map, 1, centerX, centerY);
             break;
         case COUNTDOWN_GO:
-            printDigit(map, 0, centerX, centerY);
+            Gameplay_PrintDigit(map, 0, centerX, centerY);
             break;
         case COUNTDOWN_FINISHED:
             break;
@@ -779,7 +607,7 @@ static void renderCountdown(CountdownState state) {
 #endif
 }
 
-static void clearCountdownDisplay(void) {
+static void Gameplay_ClearCountdownDisplay(void) {
 #ifndef console_on_debug
     u16* map = BG_MAP_RAM_SUB(0);
 
@@ -792,9 +620,9 @@ static void clearCountdownDisplay(void) {
 }
 
 //=============================================================================
-// Private Functions - Setup
+// PRIVATE HELPERS - Graphics Setup
 //=============================================================================
-static void configureGraphics(void) {
+static void Gameplay_ConfigureGraphics(void) {
     REG_DISPCNT = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_SPR_ACTIVE | DISPLAY_SPR_1D;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
     VRAM_B_CR = VRAM_ENABLE | VRAM_B_MAIN_SPRITE;
@@ -812,7 +640,7 @@ static void configureGraphics(void) {
 #endif
 }
 
-static void configureBackground(void) {
+static void Gameplay_ConfigureBackground(void) {
     Map selectedMap = GameContext_GetMap();
     if (selectedMap != ScorchingSands)
         return;
@@ -823,7 +651,7 @@ static void configureBackground(void) {
 
 #ifdef console_on_debug
     // Debug mode: Set up console
-    configureConsole();
+    Gameplay_ConfigureConsole();
 #else
     // Normal mode: Sub screen setup with numbers tileset
     BGCTRL_SUB[0] = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1);
@@ -832,12 +660,12 @@ static void configureBackground(void) {
     BG_PALETTE_SUB[0] = BLACK;
     BG_PALETTE_SUB[255] = DARK_GRAY;  // neutral sub background
     memset(BG_MAP_RAM_SUB(0), 32, 32 * 32 * 2);
-    updateChronoDisp_Sub(-1, -1, -1);
-    loadItemDisplay_Sub();
+    Gameplay_UpdateChronoDisplay(-1, -1, -1);
+    Gameplay_LoadItemDisplay_Sub();
 #endif
 }
 
-static void configureSprite(void) {
+static void Gameplay_ConfigureSprite(void) {
     oamInit(&oamMain, SpriteMapping_1D_32, false);
 
     dmaCopy(kart_spritePal, SPRITE_PALETTE, kart_spritePalLen);
@@ -858,7 +686,7 @@ static void configureSprite(void) {
     Items_LoadGraphics();
 }
 
-static void freeSprites(void) {
+static void Gameplay_FreeSprites(void) {
     if (kartGfx) {
         oamFreeGfx(&oamMain, kartGfx);
         kartGfx = NULL;
@@ -868,7 +696,7 @@ static void freeSprites(void) {
 
 #ifdef console_on_debug
 // DEBUG Console setup (active for gameplay debug)
-static void configureConsole(void) {
+static void Gameplay_ConfigureConsole(void) {
     // Use sub screen BG0 for console
     consoleInit(NULL, 0, BgType_Text4bpp, BgSize_T_256x256, 31, 0, false, true);
     printf("\x1b[2J");
@@ -878,10 +706,10 @@ static void configureConsole(void) {
 #endif
 
 //=============================================================================
-// Sub Screen Item Display
+// PRIVATE HELPERS - Sub Screen Item Display
 //=============================================================================
 #ifndef console_on_debug
-static void loadItemDisplay_Sub(void) {
+static void Gameplay_LoadItemDisplay_Sub(void) {
     // Initialize sub screen OAM
     oamInit(&oamSub, SpriteMapping_1D_32, false);
 
@@ -904,81 +732,86 @@ static void loadItemDisplay_Sub(void) {
     oamUpdate(&oamSub);
 }
 
-static void updateItemDisplay_Sub(void) {
+// Helper: Get item sprite properties for a given item type
+static void Gameplay_GetItemSpriteInfo(Item item, const unsigned int** outTiles,
+                                       int* outPalette, SpriteSize* outSize, int* outX) {
+    *outX = 220;  // Default position (256 - 16 - margin)
+
+    switch (item) {
+        case ITEM_BANANA:
+            *outTiles = bananaTiles;
+            *outPalette = 2;
+            *outSize = SpriteSize_16x16;
+            break;
+        case ITEM_BOMB:
+            *outTiles = bombTiles;
+            *outPalette = 3;
+            *outSize = SpriteSize_16x16;
+            break;
+        case ITEM_GREEN_SHELL:
+            *outTiles = green_shellTiles;
+            *outPalette = 4;
+            *outSize = SpriteSize_16x16;
+            break;
+        case ITEM_RED_SHELL:
+            *outTiles = red_shellTiles;
+            *outPalette = 5;
+            *outSize = SpriteSize_16x16;
+            break;
+        case ITEM_MISSILE:
+            *outTiles = missileTiles;
+            *outPalette = 6;
+            *outSize = SpriteSize_16x32;
+            break;
+        case ITEM_OIL:
+            *outTiles = oil_slickTiles;
+            *outPalette = 7;
+            *outSize = SpriteSize_32x32;
+            *outX = 208;  // Adjust for larger sprite (256 - 32 - margin)
+            break;
+        case ITEM_MUSHROOM:
+            *outTiles = bananaTiles;
+            *outPalette = 2;
+            *outSize = SpriteSize_16x16;
+            break;
+        case ITEM_SPEEDBOOST:
+            *outTiles = red_shellTiles;
+            *outPalette = 5;
+            *outSize = SpriteSize_16x16;
+            break;
+        default:
+            *outTiles = NULL;
+            break;
+    }
+}
+
+static void Gameplay_UpdateItemDisplay_Sub(void) {
     const Car* player = Race_GetPlayerCar();
 
     if (player->item == ITEM_NONE) {
         // Hide sprite when no item
-        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,  // CHANGED: to 32x32
+        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,
                SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false,
                false, false);
     } else {
-        // Position in top-right corner
-        int itemX = 220;  // Right side (256 - 16 - some margin)
-        int itemY = 8;    // Top area
-
-        // Determine which graphics to display and which palette to use
+        // Get item sprite properties
         const unsigned int* itemTiles = NULL;
         int paletteNum = 0;
-        SpriteSize spriteSize = SpriteSize_16x16;  // NEW: Variable sprite size
+        SpriteSize spriteSize = SpriteSize_16x16;
+        int itemX = 0;
 
-        switch (player->item) {
-            case ITEM_BANANA:
-                itemTiles = bananaTiles;
-                paletteNum = 2;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_BOMB:
-                itemTiles = bombTiles;
-                paletteNum = 3;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_GREEN_SHELL:
-                itemTiles = green_shellTiles;
-                paletteNum = 4;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_RED_SHELL:
-                itemTiles = red_shellTiles;
-                paletteNum = 5;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_MISSILE:
-                itemTiles = missileTiles;
-                paletteNum = 6;
-                spriteSize = SpriteSize_16x32;  // CHANGED: Missile is 16x32
-                break;
-            case ITEM_OIL:
-                itemTiles = oil_slickTiles;
-                paletteNum = 7;
-                spriteSize = SpriteSize_32x32;  // CHANGED: Oil is 32x32
-                itemX = 208;  // Adjust position for larger sprite (256 - 32 - margin)
-                break;
-            case ITEM_MUSHROOM:
-                itemTiles = bananaTiles;
-                paletteNum = 2;
-                spriteSize = SpriteSize_16x16;
-                break;
-            case ITEM_SPEEDBOOST:
-                itemTiles = red_shellTiles;
-                paletteNum = 5;
-                spriteSize = SpriteSize_16x16;
-                break;
-            default:
-                itemTiles = NULL;
-                break;
-        }
+        Gameplay_GetItemSpriteInfo(player->item, &itemTiles, &paletteNum,
+                                   &spriteSize, &itemX);
 
         if (itemTiles != NULL) {
-            // Copy the item graphics to sub screen sprite memory
-            dmaCopy(itemTiles, itemDisplayGfx_Sub,
-                    (player->item == ITEM_MISSILE) ? missileTilesLen
-                    : (player->item == ITEM_OIL)   ? oil_slickTilesLen
-                                                   : bananaTilesLen);
+            // Copy item graphics to sub screen sprite memory
+            int tilesLen = (player->item == ITEM_MISSILE) ? missileTilesLen
+                         : (player->item == ITEM_OIL)     ? oil_slickTilesLen
+                                                          : bananaTilesLen;
+            dmaCopy(itemTiles, itemDisplayGfx_Sub, tilesLen);
 
-            // Display the sprite with appropriate size
-            oamSet(&oamSub, 0, itemX, itemY, 0, paletteNum,
-                   spriteSize,  // CHANGED: Use spriteSize variable
+            // Display sprite with appropriate size
+            oamSet(&oamSub, 0, itemX, 8, 0, paletteNum, spriteSize,
                    SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, false, false,
                    false, false, false);
         }
@@ -989,9 +822,9 @@ static void updateItemDisplay_Sub(void) {
 #endif
 
 //=============================================================================
-// Private Functions - Quadrant Management
+// PRIVATE HELPERS - Quadrant Management
 //=============================================================================
-static void loadQuadrant(QuadrantID quad) {
+static void Gameplay_LoadQuadrant(QuadrantID quad) {
     const QuadrantData* data = &quadrantData[quad];
     // CHANGED: Clear the entire palette first to avoid color pollution
     memset(BG_PALETTE, 0, 512);  // 256 colors × 2 bytes = 512 bytes
@@ -1010,16 +843,16 @@ static void loadQuadrant(QuadrantID quad) {
     }
 }
 
-static QuadrantID determineQuadrant(int x, int y) {
+static QuadrantID Gameplay_DetermineQuadrant(int x, int y) {
     int col = (x < QUAD_OFFSET) ? 0 : (x < 2 * QUAD_OFFSET) ? 1 : 2;
     int row = (y < QUAD_OFFSET) ? 0 : (y < 2 * QUAD_OFFSET) ? 1 : 2;
     return (QuadrantID)(row * QUADRANT_GRID_SIZE + col);
 }
 
 //=============================================================================
-// Sub-Screen Display Functions
+// PUBLIC API - Sub-Screen Display
 //=============================================================================
-void printDigit(u16* map, int number, int x, int y) {
+void Gameplay_PrintDigit(u16* map, int number, int x, int y) {
     int i, j;
     if (number < 10) {
         for (i = 0; i < 8; i++)
@@ -1039,7 +872,7 @@ void printDigit(u16* map, int number, int x, int y) {
     }
 }
 
-void updateChronoDisp(u16* map, int min, int sec, int msec) {
+static void Gameplay_UpdateChronoDisp(u16* map, int min, int sec, int msec) {
     int x = 0, y = 0;
     int number;
 
@@ -1051,18 +884,18 @@ void updateChronoDisp(u16* map, int min, int sec, int msec) {
     y = 8;
     if (min >= 0)
         number = min / 10;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
     x = 4;
     y = 8;
     if (min >= 0)
         number = min % 10;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
 
     // Separator ":"
     x = 8;
     y = 8;
     number = 10;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
 
     // Seconds
     number = sec;
@@ -1072,18 +905,18 @@ void updateChronoDisp(u16* map, int min, int sec, int msec) {
     y = 8;
     if (sec >= 0)
         number = sec / 10;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
     x = 14;
     y = 8;
     if (sec >= 0)
         number = sec % 10;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
 
     // Separator "."
     x = 18;
     y = 8;
     number = 11;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
 
     // Milliseconds
     number = msec;
@@ -1093,51 +926,51 @@ void updateChronoDisp(u16* map, int min, int sec, int msec) {
     y = 8;
     if (msec >= 0)
         number = msec / 100;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
     x = 24;
     y = 8;
     if (msec >= 0)
         number = (msec % 100) / 10;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
     x = 28;
     y = 8;
     if (msec >= 0)
         number = (msec % 10) % 10;
-    printDigit(map, number, x, y);
+    Gameplay_PrintDigit(map, number, x, y);
 }
 
-void updateChronoDisp_Sub(int min, int sec, int msec) {
-    updateChronoDisp(BG_MAP_RAM_SUB(0), min, sec, msec);
+void Gameplay_UpdateChronoDisplay(int min, int sec, int msec) {
+    Gameplay_UpdateChronoDisp(BG_MAP_RAM_SUB(0), min, sec, msec);
 }
 
-void changeColorDisp_Sub(uint16 c) {
+void Gameplay_ChangeDisplayColor(uint16 c) {
     BG_PALETTE_SUB[0] = c;
 }
 
-void updateLapDisp_Sub(int currentLap, int totalLaps) {
+void Gameplay_UpdateLapDisplay(int currentLap, int totalLaps) {
     int x, y;
 
     // Current lap
     x = 0;
     y = 0;
     if (currentLap >= 0 && currentLap <= 9) {
-        printDigit(BG_MAP_RAM_SUB(0), currentLap, x, y);
+        Gameplay_PrintDigit(BG_MAP_RAM_SUB(0), currentLap, x, y);
     }
 
     // Separator ":"
     x = 4;
     y = 0;
-    printDigit(BG_MAP_RAM_SUB(0), 10, x, y);
+    Gameplay_PrintDigit(BG_MAP_RAM_SUB(0), 10, x, y);
 
     // Total laps
     x = 6;
     y = 0;
     if (totalLaps >= 0 && totalLaps <= 9) {
-        printDigit(BG_MAP_RAM_SUB(0), totalLaps, x, y);
+        Gameplay_PrintDigit(BG_MAP_RAM_SUB(0), totalLaps, x, y);
     } else if (totalLaps >= 10) {
-        printDigit(BG_MAP_RAM_SUB(0), totalLaps / 10, x, y);
+        Gameplay_PrintDigit(BG_MAP_RAM_SUB(0), totalLaps / 10, x, y);
         x = 10;
         y = 0;
-        printDigit(BG_MAP_RAM_SUB(0), totalLaps % 10, x, y);
+        Gameplay_PrintDigit(BG_MAP_RAM_SUB(0), totalLaps % 10, x, y);
     }
 }

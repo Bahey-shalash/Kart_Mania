@@ -26,6 +26,38 @@
 #include "kart_home.h"
 
 //=============================================================================
+// PRIVATE TYPES
+//=============================================================================
+
+/**
+ * Home page menu button identifiers.
+ */
+typedef enum {
+    HOME_BTN_NONE = -1,
+    HOME_BTN_SINGLEPLAYER = 0,
+    HOME_BTN_MULTIPLAYER = 1,
+    HOME_BTN_SETTINGS = 2,
+    HOME_BTN_COUNT
+} HomeButtonSelected;
+
+/**
+ * Kart sprite state for home page animation.
+ */
+typedef struct {
+    u16* gfx;
+    int x;
+    int y;
+    int id;
+} HomeKartSprite;
+
+/**
+ * Rectangular hitbox for touch detection on menu items.
+ */
+typedef struct {
+    int x, y, width, height;
+} MenuItemHitBox;
+
+//=============================================================================
 // PRIVATE CONSTANTS
 //=============================================================================
 
