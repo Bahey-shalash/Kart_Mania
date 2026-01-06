@@ -34,7 +34,7 @@ ARCH	:=	-mthumb-interwork
 ifeq ($(BUILD_MODE),debug)
 OPT_FLAGS := -O0
 else
-OPT_FLAGS := -O3
+OPT_FLAGS := -O2
 endif
 
 CFLAGS	:=	-g -Wall $(OPT_FLAGS)\
