@@ -13,13 +13,13 @@
 #include "items_internal.h"
 #include "items_api.h"
 
-#include "banana.h"
-#include "bomb.h"
-#include "green_shell.h"
-#include "item_box.h"
-#include "missile.h"
-#include "oil_slick.h"
-#include "red_shell.h"
+#include "data/items/banana.h"
+#include "data/items/bomb.h"
+#include "data/items/green_shell.h"
+#include "data/items/item_box.h"
+#include "data/items/missile.h"
+#include "data/items/oil_slick.h"
+#include "data/items/red_shell.h"
 
 //=============================================================================
 // Rendering

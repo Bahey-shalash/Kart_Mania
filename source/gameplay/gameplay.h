@@ -20,13 +20,8 @@
 // PUBLIC CONSTANTS
 //=============================================================================
 
-#define SCREEN_WIDTH 256
-#define SCREEN_HEIGHT 192
-#define MAP_SIZE 1024
-#define QUADRANT_SIZE 512
-#define QUAD_OFFSET 256
-#define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
-#define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
+// Note: SCREEN_WIDTH, SCREEN_HEIGHT, MAP_SIZE, QUADRANT_SIZE, QUAD_OFFSET,
+//       MAX_SCROLL_X, MAX_SCROLL_Y moved to game_constants.h
 
 //=============================================================================
 // PUBLIC API - Lifecycle

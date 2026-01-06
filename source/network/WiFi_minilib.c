@@ -59,22 +59,9 @@
 
 #include "WiFi_minilib.h"
 #include <stdio.h>
+#include "../core/game_constants.h"
 
-// Socket port configuration
-#define LOCAL_PORT 8888
-#define OUT_PORT 8888
-
-//=============================================================================
-// TIMEOUT CONFIGURATION
-//=============================================================================
-// These timeouts prevent the game from freezing if WiFi is off or unavailable.
-// Values are in VBlank frames (60 frames = 1 second on Nintendo DS).
-
-// Maximum time to search for the access point before giving up
-#define WIFI_SCAN_TIMEOUT_FRAMES 300  // 5 seconds at 60Hz
-
-// Maximum time to wait for connection to complete before giving up
-#define WIFI_CONNECT_TIMEOUT_FRAMES 600  // 10 seconds at 60Hz
+// Note: LOCAL_PORT, OUT_PORT, WIFI_SCAN_TIMEOUT_FRAMES, WIFI_CONNECT_TIMEOUT_FRAMES moved to game_constants.h
 
 //=============================================================================
 // MODULE STATE

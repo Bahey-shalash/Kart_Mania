@@ -18,17 +18,7 @@
 // Configuration
 //=============================================================================
 
-/**
- * Constant: RACE_TICK_FREQ
- * -------------------------
- * Physics update rate in Hertz. Controls how often Race_Tick() is called
- * during gameplay for position updates, collision detection, and game logic.
- *
- * Value: 60 Hz (matches VBlank for synchronized physics/graphics)
- * value can be tuned higher that 60 will make the game run smoother, but battery will
- * run out quicker
- */
-#define RACE_TICK_FREQ 60
+// Note: RACE_TICK_FREQ moved to game_constants.h
 
 //=============================================================================
 // VBlank Timer (60Hz graphics)

@@ -66,12 +66,12 @@
 #include <string.h>
 
 #include "../graphics/color.h"
-#include "combined.h"
+#include "data/ui/combined.h"
 #include "../core/context.h"
 #include "../core/game_types.h"
-#include "map_bottom.h"
-#include "map_top.h"
-#include "map_top_clouds.h"
+#include "data/ui/map_bottom.h"
+#include "data/ui/map_top.h"
+#include "data/ui/map_top_clouds.h"
 #include "../audio/sound.h"
 
 //=============================================================================
@@ -82,61 +82,56 @@
  * Map selection button identifiers.
  */
 typedef enum {
-    SP_BTN_NONE = -1,
-    SP_BTN_MAP1 = 0,  // Scorching Sands
-    SP_BTN_MAP2 = 1,  // Alpine Rush
-    SP_BTN_MAP3 = 2,  // Neon Circuit
-    SP_BTN_HOME = 3,  // Home button
-    SP_BTN_COUNT
+    BTN_NONE = -1,
+    BTN_MAP1 = 0,  // Scorching Sands
+    BTN_MAP2 = 1,  // Alpine Rush
+    BTN_MAP3 = 2,  // Neon Circuit
+    BTN_HOME = 3,  // Home button
+    BTN_COUNT
 } MapSelectionButton;
 
 /**
  * Tile indices for map selection UI elements.
  */
 typedef enum {
-    TILE_SEL_MAP1 = 0,
-    TILE_SEL_MAP2 = 1,
-    TILE_SEL_MAP3 = 2,
-    TILE_SEL_SP_HOME = 3
-} Map_sel_TileIndex;
+    TILE_MAP1 = 0,
+    TILE_MAP2 = 1,
+    TILE_MAP3 = 2,
+    TILE_HOME = 3
+} SelectionTileIndex;
 
 //=============================================================================
-// Private constants / config
+// Private constants
 //=============================================================================
-#define MAPSELECTION_BTN_COUNT SP_BTN_COUNT
-#define MAP_SEL_SELECTION_PAL_BASE 240  // Base palette index for selection tiles
+#define SELECTION_PAL_BASE 240  // Base palette index for selection tiles
 
 //=============================================================================
 // Private module state
 //=============================================================================
-static MapSelectionButton selected = SP_BTN_NONE;
-static MapSelectionButton lastSelected = SP_BTN_NONE;
+static MapSelectionButton selected = BTN_NONE;
+static MapSelectionButton lastSelected = BTN_NONE;
 static int cloudOffset = 0;  // Track cloud scrolling
 
 //=============================================================================
-// Private assets / tables (tiles, hitboxes, coordinates)
+// Private assets (selection tiles)
 //=============================================================================
-static const u8 selectionTile0[64] = {[0 ... 63] =
-                                          MAP_SEL_SELECTION_PAL_BASE};  // MAP1
-static const u8 selectionTile1[64] = {[0 ... 63] =
-                                          MAP_SEL_SELECTION_PAL_BASE + 1};  // MAP2
-static const u8 selectionTile2[64] = {[0 ... 63] =
-                                          MAP_SEL_SELECTION_PAL_BASE + 2};  // MAP3
-static const u8 selectionTile3[64] = {[0 ... 63] =
-                                          MAP_SEL_SELECTION_PAL_BASE + 3};  // HOME
+static const u8 selectionTile0[64] = {[0 ... 63] = SELECTION_PAL_BASE};      // MAP1
+static const u8 selectionTile1[64] = {[0 ... 63] = SELECTION_PAL_BASE + 1};  // MAP2
+static const u8 selectionTile2[64] = {[0 ... 63] = SELECTION_PAL_BASE + 2};  // MAP3
+static const u8 selectionTile3[64] = {[0 ... 63] = SELECTION_PAL_BASE + 3};  // HOME
 
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-static void configureGraphics_MAIN_MAP_SEL(void);
-static void configBG_Main_MAP_SEL(void);
-static void configureGraphics_Sub_MAP_SEL(void);
-static void configBG_Sub_MAP_SEL(void);
+static void configureGraphicsMain(void);
+static void configureBackgroundsMain(void);
+static void configureGraphicsSub(void);
+static void configureBackgroundsSub(void);
 
-static void handleDPadInputMAP_SEL(void);
-static void handleTouchInputMAP_SEL(void);
+static void handleDPadInput(void);
+static void handleTouchInput(void);
 
-static void MAP_SEL_setSelectionTint(MapSelectionButton btn, bool show);
+static void setSelectionHighlight(MapSelectionButton btn, bool show);
 static void drawSelectionRect(MapSelectionButton btn, u16 tileIndex);
 
 //=============================================================================
@@ -144,31 +139,31 @@ static void drawSelectionRect(MapSelectionButton btn, u16 tileIndex);
 //=============================================================================
 
 /**
- * Initialize map selection screen
+ * Initialize map selection screen.
  *
  * Sets up graphics configuration for both screens:
  * - Main screen: Configures BG0 (thumbnails) and BG1 (clouds)
  * - Sub screen: Configures BG0 (menu UI) and BG1 (selection highlights)
  *
  * Initializes module state:
- * - Resets selection to SP_BTN_NONE (no button selected)
+ * - Resets selection to BTN_NONE (no button selected)
  * - Clears lastSelected for clean state tracking
  * - Cloud offset starts at 0
  *
  * Called once when entering MAPSELECTION state.
  */
-void Map_Selection_initialize(void) {
-    selected = SP_BTN_NONE;
-    lastSelected = SP_BTN_NONE;
+void MapSelection_Initialize(void) {
+    selected = BTN_NONE;
+    lastSelected = BTN_NONE;
 
-    configureGraphics_MAIN_MAP_SEL();
-    configBG_Main_MAP_SEL();
-    configureGraphics_Sub_MAP_SEL();
-    configBG_Sub_MAP_SEL();
+    configureGraphicsMain();
+    configureBackgroundsMain();
+    configureGraphicsSub();
+    configureBackgroundsSub();
 }
 
 /**
- * Update map selection screen (call every frame)
+ * Update map selection screen (call every frame).
  *
  * Input processing:
  * - Scans for D-pad, touch, and button input
@@ -191,39 +186,36 @@ void Map_Selection_initialize(void) {
  * - HOME_PAGE: If MAP2, MAP3, or HOME button selected and confirmed
  * - MAPSELECTION: If no confirmation yet (stay on this screen)
  */
-GameState Map_selection_update(void) {
+GameState MapSelection_Update(void) {
     scanKeys();
-    handleDPadInputMAP_SEL();
-    handleTouchInputMAP_SEL();
+    handleDPadInput();
+    handleTouchInput();
 
     // Update highlight when selection changes
     if (selected != lastSelected) {
-        if (lastSelected != SP_BTN_NONE)
-            MAP_SEL_setSelectionTint(lastSelected, false);
-        if (selected != SP_BTN_NONE)
-            MAP_SEL_setSelectionTint(selected, true);
+        if (lastSelected != BTN_NONE)
+            setSelectionHighlight(lastSelected, false);
+        if (selected != BTN_NONE)
+            setSelectionHighlight(selected, true);
         lastSelected = selected;
     }
 
     // Handle button activation on release
     if (keysUp() & (KEY_A | KEY_TOUCH)) {
         switch (selected) {
-            case SP_BTN_MAP1:
+            case BTN_MAP1:
                 GameContext_SetMap(ScorchingSands);
                 PlayCLICKSFX();
                 return GAMEPLAY;
-                break;
-            case SP_BTN_MAP2:
+            case BTN_MAP2:
                 GameContext_SetMap(AlpinRush);
                 PlayCLICKSFX();
                 return HOME_PAGE;
-                break;
-            case SP_BTN_MAP3:
+            case BTN_MAP3:
                 GameContext_SetMap(NeonCircuit);
                 PlayCLICKSFX();
                 return HOME_PAGE;
-                break;
-            case SP_BTN_HOME:
+            case BTN_HOME:
                 PlayCLICKSFX();
                 return HOME_PAGE;
             default:
@@ -235,7 +227,7 @@ GameState Map_selection_update(void) {
 }
 
 /**
- * VBlank interrupt handler for map selection screen
+ * VBlank interrupt handler for map selection screen.
  *
  * Animates cloud scrolling on main screen BG1:
  * - cloudSubPixel increments every frame (60 times per second)
@@ -246,7 +238,7 @@ GameState Map_selection_update(void) {
  *
  * Must be called from IRQ_VBLANK handler every frame.
  */
-void Map_selection_OnVBlank(void) {
+void MapSelection_OnVBlank(void) {
     static int cloudSubPixel = 0;
     cloudSubPixel++;
     if (cloudSubPixel >= 2) {
@@ -261,7 +253,7 @@ void Map_selection_OnVBlank(void) {
 //=============================================================================
 
 /**
- * Configure main screen display mode
+ * Configure main screen display mode.
  *
  * Sets up MODE_0_2D with two background layers:
  * - BG0: Map thumbnails (enabled)
@@ -269,14 +261,13 @@ void Map_selection_OnVBlank(void) {
  *
  * Maps VRAM_A to main screen background memory.
  */
-static void configureGraphics_MAIN_MAP_SEL(void) {
+static void configureGraphicsMain(void) {
     REG_DISPCNT = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
-    // REG_DISPCNT = MODE_3_2D | DISPLAY_BG3_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_MAIN_BG;
 }
 
 /**
- * Configure main screen background layers
+ * Configure main screen background layers.
  *
  * BG0 (priority 1, back layer):
  * - 32x32 tilemap, 256-color mode
@@ -293,7 +284,7 @@ static void configureGraphics_MAIN_MAP_SEL(void) {
  * - Palette data to BG_PALETTE
  * - Map data split between BG0 and BG1 (64x24 bytes each)
  */
-static void configBG_Main_MAP_SEL(void) {
+static void configureBackgroundsMain(void) {
     BGCTRL[0] =
         BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_PRIORITY(1);
 
@@ -303,25 +294,10 @@ static void configBG_Main_MAP_SEL(void) {
     dmaCopy(combinedPal, BG_PALETTE, combinedPalLen);
     dmaCopy(&combinedMap[0], BG_MAP_RAM(0), 64 * 24);
     dmaCopy(&combinedMap[32 * 24], BG_MAP_RAM(1), 64 * 24);
-
-    /*
-    BGCTRL[3] = BG_BMP_BASE(2) | BgSize_B8_256x256 | BG_PRIORITY(0);
-
-    dmaCopy(map_topBitmap, BG_BMP_RAM(2), map_topBitmapLen);
-    dmaCopy(map_topPal, BG_PALETTE, map_topPalLen);
-
-    dmaCopy(map_top_cloudsTiles, BG_TILE_RAM(1), map_top_cloudsTilesLen);
-    dmaCopy(map_top_cloudsMap, BG_MAP_RAM(0), map_top_cloudsMapLen);
-
-    REG_BG3PA = 256;
-    REG_BG3PC = 0;
-    REG_BG3PB = 0;
-    REG_BG3PD = 256;
-    */
 }
 
 /**
- * Configure sub screen display mode
+ * Configure sub screen display mode.
  *
  * Sets up MODE_0_2D with two background layers:
  * - BG0: Menu UI with transparent areas (enabled)
@@ -329,13 +305,13 @@ static void configBG_Main_MAP_SEL(void) {
  *
  * Maps VRAM_C to sub screen background memory.
  */
-static void configureGraphics_Sub_MAP_SEL(void) {
+static void configureGraphicsSub(void) {
     REG_DISPCNT_SUB = MODE_0_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG1_ACTIVE;
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 }
 
 /**
- * Configure sub screen background layers
+ * Configure sub screen background layers.
  *
  * BG0 (priority 0, front layer):
  * - 32x32 tilemap, 256-color mode
@@ -355,7 +331,7 @@ static void configureGraphics_Sub_MAP_SEL(void) {
  * - Palette colors initialized to BLACK (invisible)
  * - When selected, palette changes to WHITE (visible through BG0 transparency)
  */
-static void configBG_Sub_MAP_SEL(void) {
+static void configureBackgroundsSub(void) {
     // BG0: Menu layer (front)
     BGCTRL_SUB[0] =
         BG_32x32 | BG_MAP_BASE(0) | BG_TILE_BASE(1) | BG_COLOR_256 | BG_PRIORITY(0);
@@ -376,28 +352,28 @@ static void configBG_Sub_MAP_SEL(void) {
     // Clear BG1 map
     memset(BG_MAP_RAM_SUB(1), 0, 32 * 24 * 2);
 
-    // color selection
-    BG_PALETTE_SUB[MAP_SEL_SELECTION_PAL_BASE] = BLACK;
-    BG_PALETTE_SUB[MAP_SEL_SELECTION_PAL_BASE + 1] = BLACK;
-    BG_PALETTE_SUB[MAP_SEL_SELECTION_PAL_BASE + 2] = BLACK;
-    BG_PALETTE_SUB[MAP_SEL_SELECTION_PAL_BASE + 3] = BLACK;
+    // Initialize selection palette colors to BLACK (invisible)
+    BG_PALETTE_SUB[SELECTION_PAL_BASE] = BLACK;
+    BG_PALETTE_SUB[SELECTION_PAL_BASE + 1] = BLACK;
+    BG_PALETTE_SUB[SELECTION_PAL_BASE + 2] = BLACK;
+    BG_PALETTE_SUB[SELECTION_PAL_BASE + 3] = BLACK;
 
     // Draw selection areas
-    drawSelectionRect(SP_BTN_MAP1, TILE_SEL_MAP1);
-    drawSelectionRect(SP_BTN_MAP2, TILE_SEL_MAP2);
-    drawSelectionRect(SP_BTN_MAP3, TILE_SEL_MAP3);
-    drawSelectionRect(SP_BTN_HOME, TILE_SEL_SP_HOME);
+    drawSelectionRect(BTN_MAP1, TILE_MAP1);
+    drawSelectionRect(BTN_MAP2, TILE_MAP2);
+    drawSelectionRect(BTN_MAP3, TILE_MAP3);
+    drawSelectionRect(BTN_HOME, TILE_HOME);
 }
 
 /**
- * Draw selection rectangle on BG1 tilemap
+ * Draw selection rectangle on BG1 tilemap.
  *
  * Fills a rectangular area on the BG1 map with the specified tile index.
  * The tile's color is controlled by its palette entry (240-243), which
  * is changed between BLACK (invisible) and WHITE (visible) for highlighting.
  *
  * @param btn - Which button's selection area to draw
- * @param tileIndex - Tile index to use (TILE_SEL_MAP1/2/3/HOME)
+ * @param tileIndex - Tile index to use (TILE_MAP1/2/3/HOME)
  *
  * Selection area coordinates (in tiles):
  * - MAP1: rows 9-21, cols 2-12 (left thumbnail)
@@ -410,25 +386,25 @@ static void drawSelectionRect(MapSelectionButton btn, u16 tileIndex) {
     int startX, startY, endX, endY;
 
     switch (btn) {
-        case SP_BTN_MAP1:  // Scorching Sands
+        case BTN_MAP1:  // Scorching Sands
             startX = 2;
             startY = 9;
             endX = 12;
             endY = 21;
             break;
-        case SP_BTN_MAP2:  // Alpine Rush
+        case BTN_MAP2:  // Alpine Rush
             startX = 11;
             startY = 9;
             endX = 21;
             endY = 21;
             break;
-        case SP_BTN_MAP3:  // Neon Circuit
+        case BTN_MAP3:  // Neon Circuit
             startX = 20;
             startY = 9;
             endX = 30;
             endY = 21;
             break;
-        case SP_BTN_HOME:  // Home button
+        case BTN_HOME:  // Home button
             startX = 28;
             startY = 20;
             endX = 32;
@@ -444,14 +420,14 @@ static void drawSelectionRect(MapSelectionButton btn, u16 tileIndex) {
 }
 
 /**
- * Set selection highlighting for a button
+ * Set selection highlighting for a button.
  *
  * Changes the palette color of the button's selection tile between
  * BLACK (invisible) and WHITE (visible). Since the selection tiles
  * are positioned on BG1 behind transparent areas of BG0, changing
  * the color creates an instant highlight effect.
  *
- * @param btn - Which button to highlight (SP_BTN_MAP1/2/3/HOME)
+ * @param btn - Which button to highlight (BTN_MAP1/2/3/HOME)
  * @param show - true to show highlight (WHITE), false to hide (BLACK)
  *
  * Palette indices:
@@ -460,10 +436,10 @@ static void drawSelectionRect(MapSelectionButton btn, u16 tileIndex) {
  * - 242: MAP3 selection tile color
  * - 243: HOME button selection tile color
  */
-static void MAP_SEL_setSelectionTint(MapSelectionButton btn, bool show) {
-    if (btn < 0 || btn >= MAPSELECTION_BTN_COUNT)
+static void setSelectionHighlight(MapSelectionButton btn, bool show) {
+    if (btn < 0 || btn >= BTN_COUNT)
         return;
-    int paletteIndex = MAP_SEL_SELECTION_PAL_BASE + btn;
+    int paletteIndex = SELECTION_PAL_BASE + btn;
     BG_PALETTE_SUB[paletteIndex] = show ? SP_SELECT_COLOR : BLACK;
 }
 
@@ -472,7 +448,7 @@ static void MAP_SEL_setSelectionTint(MapSelectionButton btn, bool show) {
 //=============================================================================
 
 /**
- * Handle D-pad navigation
+ * Handle D-pad navigation.
  *
  * UP/DOWN: Cycles through all 4 buttons with wraparound
  * - Uses modulo arithmetic for circular navigation
@@ -484,30 +460,30 @@ static void MAP_SEL_setSelectionTint(MapSelectionButton btn, bool show) {
  * - RIGHT: MAP1→MAP2, MAP2→MAP3, MAP3→HOME, HOME→MAP1 (wraps)
  * - Provides circular horizontal navigation for convenience
  */
-static void handleDPadInputMAP_SEL(void) {
+static void handleDPadInput(void) {
     int keys = keysDown();
 
     if (keys & KEY_UP) {
-        selected = (selected - 1 + MAPSELECTION_BTN_COUNT) % MAPSELECTION_BTN_COUNT;
+        selected = (selected - 1 + BTN_COUNT) % BTN_COUNT;
     }
 
     if (keys & KEY_DOWN) {
-        selected = (selected + 1) % MAPSELECTION_BTN_COUNT;
+        selected = (selected + 1) % BTN_COUNT;
     }
 
     if (keys & KEY_LEFT) {
         // Wrap around: MAP1 goes to HOME
-        selected = (selected - 1 + MAPSELECTION_BTN_COUNT) % MAPSELECTION_BTN_COUNT;
+        selected = (selected - 1 + BTN_COUNT) % BTN_COUNT;
     }
 
     if (keys & KEY_RIGHT) {
         // Wrap around: HOME goes to MAP1
-        selected = (selected + 1) % MAPSELECTION_BTN_COUNT;
+        selected = (selected + 1) % BTN_COUNT;
     }
 }
 
 /**
- * Handle touch screen input
+ * Handle touch screen input.
  *
  * Checks if touch is within any button's hitbox and updates selection.
  * Hitboxes are defined in pixel coordinates for each button:
@@ -526,7 +502,7 @@ static void handleDPadInputMAP_SEL(void) {
  *
  * Returns immediately after first match (priority order: MAP1→MAP2→MAP3→HOME)
  */
-static void handleTouchInputMAP_SEL(void) {
+static void handleTouchInput(void) {
     if (!(keysHeld() & KEY_TOUCH))
         return;
 
@@ -539,25 +515,25 @@ static void handleTouchInputMAP_SEL(void) {
 
     // Map 1 - Scorching Sands (circle + text)
     if (touch.px >= 20 && touch.px <= 80 && touch.py >= 70 && touch.py <= 165) {
-        selected = SP_BTN_MAP1;
+        selected = BTN_MAP1;
         return;
     }
 
     // Map 2 - Alpine Rush (circle + text)
     if (touch.px >= 98 && touch.px <= 158 && touch.py >= 70 && touch.py <= 165) {
-        selected = SP_BTN_MAP2;
+        selected = BTN_MAP2;
         return;
     }
 
     // Map 3 - Neon Circuit (circle + text)
     if (touch.px >= 176 && touch.px <= 236 && touch.py >= 70 && touch.py <= 165) {
-        selected = SP_BTN_MAP3;
+        selected = BTN_MAP3;
         return;
     }
 
     // Home button (bottom right corner)
     if (touch.px >= 224 && touch.px <= 251 && touch.py >= 161 && touch.py <= 188) {
-        selected = SP_BTN_HOME;
+        selected = BTN_HOME;
         return;
     }
 }

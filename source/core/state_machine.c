@@ -37,7 +37,7 @@ GameState StateMachine_Update(GameState state) {
             return Settings_Update();
 
         case MAPSELECTION:
-            return Map_selection_update();
+            return MapSelection_Update();
 
         case MULTIPLAYER_LOBBY:
             return MultiplayerLobby_Update();
@@ -65,7 +65,7 @@ void StateMachine_Init(GameState state) {
             break;
 
         case MAPSELECTION:
-            Map_Selection_initialize();
+            MapSelection_Initialize();
             break;
 
         case MULTIPLAYER_LOBBY:

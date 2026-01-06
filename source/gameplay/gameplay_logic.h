@@ -26,10 +26,7 @@
 // PUBLIC CONSTANTS
 //=============================================================================
 
-#define MAX_CARS 8
-#define MAX_CHECKPOINTS 16
-#define QUAD_OFFSET 256
-// NOTE: FINISH_DELAY_FRAMES moved to game_constants.h
+// Note: MAX_CARS, MAX_CHECKPOINTS, QUAD_OFFSET, FINISH_DELAY_FRAMES moved to game_constants.h
 
 //=============================================================================
 // PUBLIC TYPES

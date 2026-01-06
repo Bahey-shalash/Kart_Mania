@@ -51,7 +51,7 @@ void timerISRVblank(void) {
             break;
 
         case MAPSELECTION:
-            Map_selection_OnVBlank();  // Animate clouds and map previews
+            MapSelection_OnVBlank();  // Animate clouds and map previews
             break;
 
         case PLAYAGAIN:

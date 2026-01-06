@@ -54,20 +54,20 @@
 #include "../core/game_types.h"
 
 /**
- * Initialize map selection screen
+ * Initialize map selection screen.
  * - Configures graphics for both main and sub screens
  * - Sets up BG0 and BG1 layers on both screens
  * - Loads map thumbnails, cloud graphics, and selection tiles
  * - Positions selection tiles under transparent areas of menu UI
- * - Resets selection state to SP_BTN_NONE
+ * - Resets selection state to BTN_NONE
  * - Initializes cloud scrolling offset to 0
  *
  * Must be called when entering MAPSELECTION state.
  */
-void Map_Selection_initialize(void);
+void MapSelection_Initialize(void);
 
 /**
- * Update map selection screen (call every frame)
+ * Update map selection screen (call every frame).
  * - Processes D-pad and touch input for navigation
  * - Updates selection highlighting when selection changes
  * - Handles A button or touch release to confirm selection
@@ -78,10 +78,10 @@ void Map_Selection_initialize(void);
  *   - HOME_PAGE if MAP2, MAP3, or HOME selected
  *   - MAPSELECTION to stay on this screen
  */
-GameState Map_selection_update(void);
+GameState MapSelection_Update(void);
 
 /**
- * VBlank handler for map selection screen
+ * VBlank handler for map selection screen.
  * - Animates cloud scrolling on main screen (BG1)
  * - Scrolls clouds at 0.5 pixels per frame (30 px/sec at 60 FPS)
  * - Uses subpixel counter to achieve fractional scroll speed
@@ -89,6 +89,6 @@ GameState Map_selection_update(void);
  *
  * Must be called from IRQ_VBLANK interrupt handler.
  */
-void Map_selection_OnVBlank(void);
+void MapSelection_OnVBlank(void);
 
 #endif  // MAPSELECTION_H

@@ -12,11 +12,12 @@
 
 #include "item_navigation.h"
 #include <stdlib.h>
+#include "../../core/game_constants.h"
 
 //=============================================================================
 // Constants
 //=============================================================================
-#define WAYPOINT_REACHED_DIST IntToFixed(25)  // 25 pixels = close enough
+// Note: WAYPOINT_REACHED_DIST moved to game_constants.h
 
 //=============================================================================
 // Scorching Sands Waypoints

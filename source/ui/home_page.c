@@ -21,9 +21,9 @@
 #include "../core/timer.h"
 #include "../graphics/color.h"
 #include "../network/multiplayer.h"
-#include "ds_menu.h"
-#include "home_top.h"
-#include "kart_home.h"
+#include "data/ui/ds_menu.h"
+#include "data/ui/home_top.h"
+#include "data/sprites/kart_home.h"
 
 //=============================================================================
 // PRIVATE TYPES

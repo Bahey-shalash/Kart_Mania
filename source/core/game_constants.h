@@ -1,17 +1,40 @@
-// HUGO------
+/**
+ * File: game_constants.h
+ * ----------------------
+ * Description: Central location for all game-tunable constants and magic numbers.
+ *              This header defines physics values, collision thresholds, durations,
+ *              rendering constants, and other numeric values used throughout the codebase.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
 
 #ifndef GAME_CONSTANTS_H
 #define GAME_CONSTANTS_H
 
 #include "../math/fixedmath.h"
 
-/*
- * game_constants.h
- *
- * Central location for all game-tunable constants and magic numbers.
- * This header defines physics values, collision thresholds, durations,
- * rendering constants, and other numeric values used throughout the codebase.
- */
+//=============================================================================
+// Screen & Map Dimensions
+//=============================================================================
+
+#define SCREEN_WIDTH 256    // Nintendo DS screen width in pixels
+#define SCREEN_HEIGHT 192   // Nintendo DS screen height in pixels
+#define MAP_SIZE 1024       // Full map size in pixels (1024×1024)
+#define QUADRANT_SIZE 512   // Size of double quadrant (for bounds checking)
+#define QUAD_OFFSET 256     // Quadrant offset size (256×256 per quadrant)
+
+// Scroll limits
+#define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)   // 768
+#define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)  // 832
+
+//=============================================================================
+// Gameplay Limits
+//=============================================================================
+
+#define MAX_CARS 8          // Maximum number of cars in a race
+#define MAX_CHECKPOINTS 16  // Maximum number of checkpoints
 
 //=============================================================================
 // Rendering & Display Constants
@@ -20,8 +43,7 @@
 // Sprite constants
 #define CAR_SPRITE_SIZE 32
 #define CAR_SPRITE_CENTER_OFFSET 16  // Half of sprite size for centering
-#define CAR_RADIUS \
-    12  // Collision radius (adjust if needed - currently undefined in your code)
+#define CAR_RADIUS 12                // Collision radius
 
 //=============================================================================
 // Physics & Movement Constants
@@ -177,8 +199,9 @@
 // Audio Constants
 //=============================================================================
 
-#define VOLUME_MAX 1024  // Maximum volume (100%)
-#define VOLUME_MUTE 0    // Mute volume (0%)
+#define VOLUME_MAX 1024   // Maximum volume (100%)
+#define VOLUME_MUTE 0     // Mute volume (0%)
+#define MUSIC_VOLUME 256  // Default music volume (range 0...1024)
 
 //=============================================================================
 // Time & Frequency Constants
@@ -208,7 +231,51 @@
 // Car Physics Constants
 //=============================================================================
 
-#define CAR_NAME_MAX_LENGTH \
-    31  // Maximum length for car name (without null terminator)
+#define CAR_NAME_MAX_LENGTH 31  // Maximum length for car name (without null terminator)
+
+//=============================================================================
+// Terrain Detection Constants (RGB 5-bit values)
+//=============================================================================
+
+// Track colors (gray)
+#define GRAY_MAIN_R5 12     // Main gray track R channel (5-bit)
+#define GRAY_MAIN_G5 12     // Main gray track G channel (5-bit)
+#define GRAY_MAIN_B5 12     // Main gray track B channel (5-bit)
+#define GRAY_LIGHT_R5 14    // Light gray track R channel (5-bit)
+#define GRAY_LIGHT_G5 14    // Light gray track G channel (5-bit)
+#define GRAY_LIGHT_B5 14    // Light gray track B channel (5-bit)
+
+// Sand colors (beige/tan)
+#define SAND_PRIMARY_R5 20      // Primary sand R channel (5-bit)
+#define SAND_PRIMARY_G5 18      // Primary sand G channel (5-bit)
+#define SAND_PRIMARY_B5 12      // Primary sand B channel (5-bit)
+#define SAND_SECONDARY_R5 22    // Secondary sand R channel (5-bit)
+#define SAND_SECONDARY_G5 20    // Secondary sand G channel (5-bit)
+#define SAND_SECONDARY_B5 14    // Secondary sand B channel (5-bit)
+
+// Tolerance for color matching
+#define COLOR_TOLERANCE_5BIT 1  // ±1 unit tolerance per channel
+
+//=============================================================================
+// Input & Control Constants
+//=============================================================================
+
+#define DEBOUNCE_DELAY 15  // ~250ms at 60Hz for button debouncing
+
+//=============================================================================
+// Network Constants
+//=============================================================================
+
+#define LOCAL_PORT 8888             // Local UDP port for multiplayer
+#define OUT_PORT 8888               // Remote UDP port for multiplayer
+#define WIFI_SCAN_TIMEOUT_FRAMES 300    // 5 seconds at 60Hz for WiFi scan
+#define WIFI_CONNECT_TIMEOUT_FRAMES 600  // 10 seconds at 60Hz for connection
+#define WIFI_RETRY_MAX 3            // Maximum WiFi connection retry attempts
+
+//=============================================================================
+// Item Navigation Constants
+//=============================================================================
+
+#define WAYPOINT_REACHED_DIST IntToFixed(25)  // 25 pixels = waypoint reached threshold
 
 #endif  // GAME_CONSTANTS_H

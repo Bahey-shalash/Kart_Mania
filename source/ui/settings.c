@@ -21,8 +21,8 @@
 #include "../core/context.h"
 #include "../graphics/color.h"
 #include "../storage/storage.h"
-#include "nds_settings.h"
-#include "settings_top.h"
+#include "data/ui/nds_settings.h"
+#include "data/ui/settings_top.h"
 
 //=============================================================================
 // PRIVATE TYPES

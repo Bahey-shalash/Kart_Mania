@@ -22,7 +22,7 @@
 #include "../gameplay/gameplay_logic.h"
 #include "../graphics/color.h"
 #include "../network/multiplayer.h"
-#include "playagain.h"
+#include "data/ui/playagain.h"
 
 //=============================================================================
 // PRIVATE TYPES

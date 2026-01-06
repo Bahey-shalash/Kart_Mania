@@ -17,7 +17,7 @@
 
 #include <stdbool.h>
 
-#define MUSIC_VOLUME 256  // Default music volume (range 0...1024)
+// Note: MUSIC_VOLUME moved to game_constants.h
 
 /**
  * Function: initSoundLibrary

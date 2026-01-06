@@ -23,15 +23,11 @@
 #include "wall_collision.h"
 
 //=============================================================================
-// Constants
+// Private Constants
 //=============================================================================
-#define SCREEN_WIDTH 256
-#define SCREEN_HEIGHT 192
-#define MAP_SIZE 1024
-#define COUNTDOWN_NUMBER_DURATION 60
-#define COUNTDOWN_GO_DURATION 60
-#define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)
-#define MAX_SCROLL_Y (MAP_SIZE - SCREEN_HEIGHT)
+// Note: SCREEN_WIDTH, SCREEN_HEIGHT, MAP_SIZE, MAX_SCROLL_X/Y moved to game_constants.h
+#define COUNTDOWN_NUMBER_DURATION 60  // Frames per countdown number (moved from COUNTDOWN_FRAMES_PER_STEP)
+#define COUNTDOWN_GO_DURATION 60      // Frames for "GO!" display
 
 typedef enum {
     CP_STATE_START = 0,
@@ -660,7 +656,7 @@ static QuadrantID determineCarQuadrant(int x, int y) {
 static volatile bool isPaused = false;
 static volatile int debounceFrames = 0;
 
-#define DEBOUNCE_DELAY 15  // ~250ms at 60Hz
+// Note: DEBOUNCE_DELAY moved to game_constants.h
 
 void Race_InitPauseInterrupt(void) {
     // BIT(14) = enable key interrupt

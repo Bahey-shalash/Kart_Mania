@@ -22,7 +22,7 @@ BUILD_MODE	?=	release  # Set BUILD_MODE=debug for -O0 builds
 SOURCES 	:= 	$(shell [ -d source ] && find source -type d) # source folder + all directories inside it
 DATA		:=
 INCLUDES	:=	include
-GRAPHICS	:= 	data
+GRAPHICS	:= 	$(shell [ -d data ] && find data -type d)
 AUDIO       := 	audio
 PRECOMPILED := 	precompiled
 
@@ -72,7 +72,11 @@ export OUTPUT_NDS 	:= $(CURDIR)/$(TARGET)
 
 export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 					$(foreach dir,$(DATA),$(CURDIR)/$(dir)) \
-					$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir))
+					$(foreach dir,$(GRAPHICS),$(CURDIR)/$(dir)) \
+					$(CURDIR)/$(BUILD)/data/ui \
+					$(CURDIR)/$(BUILD)/data/items \
+					$(CURDIR)/$(BUILD)/data/sprites \
+					$(CURDIR)/$(BUILD)/data/tracks
 
 export DEPSDIR	:=	$(CURDIR)/$(BUILD)
 
@@ -123,6 +127,7 @@ export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 #---------------------------------------------------------------------------------
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
+	@mkdir -p $@/data/ui $@/data/items $@/data/sprites $@/data/tracks
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
@@ -187,9 +192,18 @@ soundbank.bin : $(AUDIOFILES)
 #---------------------------------------------------------------------------------
 %.s %.h : %.png %.grit
 #---------------------------------------------------------------------------------
-	grit $< -fts -o$*
-	@if [ "$*" = "ds_menu" ]; then \
-		sed -i '' 's/\.hword 0x7C1F/.hword 0x7BBD/' $*.s; \
+	@SRCPATH=$$(find ../data -name "$(notdir $<)" -print -quit) && \
+	RELPATH=$$(echo "$$SRCPATH" | sed 's|^\.\./||') && \
+	SUBDIR=$$(dirname "$$RELPATH") && \
+	mkdir -p "$$SUBDIR" && \
+	grit "$$SRCPATH" -fts -o"$$SUBDIR/$(notdir $*)" && \
+	ln -sf "$$SUBDIR/$(notdir $*).s" "$(notdir $*).s" && \
+	ln -sf "$$SUBDIR/$(notdir $*).h" "$(notdir $*).h"
+	@if [ "$(notdir $*)" = "ds_menu" ]; then \
+		SRCPATH=$$(find ../data -name "$(notdir $<)" -print -quit) && \
+		RELPATH=$$(echo "$$SRCPATH" | sed 's|^\.\./||') && \
+		SUBDIR=$$(dirname "$$RELPATH") && \
+		sed -i '' 's/\.hword 0x7C1F/.hword 0x7BBD/' "$$SUBDIR/$(notdir $*).s"; \
 	fi
 
 -include $(DEPENDS)

@@ -22,27 +22,8 @@
 // PRIVATE CONSTANTS
 //=============================================================================
 
-// Quadrant offset (256 pixels per quadrant)
-#define QUAD_OFFSET 256
-
-// Gray track colors (5-bit RGB, 0-31 range)
-#define GRAY_MAIN_R5 12    // Main gray track R channel
-#define GRAY_MAIN_G5 12    // Main gray track G channel
-#define GRAY_MAIN_B5 12    // Main gray track B channel
-#define GRAY_LIGHT_R5 14   // Light gray track R channel
-#define GRAY_LIGHT_G5 14   // Light gray track G channel
-#define GRAY_LIGHT_B5 14   // Light gray track B channel
-
-// Sand colors (5-bit RGB, 0-31 range)
-#define SAND_PRIMARY_R5 20     // Primary sand R channel
-#define SAND_PRIMARY_G5 18     // Primary sand G channel
-#define SAND_PRIMARY_B5 12     // Primary sand B channel
-#define SAND_SECONDARY_R5 22   // Secondary sand R channel
-#define SAND_SECONDARY_G5 20   // Secondary sand G channel
-#define SAND_SECONDARY_B5 14   // Secondary sand B channel
-
-// Color matching tolerance (5-bit space)
-#define COLOR_TOLERANCE_5BIT 1  // ±1 unit tolerance per channel
+// Note: QUAD_OFFSET, terrain color constants (GRAY_*, SAND_*), and
+//       COLOR_TOLERANCE_5BIT moved to game_constants.h
 
 //=============================================================================
 // PRIVATE HELPER FUNCTIONS
