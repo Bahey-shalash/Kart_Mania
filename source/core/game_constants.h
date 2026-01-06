@@ -92,6 +92,8 @@
 // Projectile spawn offsets (in pixels)
 #define PROJECTILE_SPAWN_OFFSET 30  // Distance ahead of car to spawn projectiles
 #define HAZARD_DROP_OFFSET 40       // Distance behind car to drop hazards
+#define BANANA_DROP_OFFSET 35
+#define BOMB_DROP_OFFSET 35
 
 // Collision detection
 #define CAR_COLLISION_SIZE 32     // Car hitbox size for item collision
@@ -107,7 +109,8 @@
 // Projectile & hazard lifetimes (in seconds)
 #define PROJECTILE_LIFETIME_SECONDS \
     20                             // Max lifetime for green/red shells and missiles
-#define BOMB_LIFETIME_SECONDS 5    // Time until bomb auto-explodes
+#define BOMB_LIFETIME_SECONDS 2    // Time until bomb auto-explodes
+#define BANANA_LIFETIME_SECONDS 30  // Bananas despawn after 30 seconds
 #define ITEM_LIFETIME_INFINITE -1  // Marker for items that never expire
 
 //=============================================================================

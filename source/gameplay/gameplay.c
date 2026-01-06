@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 // HUGO------
-#include "items/Items.h"
+#include "items/items_api.h"
 #include "../core/context.h"
 #include "../core/game_constants.h"
 #include "../core/game_types.h"
