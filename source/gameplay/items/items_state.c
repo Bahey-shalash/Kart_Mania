@@ -1,3 +1,15 @@
+/**
+ * File: items_state.c
+ * -------------------
+ * Description: Module state management and lifecycle functions for the items
+ *              system. Handles initialization, reset, and storage of all
+ *              active items, item boxes, player effects, and graphics pointers.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "items_internal.h"
 #include "items_api.h"
 
@@ -21,6 +33,9 @@ u16* redShellGfx = NULL;
 u16* missileGfx = NULL;
 u16* oilSlickGfx = NULL;
 
+//=============================================================================
+// Internal Helper Prototypes
+//=============================================================================
 static void initItemBoxSpawns(Map map);
 static void clearActiveItems(void);
 
@@ -52,7 +67,7 @@ void Items_Reset(void) {
 }
 
 //=============================================================================
-// Internal helpers
+// Internal Implementation
 //=============================================================================
 
 static void initItemBoxSpawns(Map map) {
@@ -84,5 +99,9 @@ static void clearActiveItems(void) {
     }
 }
 
-// Declared but unused in the current implementation
+/**
+ * Function: Items_SpawnBoxes
+ * --------------------------
+ * Declared but unused - reserved for future dynamic item box spawning.
+ */
 void Items_SpawnBoxes(void) {}

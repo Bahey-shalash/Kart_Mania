@@ -1,3 +1,15 @@
+/**
+ * File: items_effects.c
+ * ---------------------
+ * Description: Player status effect management for the items system. Handles
+ *              confusion (swapped controls), speed boosts, and oil slows with
+ *              timer-based and distance-based duration tracking.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "items_internal.h"
 #include "items_api.h"
 

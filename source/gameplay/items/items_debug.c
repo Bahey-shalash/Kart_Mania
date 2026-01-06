@@ -1,3 +1,14 @@
+/**
+ * File: items_debug.c
+ * -------------------
+ * Description: Debug and testing API for the items system. Provides access
+ *              to internal state for debugging, visualization, and testing.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "items_internal.h"
 #include "items_api.h"
 

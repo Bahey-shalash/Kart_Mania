@@ -1,3 +1,15 @@
+/**
+ * File: items_types.h
+ * -------------------
+ * Description: Type definitions for the items system. Defines all item types,
+ *              probabilities, track item state, item box spawns, and player
+ *              status effects for the kart racing game's power-up system.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #ifndef ITEMS_TYPES_H
 #define ITEMS_TYPES_H
 
@@ -7,7 +19,16 @@
 #include "../../math/fixedmath.h"
 #include "../../core/game_types.h"
 
-// Track item kind
+//=============================================================================
+// Item Types
+//=============================================================================
+
+/**
+ * Enum: Item
+ * ----------
+ * Defines all available item types in the game. Each item has unique
+ * behavior when picked up or collided with during gameplay.
+ */
 typedef enum {
     ITEM_NONE = 0,
     ITEM_BOX,
@@ -21,6 +42,12 @@ typedef enum {
     ITEM_SPEEDBOOST
 } Item;
 
+/**
+ * Struct: ItemProbability
+ * -----------------------
+ * Probability distribution for item drops based on player rank.
+ * All values represent relative weights (not percentages).
+ */
 typedef struct {
     int banana;
     int oil;
@@ -32,7 +59,16 @@ typedef struct {
     int speedBoost;
 } ItemProbability;
 
-// Track item state
+//=============================================================================
+// Track Items
+//=============================================================================
+
+/**
+ * Struct: TrackItem
+ * -----------------
+ * Represents an active item on the track (projectile or hazard).
+ * Includes position, movement, collision data, and special behavior flags.
+ */
 typedef struct {
     Item type;
     Vec2 position;
@@ -59,7 +95,16 @@ typedef struct {
     bool hasCompletedLap;  // True after completing full lap
 } TrackItem;
 
-// Item box spawn location
+//=============================================================================
+// Item Boxes
+//=============================================================================
+
+/**
+ * Struct: ItemBoxSpawn
+ * --------------------
+ * Represents a fixed item box spawn location on the track. Item boxes
+ * give random items when collected and respawn after a delay.
+ */
 typedef struct {
     Vec2 position;
     bool active;       // Is box available for pickup?
@@ -67,7 +112,16 @@ typedef struct {
     u16* gfx;          // Sprite graphics pointer
 } ItemBoxSpawn;
 
-// Player status effects
+//=============================================================================
+// Player Effects
+//=============================================================================
+
+/**
+ * Struct: PlayerItemEffects
+ * -------------------------
+ * Tracks temporary status effects applied to the player from items.
+ * Effects include confusion, speed boosts, and oil slows.
+ */
 typedef struct {
     bool confusionActive;  // Mushroom confusion (swapped controls)
     int confusionTimer;

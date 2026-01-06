@@ -1,3 +1,15 @@
+/**
+ * File: items_render.c
+ * --------------------
+ * Description: Rendering system for items. Handles sprite allocation, graphics
+ *              loading, and OAM management for item boxes and track items.
+ *              Supports rotation for projectiles and visibility culling.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "items_internal.h"
 #include "items_api.h"
 

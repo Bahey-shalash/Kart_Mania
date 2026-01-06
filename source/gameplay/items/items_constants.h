@@ -1,3 +1,15 @@
+/**
+ * File: items_constants.h
+ * -----------------------
+ * Description: Constants and configuration values for the items system.
+ *              Defines pool sizes, durations, speed multipliers, effect values,
+ *              hitbox sizes, and probability distributions for item drops.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #ifndef ITEMS_CONSTANTS_H
 #define ITEMS_CONSTANTS_H
 
@@ -7,36 +19,47 @@
 
 #include "items_types.h"
 
-// Pool sizes
+//=============================================================================
+// Pool Sizes and OAM Allocation
+//=============================================================================
 #define MAX_TRACK_ITEMS 32
 #define MAX_ITEM_BOX_SPAWNS 8
 
-// OAM sprite allocation
 #define ITEM_BOX_OAM_START 1
 #define TRACK_ITEM_OAM_START 9
 
-// Durations (all dependent on RACE_TICK_FREQ for easy tuning)
+//=============================================================================
+// Durations
+//=============================================================================
+// All durations are dependent on RACE_TICK_FREQ for easy tuning
 #define SPEED_BOOST_DURATION (int)(2.5f * RACE_TICK_FREQ)         // 2.5 seconds
 #define MUSHROOM_CONFUSION_DURATION (int)(3.5f * RACE_TICK_FREQ)  // 3.5 seconds
 #define OIL_LIFETIME_TICKS (10 * RACE_TICK_FREQ)                  // 10 seconds
 #define ITEM_BOX_RESPAWN_TICKS (3 * RACE_TICK_FREQ)               // 3 seconds
 #define OIL_SLOW_DISTANCE IntToFixed(64)  // 64 pixels of slowdown
 
-// Speed multipliers (relative to car max speed)
+//=============================================================================
+// Speed Multipliers
+//=============================================================================
+// All multipliers are relative to car max speed
 #define GREEN_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))  // 1.5x
 #define RED_SHELL_SPEED_MULT FixedDiv(IntToFixed(6), IntToFixed(5))    // 1.2x
 #define MISSILE_SPEED_MULT FixedDiv(IntToFixed(17), IntToFixed(10))    // 1.7x
-#define SPEED_BOOST_MULT \
-    IntToFixed(2)  // x2 //FixedDiv(IntToFixed(3), IntToFixed(2))  // 1.5x max speed
+#define SPEED_BOOST_MULT IntToFixed(2)  // 2x max speed
+
 // Note: Applying a second speed boost while one is active will reset
 // the timer to full duration but maintain the original maxSpeed reference,
 // so multiple boosts extend duration rather than multiply speed further.
 
-// Effect values
+//=============================================================================
+// Effect Values
+//=============================================================================
 #define BOMB_EXPLOSION_RADIUS IntToFixed(50)  // 50 pixels
 #define BOMB_KNOCKBACK_IMPULSE IntToFixed(8)  // Impulse strength
 
-// Hitbox sizes (in pixels)
+//=============================================================================
+// Hitbox Sizes
+//=============================================================================
 #define ITEM_BOX_HITBOX 8
 #define OIL_SLICK_HITBOX 32
 #define BOMB_HITBOX 16
@@ -45,7 +68,16 @@
 #define MISSILE_HITBOX_W 16
 #define MISSILE_HITBOX_H 32
 
-// Probability distributions by rank - Single Player (only banana/oil/mushroom/speed)
+//=============================================================================
+// Item Probability Distributions
+//=============================================================================
+
+/**
+ * ITEM_PROBABILITIES_SP - Single Player Mode
+ * -------------------------------------------
+ * Balanced for solo play with AI opponents. Only includes defensive items
+ * (banana, oil, mushroom, speed boost). No offensive projectiles.
+ */
 static const ItemProbability ITEM_PROBABILITIES_SP[8] = {
     {35, 35, 0, 0, 0, 0, 15, 15},  // 1st
     {30, 30, 0, 0, 0, 0, 20, 20},  // 2nd
@@ -57,7 +89,12 @@ static const ItemProbability ITEM_PROBABILITIES_SP[8] = {
     {10, 10, 0, 0, 0, 0, 25, 55}   // 8th+
 };
 
-// Probability distributions by rank - Multiplayer (full set)
+/**
+ * ITEM_PROBABILITIES_MP - Multiplayer Mode
+ * -----------------------------------------
+ * Balanced for competitive multiplayer. Includes full item set with
+ * offensive projectiles (shells, bombs, missiles) for player vs player combat.
+ */
 static const ItemProbability ITEM_PROBABILITIES_MP[8] = {
     {17, 18, 5, 15, 10, 0, 15, 20},  // 1st
     {17, 17, 5, 16, 12, 0, 13, 20},  // 2nd

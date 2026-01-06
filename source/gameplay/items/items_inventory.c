@@ -1,3 +1,15 @@
+/**
+ * File: items_inventory.c
+ * -----------------------
+ * Description: Player inventory and item usage system. Handles item activation,
+ *              random item selection based on rank, and targeting logic for
+ *              projectiles and hazards.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "items_internal.h"
 #include "items_api.h"
 
@@ -7,9 +19,16 @@
 #include "../gameplay_logic.h"
 #include "../../core/game_constants.h"
 
+//=============================================================================
+// Internal Helper Prototypes
+//=============================================================================
 static int findCarAhead(int currentRank, int carCount);
 static int findCarInDirection(Vec2 fromPosition, int direction512, int playerIndex,
                               const Car* cars, int carCount);
+
+//=============================================================================
+// Public API - Item Usage
+//=============================================================================
 
 void Items_UsePlayerItem(Car* player, bool fireForward) {
     if (player->item == ITEM_NONE)

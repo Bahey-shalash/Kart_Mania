@@ -1,10 +1,26 @@
+/**
+ * File: item_navigation.c
+ * -----------------------
+ * Description: Waypoint navigation implementation for homing projectiles.
+ *              Defines racing line waypoints for each map and provides
+ *              functions to find, query, and navigate between waypoints.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
 
 #include "item_navigation.h"
 #include <stdlib.h>
-// BAHEY------
+
+//=============================================================================
+// Constants
+//=============================================================================
 #define WAYPOINT_REACHED_DIST IntToFixed(25)  // 25 pixels = close enough
 
-// Scorching Sands racing line waypoints (extracted from track coordinates)
+//=============================================================================
+// Scorching Sands Waypoints
+//=============================================================================
 static const Waypoint scorchingSands_racingLine[] = {
     // Start/finish straight (right side)
     {.pos = {IntToFixed(940), IntToFixed(553)}, .next = 1},
@@ -147,7 +163,9 @@ static const Waypoint scorchingSands_racingLine[] = {
 
 static const int scorchingSands_waypointCount = 119;
 
-// Get waypoint data for a specific map
+//=============================================================================
+// Internal Helpers
+//=============================================================================
 static const Waypoint* getWaypointsForMap(Map map, int* count) {
     switch (map) {
         case ScorchingSands:
@@ -162,6 +180,10 @@ static const Waypoint* getWaypointsForMap(Map map, int* count) {
             return NULL;  // TODO: Add other maps when they're ready
     }
 }
+
+//=============================================================================
+// Public API
+//=============================================================================
 
 int ItemNav_FindNearestWaypoint(Vec2 position, Map map) {
     int count;

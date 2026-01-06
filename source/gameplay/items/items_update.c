@@ -1,3 +1,15 @@
+/**
+ * File: items_update.c
+ * --------------------
+ * Description: Core update and collision logic for the items system. Handles
+ *              projectile movement, homing behavior, collision detection with
+ *              cars and walls, item box pickups, and multiplayer synchronization.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "items_internal.h"
 #include "items_api.h"
 #include "item_navigation.h"
@@ -11,6 +23,9 @@
 #include "../../audio/sound.h"
 #include "../../network/multiplayer.h"
 
+//=============================================================================
+// Internal Helper Prototypes
+//=============================================================================
 static void updateProjectile(TrackItem* item, const Car* cars, int carCount);
 static void updateHoming(TrackItem* item, const Car* cars, int carCount);
 static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount);

@@ -1,4 +1,21 @@
-// BAHEY------
+/**
+ * File: Car.c
+ * -----------
+ * Description: Implementation of car physics and state management. Provides
+ *              acceleration, braking, steering, friction, position updates,
+ *              and velocity manipulation for kart racing gameplay.
+ *
+ * Physics Model:
+ *   - Scalar speed + angle representation for simplified control
+ *   - Movement direction always follows facing angle
+ *   - Friction applied as multiplicative decay per frame
+ *   - Speed capped to maxSpeed on all operations
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "Car.h"
 
 #include <stddef.h>
@@ -7,9 +24,23 @@
 #include "../core/game_constants.h"
 
 //=============================================================================
-// Private Helpers
+// Private Function Prototypes
 //=============================================================================
 
+static void copy_name(char destination[32], const char* name);
+static Q16_8 clamp_friction(Q16_8 friction);
+static Vec2 build_velocity(const Car* car);
+static void apply_velocity(Car* car, Vec2 velocity);
+
+//=============================================================================
+// Private Helper Implementations
+//=============================================================================
+
+/**
+ * Function: copy_name
+ * -------------------
+ * Safely copies a car name string with bounds checking.
+ */
 static void copy_name(char destination[32], const char* name) {
     destination[0] = '\0';
     if (name == NULL) {
@@ -19,7 +50,11 @@ static void copy_name(char destination[32], const char* name) {
     destination[CAR_NAME_MAX_LENGTH] = '\0';
 }
 
-// Clamp friction to [0, FIXED_ONE]
+/**
+ * Function: clamp_friction
+ * -------------------------
+ * Clamps friction value to valid range [0, FIXED_ONE].
+ */
 static Q16_8 clamp_friction(Q16_8 friction) {
     if (friction < 0) {
         return 0;
@@ -30,7 +65,11 @@ static Q16_8 clamp_friction(Q16_8 friction) {
     return friction;
 }
 
-// Build a velocity vector from the car's current facing + speed magnitude
+/**
+ * Function: build_velocity
+ * -------------------------
+ * Builds a velocity vector from car's current facing angle and speed magnitude.
+ */
 static Vec2 build_velocity(const Car* car) {
     if (car == NULL || car->speed == 0) {
         return Vec2_Zero();
@@ -39,7 +78,12 @@ static Vec2 build_velocity(const Car* car) {
     return Vec2_Scale(forward, car->speed);
 }
 
-// Convert a velocity vector into internal speed/angle representation
+/**
+ * Function: apply_velocity
+ * -------------------------
+ * Converts a velocity vector into the car's internal speed/angle representation.
+ * Speed is capped to maxSpeed.
+ */
 static void apply_velocity(Car* car, Vec2 velocity) {
     if (car == NULL) {
         return;
@@ -59,9 +103,14 @@ static void apply_velocity(Car* car, Vec2 velocity) {
 }
 
 //=============================================================================
-// Lifecycle
+// Public API - Lifecycle Management
 //=============================================================================
 
+/**
+ * Function: Car_Init
+ * ------------------
+ * Initializes a car with starting position, name, and physics parameters.
+ */
 void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelRate,
               Q16_8 friction) {
     if (car == NULL) {
@@ -81,6 +130,12 @@ void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelR
     copy_name(car->carname, name);
 }
 
+/**
+ * Function: Car_Reset
+ * -------------------
+ * Resets car to spawn position with zeroed race state. Preserves physics
+ * parameters and car name.
+ */
 void Car_Reset(Car* car, Vec2 spawnPos) {
     if (car == NULL) {
         return;
@@ -93,16 +148,18 @@ void Car_Reset(Car* car, Vec2 spawnPos) {
     car->rank = 0;
     car->lastCheckpoint = -1;
     car->item = ITEM_NONE;
-    // Note: We intentionally do NOT reset maxSpeed, accelRate, friction, or carname
-    // These are car properties that should persist across resets
+    // Note: maxSpeed, accelRate, friction, and carname persist across resets
 }
 
 //=============================================================================
-// Physics Control
+// Public API - Physics Control
 //=============================================================================
 
-// Accelerate in the direction the car is facing (angle512).
-// This allows acceleration from standstill in any direction.
+/**
+ * Function: Car_Accelerate
+ * -------------------------
+ * Increases car speed by accelRate in the current facing direction.
+ */
 void Car_Accelerate(Car* car) {
     if (car == NULL) {
         return;
@@ -116,7 +173,11 @@ void Car_Accelerate(Car* car) {
     }
 }
 
-// Brake reduces speed along the current facing direction.
+/**
+ * Function: Car_Brake
+ * -------------------
+ * Decreases car speed by accelRate. Speed cannot go negative.
+ */
 void Car_Brake(Car* car) {
     if (car == NULL) {
         return;
@@ -134,8 +195,12 @@ void Car_Brake(Car* car) {
     car->speed -= car->accelRate;
 }
 
-// Steering rotates the car's facing angle.
-// Movement direction always follows the facing since speed is scalar.
+/**
+ * Function: Car_Steer
+ * -------------------
+ * Rotates the car's facing angle. Movement direction follows the facing
+ * angle since speed is scalar.
+ */
 void Car_Steer(Car* car, int deltaAngle512) {
     if (car == NULL) {
         return;
@@ -145,8 +210,12 @@ void Car_Steer(Car* car, int deltaAngle512) {
     car->angle512 = (car->angle512 + deltaAngle512) & ANGLE_MASK;
 }
 
-// Update integrates speed/angle into position and applies friction + speed cap.
-// Call this once per physics tick (e.g., 60Hz).
+/**
+ * Function: Car_Update
+ * --------------------
+ * Updates car physics for one frame. Applies friction, snaps low speeds to
+ * zero, and integrates velocity into position. Call once per physics tick (60Hz).
+ */
 void Car_Update(Car* car) {
     if (car == NULL) {
         return;
@@ -172,11 +241,14 @@ void Car_Update(Car* car) {
 }
 
 //=============================================================================
-// Read-Only Queries
+// Public API - Read-Only Queries
 //=============================================================================
 
-// Returns the car's facing angle (not velocity direction)
-// Use this for sprite rotation
+/**
+ * Function: Car_GetAngle
+ * ----------------------
+ * Returns the car's facing angle for sprite rotation.
+ */
 int Car_GetAngle(const Car* car) {
     if (car == NULL) {
         return 0;
@@ -184,8 +256,12 @@ int Car_GetAngle(const Car* car) {
     return car->angle512;
 }
 
-// Get the car's current movement direction (for debugging/display)
-// With scalar speed, this matches angle512 whenever the car is moving.
+/**
+ * Function: Car_GetVelocityAngle
+ * -------------------------------
+ * Returns the car's movement direction. With scalar speed, this matches
+ * the facing angle when moving.
+ */
 int Car_GetVelocityAngle(const Car* car) {
     if (car == NULL) {
         return 0;
@@ -193,7 +269,11 @@ int Car_GetVelocityAngle(const Car* car) {
     return car->angle512;
 }
 
-// Check if car is moving (speed above threshold)
+/**
+ * Function: Car_IsMoving
+ * ----------------------
+ * Checks if car speed is above the movement threshold.
+ */
 bool Car_IsMoving(const Car* car) {
     if (car == NULL) {
         return false;
@@ -201,7 +281,11 @@ bool Car_IsMoving(const Car* car) {
     return car->speed > MIN_MOVING_SPEED;
 }
 
-// Get current speed (magnitude of velocity)
+/**
+ * Function: Car_GetSpeed
+ * ----------------------
+ * Returns the car's current speed magnitude.
+ */
 Q16_8 Car_GetSpeed(const Car* car) {
     if (car == NULL) {
         return 0;
@@ -210,9 +294,14 @@ Q16_8 Car_GetSpeed(const Car* car) {
 }
 
 //=============================================================================
-// Special Operations
+// Public API - Special Operations
 //=============================================================================
 
+/**
+ * Function: Car_SetPosition
+ * -------------------------
+ * Directly sets car position for respawn/teleport effects.
+ */
 void Car_SetPosition(Car* car, Vec2 pos) {
     if (car == NULL) {
         return;
@@ -220,9 +309,12 @@ void Car_SetPosition(Car* car, Vec2 pos) {
     car->position = pos;
 }
 
-// Set speed/angle directly from a velocity vector (use with caution - prefer
-// Accelerate/Brake/Steer). Useful for external forces like boosts, collisions,
-// or hazards.
+/**
+ * Function: Car_SetVelocity
+ * -------------------------
+ * Sets car speed and direction from a velocity vector. Use for boosts,
+ * collisions, and hazard effects. Speed is capped to maxSpeed.
+ */
 void Car_SetVelocity(Car* car, Vec2 velocity) {
     if (car == NULL) {
         return;
@@ -230,8 +322,12 @@ void Car_SetVelocity(Car* car, Vec2 velocity) {
     apply_velocity(car, velocity);
 }
 
-// Apply an impulse (instant velocity change)
-// Useful for collisions, item effects, etc.
+/**
+ * Function: Car_ApplyImpulse
+ * --------------------------
+ * Applies an instant velocity change to the car. Useful for collision
+ * responses and item effects. Speed is capped to maxSpeed.
+ */
 void Car_ApplyImpulse(Car* car, Vec2 impulse) {
     if (car == NULL) {
         return;
@@ -241,8 +337,12 @@ void Car_ApplyImpulse(Car* car, Vec2 impulse) {
     apply_velocity(car, newVelocity);
 }
 
-// Set the car's facing angle directly. Movement direction will follow this
-// angle on the next update since speed is scalar.
+/**
+ * Function: Car_SetAngle
+ * ----------------------
+ * Directly sets car facing angle. Movement direction will follow this angle
+ * on the next update. Use for spawning and respawn orientation.
+ */
 void Car_SetAngle(Car* car, int angle512) {
     if (car == NULL) {
         return;
@@ -251,9 +351,14 @@ void Car_SetAngle(Car* car, int angle512) {
 }
 
 //=============================================================================
-// Game Events
+// Public API - Game Events
 //=============================================================================
 
+/**
+ * Function: Car_LapComplete
+ * -------------------------
+ * Increments the car's lap counter when a lap is completed.
+ */
 void Car_LapComplete(Car* car) {
     if (car == NULL) {
         return;

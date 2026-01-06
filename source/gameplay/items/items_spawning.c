@@ -1,3 +1,15 @@
+/**
+ * File: items_spawning.c
+ * ----------------------
+ * Description: Item spawning logic for projectiles and hazards. Manages track
+ *              item creation, initialization, network synchronization, and
+ *              shooter immunity for multiplayer safety.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "items_internal.h"
 #include "items_api.h"
 #include "item_navigation.h"
