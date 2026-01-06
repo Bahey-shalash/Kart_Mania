@@ -1,8 +1,22 @@
-//=============================================================================
-// wall_collision.c
-//=============================================================================
+/**
+ * File: wall_collision.c
+ * ----------------------
+ * Description: Implementation of wall collision detection for racing track
+ *              boundaries. Contains pre-defined wall geometry for all 9 track
+ *              quadrants in global coordinates. Performs circle-to-segment
+ *              collision tests and computes bounce normals for physics.
+ *
+ * Authors: Bahey Shalash, Hugo Svolgaard
+ * Version: 1.0
+ * Date: 06.01.2026
+ */
+
 #include "wall_collision.h"
-// HUGO------
+
+//=============================================================================
+// PRIVATE WALL GEOMETRY DATA
+//=============================================================================
+
 // TL Quadrant (offset: 0, 0) - walls already in correct global coords
 static const WallSegment walls_TL[] = {
     {WALL_VERTICAL, 8, 0, 512},        // good
@@ -121,11 +135,27 @@ static const QuadrantWalls quadrantWalls[9] = {
     {walls_BR, sizeof(walls_BR) / sizeof(WallSegment)}};
 
 //=============================================================================
-// Collision Detection
+// PRIVATE HELPER FUNCTIONS
 //=============================================================================
 
-static inline bool segmentCollision(const WallSegment* wall, int carX, int carY,
-                                    int radius) {
+/**
+ * Tests if a circular kart hitbox collides with an axis-aligned wall segment.
+ *
+ * Algorithm:
+ *   1. Calculate perpendicular distance from circle center to wall line
+ *   2. Early-reject if distance > radius
+ *   3. Check if circle's projection onto wall's variable axis overlaps range
+ *
+ * Parameters:
+ *   wall   - Wall segment to test against
+ *   carX   - Kart center X coordinate
+ *   carY   - Kart center Y coordinate
+ *   radius - Kart collision radius
+ *
+ * Returns: true if collision detected, false otherwise
+ */
+static inline bool Wall_SegmentCollision(const WallSegment* wall, int carX, int carY,
+                                          int radius) {
     if (wall->type == WALL_HORIZONTAL) {
         int distY = (carY > wall->fixed_coord) ? (carY - wall->fixed_coord)
                                                : (wall->fixed_coord - carY);
@@ -141,6 +171,10 @@ static inline bool segmentCollision(const WallSegment* wall, int carX, int carY,
     }
 }
 
+//=============================================================================
+// PUBLIC API
+//=============================================================================
+
 bool Wall_CheckCollision(int carX, int carY, int carRadius, QuadrantID quad) {
     if (quad < QUAD_TL || quad > QUAD_BR)
         return false;
@@ -148,7 +182,7 @@ bool Wall_CheckCollision(int carX, int carY, int carRadius, QuadrantID quad) {
     const QuadrantWalls* walls = &quadrantWalls[quad];
 
     for (int i = 0; i < walls->count; i++) {
-        if (segmentCollision(&walls->segments[i], carX, carY, carRadius)) {
+        if (Wall_SegmentCollision(&walls->segments[i], carX, carY, carRadius)) {
             return true;
         }
     }
