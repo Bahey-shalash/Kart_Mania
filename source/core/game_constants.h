@@ -92,6 +92,8 @@
 // Projectile spawn offsets (in pixels)
 #define PROJECTILE_SPAWN_OFFSET 30  // Distance ahead of car to spawn projectiles
 #define HAZARD_DROP_OFFSET 40       // Distance behind car to drop hazards
+#define BANANA_DROP_OFFSET 35
+#define BOMB_DROP_OFFSET 35
 
 // Collision detection
 #define CAR_COLLISION_SIZE 32     // Car hitbox size for item collision

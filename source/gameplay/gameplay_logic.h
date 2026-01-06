@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "Car.h"
-#include "items/Items.h"
+#include "items/items_api.h"
 #include "../core/game_types.h"
 #include "wall_collision.h"
 

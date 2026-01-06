@@ -3,7 +3,7 @@
 
 #include <nds.h>
 
-#include "items/Items.h"
+#include "items/items_api.h"
 #include "../core/game_constants.h"
 #include "../network/multiplayer.h"
 #include "terrain_detection.h"

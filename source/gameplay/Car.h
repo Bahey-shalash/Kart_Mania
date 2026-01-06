@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include "items/Items.h"
+#include "items/items_types.h"
 #include "../math/fixedmath.h"
 
 //=============================================================================
