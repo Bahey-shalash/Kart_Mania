@@ -45,30 +45,28 @@
 #define MISSILE_HITBOX_W 16
 #define MISSILE_HITBOX_H 32
 
-// Probability distributions by rank
-static const ItemProbability ITEM_PROBABILITIES[8] = {
-    // 1st place - Defensive tilt, more negative mushrooms (no missile)
-    {17, 18, 5, 15, 10, 0, 15, 20},
+// Probability distributions by rank - Single Player (only banana/oil/mushroom/speed)
+static const ItemProbability ITEM_PROBABILITIES_SP[8] = {
+    {35, 35, 0, 0, 0, 0, 15, 15},  // 1st
+    {30, 30, 0, 0, 0, 0, 20, 20},  // 2nd
+    {25, 25, 0, 0, 0, 0, 20, 30},  // 3rd
+    {20, 20, 0, 0, 0, 0, 20, 40},  // 4th
+    {18, 18, 0, 0, 0, 0, 19, 45},  // 5th
+    {15, 15, 0, 0, 0, 0, 20, 50},  // 6th
+    {12, 12, 0, 0, 0, 0, 21, 55},  // 7th
+    {10, 10, 0, 0, 0, 0, 25, 55}   // 8th+
+};
 
-    // 2nd place - Mostly defensive, more mushrooms up front
-    {17, 17, 5, 16, 12, 0, 13, 20},
-
-    // 3rd place - Balanced with extra mushrooms
-    {15, 15, 5, 15, 15, 0, 12, 23},
-
-    // 4th place - Slightly offensive
-    {13, 13, 5, 17, 17, 0, 10, 25},
-
-    // 5th place - Offensive
-    {12, 12, 5, 18, 18, 0, 10, 25},
-
-    // 6th place - More offensive
-    {10, 10, 5, 18, 18, 0, 14, 25},
-
-    // 7th place - Very offensive (still no missile)
-    {8, 8, 5, 18, 18, 0, 18, 25},
-
-    // 8th+ place - Maximum offense with rare missile
-    {7, 7, 5, 17, 17, 5, 17, 25}};
+// Probability distributions by rank - Multiplayer (full set)
+static const ItemProbability ITEM_PROBABILITIES_MP[8] = {
+    {17, 18, 5, 15, 10, 0, 15, 20},  // 1st
+    {17, 17, 5, 16, 12, 0, 13, 20},  // 2nd
+    {15, 15, 5, 15, 15, 0, 12, 23},  // 3rd
+    {13, 13, 5, 17, 17, 0, 10, 25},  // 4th
+    {12, 12, 5, 18, 18, 0, 10, 25},  // 5th
+    {10, 10, 5, 18, 18, 0, 14, 25},  // 6th
+    {8, 8, 5, 18, 18, 0, 18, 25},    // 7th
+    {7, 7, 5, 17, 17, 5, 17, 25}     // 8th+
+};
 
 #endif  // ITEMS_CONSTANTS_H

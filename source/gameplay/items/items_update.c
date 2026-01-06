@@ -69,6 +69,9 @@ void Items_Update(void) {
         if (item->lifetime_ticks > 0) {
             item->lifetime_ticks--;
             if (item->lifetime_ticks <= 0) {
+                if (item->type == ITEM_BOMB) {
+                    explodeBomb(item->position, raceState->cars, raceState->carCount);
+                }
                 item->active = false;
                 continue;
             }
@@ -308,16 +311,7 @@ static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
 }
 
 static void checkHazardCollision(TrackItem* item, Car* cars, int carCount) {
-    // Get race state to check if we're in multiplayer mode
-    const RaceState* state = Race_GetState();
-    bool isMultiplayer = (state->gameMode == MultiPlayer);
-
     for (int i = 0; i < carCount; i++) {
-        // In multiplayer, only check collision for connected players
-        if (isMultiplayer && !Multiplayer_IsPlayerConnected(i)) {
-            continue;
-        }
-
         if (checkItemCarCollision(item->position, cars[i].position,
                                   item->hitbox_width)) {
             // Apply hazard effect based on item type
@@ -354,21 +348,13 @@ static void checkHazardCollision(TrackItem* item, Car* cars, int carCount) {
 }
 
 static void explodeBomb(Vec2 position, Car* cars, int carCount) {
-    // Get race state to check if we're in multiplayer mode
-    const RaceState* state = Race_GetState();
-    bool isMultiplayer = (state->gameMode == MultiPlayer);
-
     for (int i = 0; i < carCount; i++) {
-        // In multiplayer, only check collision for connected players
-        if (isMultiplayer && !Multiplayer_IsPlayerConnected(i)) {
-            continue;
-        }
-
         Q16_8 dist = Vec2_Distance(position, cars[i].position);
 
         if (dist <= BOMB_EXPLOSION_RADIUS) {
             // Stop car completely
             cars[i].speed = 0;
+            cars[i].angle512 = (cars[i].angle512 + ANGLE_HALF) & ANGLE_MASK;  // 180° flip
 
             // Knockback away from bomb
             Vec2 knockbackDir = Vec2_Sub(cars[i].position, position);

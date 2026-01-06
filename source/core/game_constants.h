@@ -109,7 +109,8 @@
 // Projectile & hazard lifetimes (in seconds)
 #define PROJECTILE_LIFETIME_SECONDS \
     20                             // Max lifetime for green/red shells and missiles
-#define BOMB_LIFETIME_SECONDS 5    // Time until bomb auto-explodes
+#define BOMB_LIFETIME_SECONDS 2    // Time until bomb auto-explodes
+#define BANANA_LIFETIME_SECONDS 30  // Bananas despawn after 30 seconds
 #define ITEM_LIFETIME_INFINITE -1  // Marker for items that never expire
 
 //=============================================================================

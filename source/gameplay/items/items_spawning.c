@@ -117,7 +117,7 @@ void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork) {
         item->hitbox_height = BOMB_HITBOX;
         item->gfx = bombGfx;
     } else if (type == ITEM_BANANA) {
-        item->lifetime_ticks = ITEM_LIFETIME_INFINITE;
+        item->lifetime_ticks = BANANA_LIFETIME_SECONDS * RACE_TICK_FREQ;
         item->hitbox_width = BANANA_HITBOX;
         item->hitbox_height = BANANA_HITBOX;
         item->gfx = bananaGfx;

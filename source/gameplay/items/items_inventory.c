@@ -119,7 +119,11 @@ Item Items_GetRandomItem(int playerRank) {
     if (rankIndex >= 8)
         rankIndex = 7;
 
-    const ItemProbability* prob = &ITEM_PROBABILITIES[rankIndex];
+    const RaceState* state = Race_GetState();
+    const ItemProbability* table =
+        (state && state->gameMode == MultiPlayer) ? ITEM_PROBABILITIES_MP
+                                                  : ITEM_PROBABILITIES_SP;
+    const ItemProbability* prob = &table[rankIndex];
 
     // Calculate total probability
     int total = prob->banana + prob->oil + prob->bomb + prob->greenShell +
