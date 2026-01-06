@@ -18,6 +18,7 @@ include $(DEVKITARM)/ds_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	$(shell basename $(CURDIR))
 BUILD		:=	build
+BUILD_MODE	?=	release  # Set BUILD_MODE=debug for -O0 builds
 SOURCES 	:= 	$(shell [ -d source ] && find source -type d) # source folder + all directories inside it
 DATA		:=
 INCLUDES	:=	include
@@ -30,7 +31,13 @@ PRECOMPILED := 	precompiled
 #---------------------------------------------------------------------------------
 ARCH	:=	-mthumb-interwork
 
-CFLAGS	:=	-g -Wall -O0\
+ifeq ($(BUILD_MODE),debug)
+OPT_FLAGS := -O0
+else
+OPT_FLAGS := -O3
+endif
+
+CFLAGS	:=	-g -Wall $(OPT_FLAGS)\
  		-march=armv5te -mtune=arm946e-s -fomit-frame-pointer\
 		-ffast-math \
 		$(ARCH)
