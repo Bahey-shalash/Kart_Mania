@@ -16,20 +16,25 @@ The context is implemented as a singleton pattern in [context.c](../source/core/
 
 ### GameContext Structure
 
-The `GameContext` struct ([context.h:19-25](../source/core/context.h#L19-L25)) contains:
+The `GameContext` struct ([context.h:34-44](../source/core/context.h#L34-L44)) contains:
 
 ```c
 typedef struct {
-    UserSettings userSettings;     // WiFi, music, sound FX toggles
-    GameState currentGameState;    // Current screen (HOME_PAGE, GAMEPLAY, etc.)
-    Map SelectedMap;               // Selected map for gameplay
-    bool isMultiplayerMode;        // Singleplayer vs multiplayer mode
+    struct {
+        bool wifiEnabled;
+        bool musicEnabled;
+        bool soundFxEnabled;
+    } userSettings;               // Inline struct (no standalone UserSettings typedef)
+
+    GameState currentGameState;   // Current screen (HOME_PAGE, GAMEPLAY, etc.)
+    Map SelectedMap;              // Selected map for gameplay
+    bool isMultiplayerMode;       // Singleplayer vs multiplayer mode
 } GameContext;
 ```
 
 #### UserSettings
 
-User preferences that persist across state transitions:
+User preferences that persist across state transitions (stored as an inline struct inside `GameContext`, not a separate typedef):
 - **wifiEnabled**: WiFi/multiplayer preference (see wifi.md for implementation details)
 - **musicEnabled**: Background music toggle
 - **soundFxEnabled**: Sound effects toggle
@@ -37,7 +42,7 @@ User preferences that persist across state transitions:
 #### Game State
 
 - **currentGameState**: Current screen/mode from `GameState` enum (HOME_PAGE, MAPSELECTION, GAMEPLAY, PLAYAGAIN)
-- **SelectedMap**: Map chosen for racing from `Map` enum (MAP1, MAP2, MAP3, etc.)
+- **SelectedMap**: Map chosen for racing from `Map` enum (`ScorchingSands`, `AlpinRush`, `NeonCircuit`, `NONEMAP`)
 - **isMultiplayerMode**: Whether the current session is multiplayer or singleplayer
 
 ## Context Access
@@ -129,7 +134,7 @@ GameContext_SetWifiEnabled(false);  // User disabled WiFi in settings
 Sets or retrieves the currently selected map for gameplay.
 
 ```c
-GameContext_SetMap(MAP1);
+GameContext_SetMap(ScorchingSands);
 Map currentMap = GameContext_GetMap();
 ```
 

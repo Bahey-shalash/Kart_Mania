@@ -18,7 +18,7 @@ The **Gameplay** module handles all graphics rendering and visual updates for th
 - **Quadrant Loading**: Dynamically load 256×256 pixel track sections to conserve VRAM
 - **Sprite Rendering**: Render player kart(s) and items with rotation
 - **Sub-Screen Display**: Show lap counter, race timer, and current item
-- **Countdown Display**: Render "3, 2, 1, GO!" sequence before race starts
+- **Countdown Display**: Render "3, 2, 1, 0" sequence before race starts
 - **Final Time Display**: Show final race time and personal best for 2.5 seconds after finish
 
 ---
@@ -58,7 +58,7 @@ VBlank (60 Hz)
     │       │
     │       ├─► Race finished? → Display final time (2.5s)
     │       │
-    │       ├─► Countdown active? → Render countdown (3/2/1/GO)
+    │       ├─► Countdown active? → Render countdown (3/2/1/0)
     │       │       │
     │       │       └─► Update camera, render cars, no physics
     │       │
@@ -119,7 +119,7 @@ VBlank interrupt handler for all rendering updates (60 Hz).
 **Renders:**
 - Camera scroll (follows player kart)
 - Quadrant loading and switching
-- Countdown display (3, 2, 1, GO!)
+- Countdown display (3, 2, 1, 0)
 - Kart sprites (single or multiplayer)
 - Items on track
 - Final time display (2.5 seconds after finish)
@@ -390,7 +390,7 @@ static void Gameplay_RenderMultiplayerCars(const RaceState* state) {
 
 ### Countdown System
 
-Before the race starts, a countdown is displayed: **3 → 2 → 1 → GO!**
+Before the race starts, a countdown is displayed: **3 → 2 → 1 → 0**
 
 ```c
 static void Gameplay_RenderCountdown(CountdownState state) {
@@ -417,7 +417,7 @@ static void Gameplay_RenderCountdown(CountdownState state) {
             Gameplay_PrintDigit(map, 1, centerX, centerY);
             break;
         case COUNTDOWN_GO:
-            Gameplay_PrintDigit(map, 0, centerX, centerY);  // "GO!" graphic
+            Gameplay_PrintDigit(map, 0, centerX, centerY);  // "0" graphic
             break;
         case COUNTDOWN_FINISHED:
             break;
@@ -508,7 +508,7 @@ void Gameplay_OnVBlank(void) {
         return;
     }
 
-    // Phase 2: Countdown (3, 2, 1, GO!)
+    // Phase 2: Countdown (3, 2, 1, 0)
     if (Race_IsCountdownActive()) {
         Race_UpdateCountdown();
         Gameplay_RenderCountdown(Race_GetCountdownState());

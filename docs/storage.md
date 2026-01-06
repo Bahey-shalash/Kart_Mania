@@ -8,7 +8,7 @@ The storage module provides persistent storage for game settings and personal be
 - **FAT Filesystem Integration**: Uses libnds FAT library for SD card access
 - **User Settings**: WiFi, music, and sound FX toggles persisted across sessions
 - **Personal Best Times**: Per-map lap time records with automatic record detection
-- **Factory Reset**: Restore default settings with START+SELECT+A combo
+- **Factory Reset**: Restore default settings by holding START+SELECT while pressing Save
 - **No Side Effects**: Storage operations only update data structures, callers apply changes
 - **Directory Structure**: Organized `/kart-mania/` directory with separate files
 
@@ -206,7 +206,7 @@ Resets settings.txt to factory defaults and reloads into GameContext.
 - Music: Enabled (1)
 - Sound FX: Enabled (1)
 
-**Triggered by:** START+SELECT+A on Settings screen Save button
+**Triggered by:** Holding START+SELECT while pressing Save on the Settings screen
 
 **Returns:**
 - `true` - Reset successful, defaults loaded into context
@@ -214,7 +214,7 @@ Resets settings.txt to factory defaults and reloads into GameContext.
 
 **Example Usage:**
 ```c
-// In Settings screen when START+SELECT+A pressed on Save button
+// In Settings screen when START+SELECT is held while Save is activated
 if (keysHeld() & KEY_START && keysHeld() & KEY_SELECT && keysDown() & KEY_A) {
     if (Storage_ResetToDefaults()) {
         iprintf("Settings reset to defaults\n");
@@ -492,7 +492,7 @@ int main(void) {
 // In Settings_OnSavePressed() function
 GameContext* ctx = GameContext_Get();
 
-// Check for factory reset combo: START+SELECT+A
+// Check for factory reset combo: START+SELECT held
 if (keysHeld() & KEY_START && keysHeld() & KEY_SELECT && keysDown() & KEY_A) {
     // Factory reset
     if (Storage_ResetToDefaults()) {
@@ -598,7 +598,7 @@ if (ctx->userSettings.wifiEnabled && user_wants_wifi) {
 
 ### Factory Reset Security
 
-**START+SELECT+A combo prevents accidental resets:**
+**Holding START+SELECT during Save prevents accidental resets:**
 - Requires three buttons pressed simultaneously
 - Must be on Save button
 - Unlikely to trigger accidentally

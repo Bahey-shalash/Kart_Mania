@@ -17,7 +17,7 @@ The implementation is in [state_machine.c](../source/core/state_machine.c) and [
 
 ### Game States
 
-The `GameState` enum ([game_types.h:9-17](../source/core/game_types.h#L9-L17)) defines all possible screens:
+The `GameState` enum ([game_types.h:36-44](../source/core/game_types.h#L36-L44)) defines all possible screens:
 
 ```c
 typedef enum {
@@ -45,7 +45,7 @@ The state machine exposes three public functions:
 
 **Signature:** `GameState StateMachine_Update(GameState state)`
 **Defined in:** [state_machine.c:30-54](../source/core/state_machine.c#L30-L54)
-**Called from:** [main.c:31](../source/core/main.c#L31)
+**Called from:** [main.c:32](../source/core/main.c#L32)
 
 Dispatches to the current state's update function. Each state processes input, updates logic, and returns the next state.
 
@@ -53,12 +53,12 @@ Dispatches to the current state's update function. Each state processes input, u
 
 | State | Handler | Returns |
 |-------|---------|---------|
-| HOME_PAGE | `HomePage_update()` ([state_machine.c:34](../source/core/state_machine.c#L34)) | MAPSELECTION, MULTIPLAYER_LOBBY, SETTINGS, or HOME_PAGE |
-| REINIT_HOME | `HomePage_update()` ([state_machine.c:34](../source/core/state_machine.c#L34)) | Same as HOME_PAGE |
-| SETTINGS | `Settings_update()` ([state_machine.c:37](../source/core/state_machine.c#L37)) | HOME_PAGE or SETTINGS |
-| MAPSELECTION | `Map_selection_update()` ([state_machine.c:40](../source/core/state_machine.c#L40)) | GAMEPLAY, HOME_PAGE, or MAPSELECTION |
+| HOME_PAGE | `HomePage_Update()` ([state_machine.c:34](../source/core/state_machine.c#L34)) | MAPSELECTION, MULTIPLAYER_LOBBY, SETTINGS, or HOME_PAGE |
+| REINIT_HOME | `HomePage_Update()` ([state_machine.c:34](../source/core/state_machine.c#L34)) | Same as HOME_PAGE |
+| SETTINGS | `Settings_Update()` ([state_machine.c:37](../source/core/state_machine.c#L37)) | HOME_PAGE or SETTINGS |
+| MAPSELECTION | `MapSelection_Update()` ([state_machine.c:40](../source/core/state_machine.c#L40)) | GAMEPLAY, HOME_PAGE, or MAPSELECTION |
 | MULTIPLAYER_LOBBY | `MultiplayerLobby_Update()` ([state_machine.c:43](../source/core/state_machine.c#L43)) | GAMEPLAY, HOME_PAGE, or MULTIPLAYER_LOBBY |
-| GAMEPLAY | `Gameplay_update()` ([state_machine.c:46](../source/core/state_machine.c#L46)) | PLAYAGAIN or GAMEPLAY |
+| GAMEPLAY | `Gameplay_Update()` ([state_machine.c:46](../source/core/state_machine.c#L46)) | PLAYAGAIN or GAMEPLAY |
 | PLAYAGAIN | `PlayAgain_Update()` ([state_machine.c:49](../source/core/state_machine.c#L49)) | GAMEPLAY, HOME_PAGE, or PLAYAGAIN |
 | Unknown | No handler ([state_machine.c:52](../source/core/state_machine.c#L52)) | Same state (stay) |
 
@@ -75,7 +75,7 @@ Dispatches to the current state's update function. Each state processes input, u
 
 **Signature:** `void StateMachine_Init(GameState state)`
 **Defined in:** [state_machine.c:60-87](../source/core/state_machine.c#L60-L87)
-**Called from:** [main.c:38](../source/core/main.c#L38) (transitions) and [init.c:96](../source/core/init.c#L96) (startup)
+**Called from:** [main.c:39](../source/core/main.c#L39) (transitions) and [init.c:97](../source/core/init.c#L97) (startup)
 
 Initializes graphics, timers, and resources for a state being entered.
 
@@ -83,12 +83,12 @@ Initializes graphics, timers, and resources for a state being entered.
 
 | State | Handler | Initializes |
 |-------|---------|-------------|
-| HOME_PAGE | `HomePage_initialize()` ([state_machine.c:64](../source/core/state_machine.c#L64)) | Main menu backgrounds, kart sprites, VBlank timer |
-| REINIT_HOME | `HomePage_initialize()` ([state_machine.c:64](../source/core/state_machine.c#L64)) | Same as HOME_PAGE (full reinit) |
-| MAPSELECTION | `Map_Selection_initialize()` ([state_machine.c:68](../source/core/state_machine.c#L68)) | Map preview graphics, cloud animations, VBlank timer |
+| HOME_PAGE | `HomePage_Initialize()` ([state_machine.c:64](../source/core/state_machine.c#L64)) | Main menu backgrounds, kart sprites, VBlank timer |
+| REINIT_HOME | `HomePage_Initialize()` ([state_machine.c:64](../source/core/state_machine.c#L64)) | Same as HOME_PAGE (full reinit) |
+| MAPSELECTION | `MapSelection_Initialize()` ([state_machine.c:68](../source/core/state_machine.c#L68)) | Map preview graphics, cloud animations, VBlank timer |
 | MULTIPLAYER_LOBBY | `MultiplayerLobby_Init()` ([state_machine.c:72](../source/core/state_machine.c#L72)) | Lobby UI, player list, WiFi connection status |
-| GAMEPLAY | `Graphical_Gameplay_initialize()` ([state_machine.c:76](../source/core/state_machine.c#L76)) | Map graphics, kart sprites, race timers (TIMER0/TIMER1) |
-| SETTINGS | `Settings_initialize()` ([state_machine.c:80](../source/core/state_machine.c#L80)) | Settings UI, toggle states from context |
+| GAMEPLAY | `Gameplay_Initialize()` ([state_machine.c:76](../source/core/state_machine.c#L76)) | Map graphics, kart sprites, race timers (TIMER0/TIMER1) |
+| SETTINGS | `Settings_Initialize()` ([state_machine.c:80](../source/core/state_machine.c#L80)) | Settings UI, toggle states from context |
 | PLAYAGAIN | `PlayAgain_Initialize()` ([state_machine.c:84](../source/core/state_machine.c#L84)) | Results screen, final time display |
 
 **Per-State Details:**
@@ -138,7 +138,7 @@ Initializes graphics, timers, and resources for a state being entered.
 
 **Signature:** `void StateMachine_Cleanup(GameState state, GameState nextState)`
 **Defined in:** [state_machine.c:93-133](../source/core/state_machine.c#L93-L133)
-**Called from:** [main.c:35](../source/core/main.c#L35)
+**Called from:** [main.c:36](../source/core/main.c#L36)
 
 Cleans up resources for the state being exited. The cleanup function receives both the current state and the destination state (`nextState`) to make conditional cleanup decisions.
 
@@ -291,7 +291,7 @@ The state machine carefully manages WiFi connections to enable multiplayer recon
 States request transitions by returning a different `GameState`:
 
 ```c
-GameState HomePage_update(void) {
+GameState HomePage_Update(void) {
     // Handle input
     if (touchInSingleplayerButton()) {
         return MAPSELECTION;  // Transition to map selection

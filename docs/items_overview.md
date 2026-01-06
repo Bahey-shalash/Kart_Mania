@@ -11,7 +11,7 @@ The items system implements a Mario Kart-style power-up system for Kart Mania. P
 - **Location:** `source/gameplay/items/`
 - **Files:** 13 files (5 headers, 8 implementation files)
 - **Max Active Items:** 32 simultaneous track items
-- **Max Item Boxes:** 8 per map
+- **Max Item Boxes:** 6 on Scorching Sands (current map)
 - **Supported Maps:** Scorching Sands (others TODO)
 - **Multiplayer:** Full network synchronization support
 

@@ -10,7 +10,7 @@ The system is implemented in [settings.c](../source/ui/settings.c) and [settings
 - Visual toggle pills showing ON (green) / OFF (red) states
 - Dual input support: D-pad navigation and direct touch selection
 - Persistent storage integration (save settings to flash memory)
-- Factory reset via START+SELECT+A combo on Save button
+- Factory reset by holding START+SELECT while pressing Save
 - Immediate audio feedback (settings applied instantly)
 - Gray selection highlighting for current focus
 
@@ -102,7 +102,7 @@ User navigates → Update highlight (deselect old, select new)
    ↓
 User confirms (A button or touch release):
    - Toggle buttons → Flip state, update visual, play sound
-   - Save button → Save to storage (or factory reset if START+SELECT held)
+- Save button → Save to storage (or factory reset if START+SELECT held)
    - Back/Home → Return to HOME_PAGE state
 ```
 
@@ -152,7 +152,7 @@ Updates the Settings screen every frame. Handles input and returns the next game
 - **D-Pad Left/Right**: Navigate between bottom row buttons (Save/Back/Home only)
 - **Touch**: Direct selection by touching button areas (both labels and pills)
 - **A Button**: Activate selected button (toggle setting or perform action)
-- **START+SELECT+A on Save**: Factory reset all settings to defaults
+- **START+SELECT held on Save**: Factory reset all settings to defaults
 
 **Return Values:**
 
@@ -491,7 +491,7 @@ static void Settings_OnSavePressed(void) {
 ```
 
 **User Experience:**
-The factory reset combo (START+SELECT+A) requires deliberate three-button input, preventing accidental resets while remaining discoverable for power users.
+The factory reset combo (holding START+SELECT while activating Save) requires deliberate input, preventing accidental resets while remaining discoverable for power users.
 
 ## Usage Patterns
 
@@ -538,7 +538,7 @@ PlayDingSFX();
 ### Factory Reset
 
 ```c
-// User holds START+SELECT and presses A on Save button
+// User holds START+SELECT while activating Save (A button or touch release)
 Storage_ResetToDefaults();  // Context reset + flash write
 Settings_RefreshUI();        // Visuals updated + settings applied
 PlayDingSFX();

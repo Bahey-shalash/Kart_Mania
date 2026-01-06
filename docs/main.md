@@ -44,8 +44,8 @@ while (true) {
 ### InitGame Call
 
 **Function:** `InitGame()`
-**Defined in:** [init.c:84-97](../source/core/init.c#L84-L97)
-**Called at:** [main.c:21](../source/core/main.c#L21)
+**Defined in:** [init.c:85-98](../source/core/init.c#L85-L98)
+**Called at:** [main.c:22](../source/core/main.c#L22)
 
 Performs all one-time initialization before entering the game loop. See [init.md](init.md) for complete details on the initialization sequence.
 
@@ -70,7 +70,7 @@ The infinite loop runs at 60Hz, synchronized to the Nintendo DS vertical blank i
 ### WiFi Update (Critical)
 
 **Function:** `Wifi_Update()`
-**Called at:** [main.c:28](../source/core/main.c#L28)
+**Called at:** [main.c:29](../source/core/main.c#L29)
 **Frequency:** Every frame (60 times per second)
 
 **Purpose:** Pumps the DSWifi state machine to keep WiFi connections alive.
@@ -86,10 +86,10 @@ The infinite loop runs at 60Hz, synchronized to the Nintendo DS vertical blank i
 ### State Machine Update
 
 **Function:** `StateMachine_Update(GameState state)`
-**Called at:** [main.c:31](../source/core/main.c#L31)
+**Called at:** [main.c:32](../source/core/main.c#L32)
 **Returns:** Next GameState to transition to
 
-Dispatches to the current state's update function (e.g., `HomePage_update()`, `Gameplay_update()`, etc.). Each state processes input, updates logic, and returns either the same state (no transition) or a different state (transition requested).
+Dispatches to the current state's update function (e.g., `HomePage_Update()`, `Gameplay_Update()`, etc.). Each state processes input, updates logic, and returns either the same state (no transition) or a different state (transition requested).
 
 **See:** [state_machine.md](state_machine.md) for complete state machine documentation
 
@@ -106,7 +106,7 @@ When a state transition is detected, the loop performs a carefully ordered clean
 ```c
 StateMachine_Cleanup(ctx->currentGameState, nextState);
 ```
-**Line:** [main.c:35](../source/core/main.c#L35)
+**Line:** [main.c:36](../source/core/main.c#L36)
 
 Cleans up resources for the state being exited. The cleanup function knows which state is being entered (`nextState`) so it can conditionally preserve resources like WiFi connections when transitioning between multiplayer screens.
 
@@ -121,7 +121,7 @@ Cleans up resources for the state being exited. The cleanup function knows which
 ```c
 ctx->currentGameState = nextState;
 ```
-**Line:** [main.c:36](../source/core/main.c#L36)
+**Line:** [main.c:37](../source/core/main.c#L37)
 
 Updates the global context to reflect the new state. This is used by VBlank ISR routing (see [timer.md](timer.md)) and throughout the codebase to check the current screen.
 
@@ -129,7 +129,7 @@ Updates the global context to reflect the new state. This is used by VBlank ISR 
 ```c
 video_nuke();
 ```
-**Line:** [main.c:37](../source/core/main.c#L37)
+**Line:** [main.c:38](../source/core/main.c#L38)
 
 Clears all video memory (VRAM) to prevent graphical artifacts from the previous state bleeding into the new state. This ensures each state starts with a clean slate.
 
@@ -143,7 +143,7 @@ Clears all video memory (VRAM) to prevent graphical artifacts from the previous 
 ```c
 StateMachine_Init(nextState);
 ```
-**Line:** [main.c:38](../source/core/main.c#L38)
+**Line:** [main.c:39](../source/core/main.c#L39)
 
 Initializes graphics, timers, and resources for the new state.
 
@@ -157,7 +157,7 @@ Initializes graphics, timers, and resources for the new state.
 ### VBlank Synchronization
 
 **Function:** `swiWaitForVBlank()`
-**Called at:** [main.c:42](../source/core/main.c#L42)
+**Called at:** [main.c:43](../source/core/main.c#L43)
 **Frequency:** 60Hz
 
 Blocks execution until the next vertical blank interrupt, ensuring the game loop runs at exactly 60 frames per second.
@@ -181,7 +181,7 @@ Here's what happens in a single frame (1/60th of a second):
 Frame N:
 ├─ Wifi_Update()                    ← Pump WiFi firmware
 ├─ StateMachine_Update()            ← Run current state logic
-│  └─ (e.g., HomePage_update())
+│  └─ (e.g., HomePage_Update())
 │     ├─ Process touch input
 │     ├─ Update menu animations
 │     └─ Return next state
@@ -241,8 +241,8 @@ The centralized transition handling in `main()` provides important guarantees:
 States request transitions by returning a different `GameState` from their update function:
 
 ```c
-// In Homepage_update()
-GameState HomePage_update(void) {
+// In HomePage_Update()
+GameState HomePage_Update(void) {
     // Process input...
 
     if (singleplayerButtonPressed) {

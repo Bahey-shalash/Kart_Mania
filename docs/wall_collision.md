@@ -37,7 +37,7 @@ Example: {WALL_VERTICAL, 735, 8, 160}
 
 ### Quadrant System
 
-The 768×768 pixel race track is divided into 9 quadrants (3×3 grid):
+The 1024×1024 pixel race track is divided into 9 quadrants (3×3 grid). Each quadrant spans a 256px origin offset with 256px overlap (double-quadrant size 512px) to allow safe collision checks near edges:
 
 | Grid Position | Quadrant ID | Offset (X, Y) | Wall Count |
 |---------------|-------------|---------------|------------|
@@ -51,7 +51,7 @@ The 768×768 pixel race track is divided into 9 quadrants (3×3 grid):
 | Bottom-Center | QUAD_BC (7) | (256, 512) | 7 walls |
 | Bottom-Right | QUAD_BR (8) | (512, 512) | 5 walls |
 
-**Total Walls:** 69 segments across 9 quadrants
+**Total Walls:** 69 segments across 9 quadrants (see `source/gameplay/wall_collision.c`)
 
 ### Collision Detection Algorithm
 

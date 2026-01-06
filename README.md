@@ -1,93 +1,130 @@
 # Kart Mania
 
+Nintendo DS homebrew kart racer with singleplayer time trials and local WiFi multiplayer (2-8 players). Built for real hardware with devkitARM/libnds.
 
+![Homepage](figures/pictures_taken/homepage.png)
 
-## Getting started
+## Highlights
+- Singleplayer 2-lap time trial on **Scorching Sands** with countdown + stopwatch and personal best tracking.
+- Local WiFi multiplayer (up to 8 players) on MES-NDS; lobby ready flow and 5-lap race.
+- Full item set: bananas, oil, turbo mushroom (control invert), speed boost, green/red shells, bombs, missiles.
+- Animated dual-screen menus (home, settings, map select, play again) with touch or D-pad navigation.
+- Persistent settings/best times saved to SD; WiFi preference stored but stack always stays alive.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Documentation
+- Main wiki: [docs/wiki.md](docs/wiki.md)
+- Key pages: [state machine](docs/state_machine.md), [context](docs/context.md), [timer system](docs/timer.md), [gameplay logic](docs/gameplay_logic.md), [dev tools](docs/development_tools.md).
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Modes and Screens
 
-## Add your files
+### Settings
+- WiFi: must be ON to enter Multiplayer.
+- Sound FX: toggle on/off.
+- Music: toggle on/off.
+- Save icon persists settings to `/kart-mania/settings.txt` so they load on boot. Home/Return leaves the screen without overwriting saved defaults.
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+<p align="center">
+  <img src="figures/pictures_taken/settings.png" alt="Settings screen" width="55%">
+</p>
 
+### Singleplayer
+
+<p align="center">
+  <img src="figures/pictures_taken/map_selection.png" alt="Singleplayer map selection" width="47%">
+  <img src="figures/pictures_taken/singleplayer_with_banana.png" alt="Singleplayer gameplay" width="47%">
+</p>
+
+- Map select shows three options; only **Scorching Sands** is implemented. Selecting the others returns to the home page.
+- 2-lap solo time trial. AI bots are still in development.
+- Countdown (3, 2, 1, 0) appears on the bottom screen, then a stopwatch tracks your lap.
+- Finish screen compares your time to your personal best; new records save to `/kart-mania/best_times.txt`.
+- Item boxes grant one item at a time; press **L** to use it.
+- Item set:
+  - **Banana** - drop behind you to spin/slow
+  - **Oil Slick** - slippery patch that slows on contact
+  - **Turbo Mushroom** - inverts D-pad controls for a few seconds
+  - **Speed Boost** - doubles top speed briefly
+
+<p align="center">
+  <img src="figures/pictures_taken/END_OF_SINGLE_PLAYER_BEST_TIME.png" alt="Best time comparison" width="47%">
+  <img src="figures/pictures_taken/PLAY_again_menu.png" alt="Play again prompt" width="47%">
+</p>
+
+<p align="center">
+  <img src="figures/pictures_taken/PLAY_AGAIN_selecting_NO.png" alt="Play again - No selected" width="47%">
+  <img src="figures/pictures_taken/single_player.png" alt="Singleplayer HUD" width="47%">
+</p>
+
+**Item gallery**
+
+<p align="center">
+  <img src="figures/entities/item_box.png" alt="Item box" width="64">
+  <img src="figures/entities/banana.png" alt="Banana" width="64">
+  <img src="figures/entities/oil_slick.png" alt="Oil slick" width="64">
+  <img src="figures/entities/turbo_mushroom.png" alt="Turbo mushroom" width="64">
+  <img src="figures/entities/speed_boost.png" alt="Speed boost" width="64">
+  <img src="figures/entities/green_shell.png" alt="Green shell" width="64">
+  <img src="figures/entities/red_shell.png" alt="Red shell" width="64">
+  <img src="figures/entities/bomb.png" alt="Bomb" width="64">
+  <img src="figures/entities/missile.png" alt="Missile" width="64">
+</p>
+
+### Multiplayer (WiFi)
+
+<p align="center">
+  <img src="figures/pictures_taken/MP_lobby.png" alt="Multiplayer lobby" width="32%">
+  <img src="figures/pictures_taken/multiplayer_5_players.png" alt="Lobby with five players" width="32%">
+  <img src="figures/pictures_taken/multiplayer_turn_one_item_collected.png" alt="Multiplayer race" width="32%">
+</p>
+
+- Requires WiFi enabled and connection to `MES-NDS`. If connection fails, the bottom screen shows the error and you can exit.
+- Supports up to 8 players; the lobby lists who joined.
+- Press **SELECT** to mark ready. When everyone is ready, the race starts automatically.
+- Map: Scorching Sands.
+- Laps: 5.
+- Item set: full arsenal (bananas, oil, mushrooms, speed boosts, green/red shells, bombs, missiles).
+
+## Controls
+- Menus: D-pad to highlight, **A** to select, or tap on the touchscreen.
+- Racing: **A** accelerate, **B** brake, D-pad steer (mushroom can invert), **L** use item, **SELECT** return home when playing, **START** pauses locally (in multiplayer others keep moving).
+
+## Saving and Persistence
+- Settings are stored on SD under `/kart-mania/settings.txt` with defaults in `/kart-mania/default_settings.txt`.
+- Start+Select while tapping Save resets your settings back to the defaults file.
+- Personal best times are stored in `/kart-mania/best_times.txt` after singleplayer runs.
+- The `/kart-mania` folder is created automatically when storage initializes.
+
+## Build and Run
+Prerequisites:
+- devkitPro with devkitARM toolchain
+- libnds, libfat, maxmod, dswifi
+- grit (for asset conversion)
+
+Commands:
+```bash
+make                 # Release build (-O2)
+make BUILD_MODE=debug
+make clean
 ```
-cd existing_repo
-git remote add origin https://gitlab.epfl.ch/shalash/kart-mania.git
-git branch -M main
-git push -uf origin main
+
+Output: `kart-mania.nds` (artifacts in `build/`). To play, copy the NDS to your flashcart. WiFi features require a DS-compatible access point. On first boot the game writes its `/kart-mania` folder for settings and best times.
+
+Running notes:
+- Hardware: Tested on real DS/DS Lite. Join `MES-NDS` for multiplayer.
+- Emulation: Emulators vary in WiFi support; singleplayer generally works, multiplayer may not.
+
+## Project Structure
 ```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.epfl.ch/shalash/kart-mania/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+kart-mania/
+├── source/          # Core game code (state machine, UI, gameplay, networking)
+│   ├── gameplay/    # Racing logic, items, physics
+│   ├── ui/          # Menus and screens
+│   ├── graphics/    # Rendering helpers
+│   ├── audio/       # Sound effects and music playback
+│   ├── network/     # WiFi multiplayer
+│   └── storage/     # Settings and personal best persistence
+├── data/            # Graphics assets (PNG + grit)
+├── audio/           # Music/SFX sources (soundbank)
+├── docs/            # Additional documentation
+└── figures/         # Screenshots
+```

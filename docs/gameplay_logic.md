@@ -16,7 +16,7 @@ The **Gameplay Logic** module is the core racing engine. It manages race state, 
 - **Race State Management**: Track race status, lap counts, finish times
 - **Car Physics**: Update car positions, velocities, acceleration
 - **Player Input**: Process steering, acceleration, braking, item usage
-- **Countdown System**: Manage pre-race countdown (3, 2, 1, GO!)
+- **Countdown System**: Manage pre-race countdown (3, 2, 1, 0)
 - **Checkpoint Progression**: Track player progress through lap sections
 - **Finish Line Detection**: Detect lap completions and race completion
 - **Terrain Effects**: Apply sand slowdown based on loaded quadrant
@@ -44,7 +44,7 @@ The **Gameplay Logic** module is the core racing engine. It manages race state, 
 │       │                                                       │
 │       ├─► COUNTDOWN_1   (1 second)                           │
 │       │                                                       │
-│       ├─► COUNTDOWN_GO  (1 second)                           │
+│       ├─► COUNTDOWN_GO  (1 second, displays 0)               │
 │       │                                                       │
 │       └─► COUNTDOWN_FINISHED                                 │
 │                  │                                            │
@@ -120,7 +120,7 @@ Initializes race state for a new race.
 **Setup:**
 - Car spawns (single or multiplayer positioning)
 - Lap count (map-specific or 5 laps for multiplayer)
-- Countdown sequence (3, 2, 1, GO!)
+- Countdown sequence (3, 2, 1, 0)
 - Items system via `Items_Init()`
 - Pause interrupt via `Race_InitPauseInterrupt()`
 
@@ -200,7 +200,7 @@ Marks race as completed and stores final time.
 
 #### `void Race_UpdateCountdown(void)`
 
-Updates countdown sequence (3 → 2 → 1 → GO → FINISHED).
+Updates countdown sequence (3 → 2 → 1 → 0 → FINISHED).
 
 **Called by:** `Gameplay_OnVBlank()` during countdown phase.
 
@@ -224,7 +224,7 @@ typedef enum {
     COUNTDOWN_3 = 0,       // Display "3"
     COUNTDOWN_2,           // Display "2"
     COUNTDOWN_1,           // Display "1"
-    COUNTDOWN_GO,          // Display "GO!"
+    COUNTDOWN_GO,          // Display "0"
     COUNTDOWN_FINISHED     // Race started, countdown done
 } CountdownState;
 ```
@@ -307,7 +307,7 @@ Gets total lap count for current map.
 
 **Lap Counts:**
 ```c
-ScorchingSands:  2 laps (10 laps in multiplayer)
+ScorchingSands:  2 laps (5 laps in multiplayer)
 AlpinRush:       10 laps
 NeonCircuit:     10 laps
 ```

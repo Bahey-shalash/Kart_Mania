@@ -30,7 +30,7 @@ The game uses two independent timing mechanisms:
 ### RACE_TICK_FREQ Configuration
 
 **Constant:** `RACE_TICK_FREQ`
-**Defined in:** [timer.h:31](../source/core/timer.h#L31)
+**Defined in:** [game_constants.h:210-214](../source/core/game_constants.h#L210-L214) (moved from `timer.h`; see note at [timer.h:21](../source/core/timer.h#L21))
 **Default Value:** 60 Hz
 
 Controls how often physics updates occur during gameplay. This constant is tunable:
@@ -82,7 +82,7 @@ VBlank interrupt service routine called at 60Hz by the hardware. Routes to state
 | State | Handler | Purpose |
 |-------|---------|---------|
 | HOME_PAGE | `HomePage_OnVBlank()` ([timer.c:50](../source/core/timer.c#L50)) | Animate kart sprites |
-| MAPSELECTION | `Map_selection_OnVBlank()` ([timer.c:54](../source/core/timer.c#L54)) | Animate clouds and map previews |
+| MAPSELECTION | `MapSelection_OnVBlank()` ([timer.c:54](../source/core/timer.c#L54)) | Animate clouds and map previews |
 | PLAYAGAIN | `PlayAgain_OnVBlank()` ([timer.c:58](../source/core/timer.c#L58)) | Update UI elements |
 | GAMEPLAY | `Gameplay_OnVBlank()` + lap/time display ([timer.c:62-73](../source/core/timer.c#L62-L73)) | Sprite updates, countdown, chronometer display |
 
@@ -259,7 +259,7 @@ void EndRace(void) {
 // Automatically called by hardware at 60Hz
 void timerISRVblank(void) {
     GameContext* ctx = GameContext_Get();
-    UpdatePauseDebounce();  // Update pause button every frame
+    Race_UpdatePauseDebounce();  // Update pause button every frame
 
     switch (ctx->currentGameState) {
         case GAMEPLAY:
@@ -270,8 +270,8 @@ void timerISRVblank(void) {
 
             // Update displays during active racing
             if (!Race_IsCountdownActive() && !Race_IsCompleted()) {
-                updateChronoDisp_Sub(...);  // Update race time display
-                updateLapDisp_Sub(...);      // Update lap counter display
+                Gameplay_UpdateChronoDisplay(...);  // Update race time display
+                Gameplay_UpdateLapDisplay(...);     // Update lap counter display
             }
             break;
         // ... other states ...
@@ -285,7 +285,7 @@ void timerISRVblank(void) {
 
 To make the game run smoother at the cost of battery life:
 
-1. Edit [timer.h:31](../source/core/timer.h#L31):
+1. Edit [game_constants.h:210-214](../source/core/game_constants.h#L210-L214):
    ```c
    #define RACE_TICK_FREQ 120  // Doubled from 60Hz
    ```
