@@ -1009,3 +1009,12 @@ These compile to just a few instructions with zero function call overhead.
 - **Rendering:** graphics/sprites.c - Converts Q16.8 positions to screen coordinates
 - **Main Loop:** [main.md](main.md) - 60Hz VBlank synchronization for physics updates
 - **Timer System:** [timer.md](timer.md) - TIMER0 drives physics at 60Hz using fixed-point math
+
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

@@ -23,3 +23,10 @@
 - https://www.sunshine2k.de/articles/coding/fp/sunfp.html
 - https://en.wikipedia.org/wiki/CORDIC?utm_source=chatgpt.com
 - https://www.nullhardware.com/blog/fixed-point-sine-and-cosine-for-embedded-systems
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

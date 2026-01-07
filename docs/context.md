@@ -217,3 +217,10 @@ void Gameplay_Update(void) {
 - **Side Effects**: Settings changes are applied immediately rather than requiring manual sync
 - **State Transitions**: `currentGameState` is typically modified directly via the context pointer
 - **TODO**: Future improvement would make `GameContext_Get()` return a const pointer to prevent bypassing setter side effects
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

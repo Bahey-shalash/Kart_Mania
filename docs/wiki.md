@@ -397,3 +397,9 @@ When documenting new systems, please follow these guidelines:
 **Authors:** Bahey Shalash, Hugo Svolgaard
 
 For questions about the codebase or documentation, please refer to the specific module documentation or reach out to the development team.
+
+
+---
+
+## Navigation
+- [← Back to README](../README.md)

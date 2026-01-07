@@ -436,3 +436,10 @@ COLOR_5BIT_MASK       // 5-bit channel mask (0x1F)
 - Place kart on different terrain types
 - Monitor speed changes in debug overlay
 - Verify no false positives on grass/barriers
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

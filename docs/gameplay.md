@@ -694,5 +694,12 @@ Uncomment `#define console_on_debug` to enable debug console on sub-screen:
 
 - [gameplay_logic.md](gameplay_logic.md) - Race physics and state management
 - [game_constants.h](../source/core/game_constants.h) - Timing and display constants
-- [Items.md](Items.md) - Item system documentation
-- [storage_pb.md](storage_pb.md) - Best time persistence
+- [items_overview.md](items_overview.md) - Item system documentation
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

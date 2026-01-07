@@ -933,7 +933,8 @@ Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
 Items_UseItem(car, carIndex);
 ```
 
-See [Items.md](Items.md) for detailed item system documentation.
+See [items_overview.md](items_overview.md) for detailed item system documentation.
+See [items_overview.md](items_overview.md) for detailed item system documentation.
 
 ---
 
@@ -956,6 +957,14 @@ See [Items.md](Items.md) for detailed item system documentation.
 ## See Also
 
 - [gameplay.md](gameplay.md) - Graphics rendering and camera management
-- [Car.md](Car.md) - Car physics documentation
-- [Items.md](Items.md) - Item system documentation
+- [car_overview.md](car_overview.md) - Car physics documentation
+- [items_overview.md](items_overview.md) - Item system documentation
 - [game_constants.h](../source/core/game_constants.h) - All game constants
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

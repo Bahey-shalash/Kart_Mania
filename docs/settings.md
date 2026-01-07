@@ -590,3 +590,11 @@ return HOME_PAGE;  // State machine transitions to home
 - Initialized by `StateMachine_Init()` when entering SETTINGS state
 - Updated by `StateMachine_Update()` every frame
 - Returns HOME_PAGE to exit, SETTINGS to stay
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

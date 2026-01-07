@@ -577,4 +577,12 @@ if (calls > 0 && success == 0) {
 - **Initialization:** [init.md](init.md) - Calls `Wifi_InitDefault()` once at startup
 - **Main Loop:** [main.md](main.md) - Pumps `Wifi_Update()` every frame
 - **State Machine:** [state_machine.md](state_machine.md) - Manages multiplayer connection lifecycle
-- **Original Fix Documentation:** [MULTIPLAYER_RECONNECTION_FIX.md](old/MULTIPLAYER_RECONNECTION_FIX.md) - Complete debugging journey
+- **Reconnection Flow:** [Reconnection](#reconnection) - Current reconnect behavior and usage
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

@@ -301,3 +301,11 @@ if (ctx->currentGameState == GAMEPLAY) {
 - **Timing System:** [timer.md](timer.md) - VBlank ISR and race timers
 - **Context System:** [context.md](context.md) - Global state singleton
 - **WiFi Architecture:** wifi.md - Why Wifi_Update() must run continuously
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

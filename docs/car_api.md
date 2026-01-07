@@ -760,7 +760,7 @@ void applyTerrainEffects(Car* car) {
 - **[Car System Overview](car_overview.md)** - High-level system description
 - **[Items System](items_overview.md)** - Item effects on cars
 - **[Fixed-Point Math](fixedmath.md)** - Q16.8 arithmetic
-- **[Game Constants](game_constants.md)** - Physics tuning values
+- **[Game Constants](../source/core/game_constants.h)** - Physics tuning values
 
 ---
 
@@ -771,3 +771,10 @@ void applyTerrainEffects(Car* car) {
 
 **Version:** 1.0
 **Last Updated:** 06.01.2026
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

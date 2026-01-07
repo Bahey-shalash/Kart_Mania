@@ -530,3 +530,11 @@ typedef enum {
 - Render wall segments as colored lines
 - Draw kart collision circle
 - Display collision normal as arrow when collision detected
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

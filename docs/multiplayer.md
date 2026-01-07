@@ -856,4 +856,12 @@ for (int i = 0; i < MAX_ITEM_BOXES; i++) {
 - **Main Loop:** [main.md](main.md) - Pumps `Wifi_Update()` every frame
 - **State Machine:** [state_machine.md](state_machine.md) - Manages multiplayer states (lobby, race)
 - **Car System:** gameplay/Car.h - Car struct with position, speed, angle, lap, item
-- **Reconnection Fix:** [old/MULTIPLAYER_RECONNECTION_FIX.md](old/MULTIPLAYER_RECONNECTION_FIX.md) - Complete debugging journey
+- **Reconnection Flow:** [wifi.md#reconnection](wifi.md#reconnection) - How reconnect logic works
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

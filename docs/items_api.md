@@ -619,3 +619,11 @@ if (boxIndex >= 0) {
 
 **Version:** 1.0
 **Last Updated:** 06.01.2026
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

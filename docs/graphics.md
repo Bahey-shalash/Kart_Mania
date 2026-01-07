@@ -40,3 +40,12 @@ Key constants:
 Usage patterns:
 - Prefer these names instead of raw `RGB15`/`ARGB16` literals in UI/gameplay to keep palettes consistent and readable (see `gameplay.c` and `play_again.c` after cleanup).
 - Add new colors here when introducing new UI themes to keep palette choices centralized.
+
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

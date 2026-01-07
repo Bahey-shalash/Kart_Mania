@@ -306,3 +306,11 @@ To make the game run smoother at the cost of battery life:
 - **Synchronized Updates**: Default 60Hz physics matches 60Hz VBlank for smooth gameplay
 - **Millisecond Precision**: 1000Hz chronometer provides accurate race time tracking
 - **Nintendo DS Hardware**: Uses IRQ_VBLANK, IRQ_TIMER0, and IRQ_TIMER1 interrupts
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

@@ -645,3 +645,10 @@ for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
 
 **Version:** 1.0
 **Last Updated:** 06.01.2026
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

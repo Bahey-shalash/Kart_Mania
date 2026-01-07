@@ -43,7 +43,7 @@ HOME_PAGE → Multiplayer_Init() → MULTIPLAYER_LOBBY → MultiplayerLobby_Init
 ```
 
 **What happens:**
-- WiFi connects to "MES-NDS" access point (see [WiFi_minilib](wifi_minilib.md))
+- WiFi connects to "MES-NDS" access point (see [WiFi Low-Level](wifi.md))
 - Player ID assigned based on MAC address (see [Multiplayer System](multiplayer.md#player-id-assignment))
 - UDP socket opened on port 8888 for broadcast
 - `MSG_LOBBY_JOIN` broadcast sent (with Selective Repeat ARQ)
@@ -243,7 +243,7 @@ if (countdownActive && (!allReady || connectedCount < 2)) {
 
 **Scenarios:**
 - Player unreadies (toggles SELECT again)
-- Player disconnects (3-second timeout, see [WiFi_minilib](wifi_minilib.md#timeout))
+- Player disconnects (3-second timeout, see [WiFi timeouts](wifi.md#1-timeout-watchdogs-critical-fix))
 - Player count drops below 2
 
 ### Input During Countdown
@@ -354,7 +354,7 @@ Source: `getReceiveDebugStats()` in [WiFi_minilib.c](../source/network/WiFi_mini
 - `Filt > 0`: Normal (we filter our own UDP broadcasts)
 - `OK == 0` for long time: **Problem** - no packets being received
 
-See [WiFi_minilib - Packet Filtering](wifi_minilib.md#self-packet-filtering) for details.
+See [WiFi Low-Level - Packet Filtering](wifi.md) for details.
 
 ### Network Addressing
 ```
@@ -438,7 +438,7 @@ GameState MultiplayerLobby_Update(void);
 
 ### WiFi System
 
-The lobby depends on [WiFi_minilib](wifi_minilib.md) for low-level networking:
+The lobby depends on [WiFi Low-Level](wifi.md) for low-level networking:
 
 ```c
 // In Multiplayer_Init() (called before lobby)
@@ -453,7 +453,7 @@ openSocket();    // Create UDP socket on port 8888
 - `Wifi_GetIP()`: Gets local IP for debug display
 - `Wifi_GetData(WIFIGETDATA_MACADDRESS)`: Gets MAC for debug display
 
-See [WiFi_minilib Documentation](wifi_minilib.md) for function details.
+See [WiFi Low-Level Documentation](wifi.md) for function details.
 
 ### Multiplayer System
 
@@ -590,7 +590,7 @@ printf("Connected=%d Ready=%d\n", connectedCount, readyCount);
 
 2. **Broadcast filtering:**
    - Router might be blocking 255.255.255.255 broadcasts
-   - See [WiFi_minilib - Broadcast Address](wifi_minilib.md#broadcast-address)
+   - See [WiFi Low-Level - Broadcast Address](wifi.md)
 
 3. **Socket not opened:**
    - Check console output during `Multiplayer_Init()`
@@ -686,7 +686,7 @@ Lobby is very lightweight compared to gameplay.
 ## Related Documentation
 
 - **[Multiplayer System](multiplayer.md)** - Network protocol, ARQ implementation, race updates
-- **[WiFi_minilib](wifi_minilib.md)** - Low-level WiFi and UDP socket library
+- **[WiFi Low-Level](wifi.md)** - Low-level WiFi and UDP socket library
 - **[Context System](context.md)** - Global game state management
 - **[State Machine](state_machine.md)** - Game state transitions and lifecycle
 
@@ -699,3 +699,10 @@ Lobby is very lightweight compared to gameplay.
 
 **Version:** 1.0
 **Last Updated:** 06.01.2026
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

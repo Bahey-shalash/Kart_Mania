@@ -722,3 +722,11 @@ if (!Storage_SaveSettings()) {
 - Test factory reset combo on settings screen
 - Race multiple times, verify record updates correctly
 - Check file contents with text editor
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

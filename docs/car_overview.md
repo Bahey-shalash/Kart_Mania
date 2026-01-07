@@ -447,7 +447,7 @@ if (onBoostPad) {
 - **[Car API Reference](car_api.md)** - Detailed function documentation
 - **[Items System](items_overview.md)** - Item effects on cars
 - **[Fixed-Point Math](fixedmath.md)** - Q16.8 arithmetic system
-- **[Game Constants](game_constants.md)** - Physics tuning values
+- **[Game Constants](../source/core/game_constants.h)** - Physics tuning values
 
 ---
 
@@ -509,3 +509,10 @@ printf("Pos: (%d, %d) Speed: %d Angle: %d\n",
 
 **Version:** 1.0
 **Last Updated:** 06.01.2026
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

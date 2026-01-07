@@ -313,3 +313,11 @@ Game runs with user's saved preferences.
 - **Audio System:** [sound.md](sound.md) - MaxMod initialization and soundbank
 - **WiFi Architecture:** wifi.md - One-time initialization and reconnection
 - **Storage System:** storage.md - FAT filesystem and settings persistence
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

@@ -392,3 +392,11 @@ Treated identically to HOME_PAGE but signals that a full reset is needed.
 - **Context System:** [context.md](context.md) - State stored in global context
 - **WiFi Architecture:** wifi.md - WiFi connection lifecycle across states
 - **Audio System:** [sound.md](sound.md) - Sound loading/unloading per state
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

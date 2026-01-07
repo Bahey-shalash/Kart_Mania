@@ -361,3 +361,11 @@ Key functions used from MaxMod:
 | `mmSetModuleVolume(vol)` | Set music volume (0-1024) |
 
 For complete MaxMod documentation, see devkitPro's MaxMod9 library reference.
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)

@@ -687,3 +687,11 @@ return SETTINGS;  // State machine transitions to settings screen
 - Cleaned up by `StateMachine_Cleanup()` when exiting
 - Returns MAPSELECTION, MULTIPLAYER_LOBBY, REINIT_HOME, SETTINGS, or HOME_PAGE
 - REINIT_HOME is special: triggers cleanup then re-initialization (fresh start)
+
+
+---
+
+## Navigation
+
+- [← Back to Wiki](wiki.md)
+- [← Back to README](../README.md)
