@@ -72,14 +72,13 @@ Global game state management and configuration.
 
 Dual-screen rendering systems and visual effects.
 
-### [Graphics Overview](graphics.md)
-High-level overview of the graphics architecture and rendering pipeline.
+### [Graphics Utilities](graphics.md)
+Reset helpers and shared palette utilities used across screens.
 
 **Topics covered:**
-- Main screen vs sub screen roles
-- Background layer system (BG0-BG3)
-- Sprite rendering (OAM)
-- VRAM allocation strategy
+- `video_nuke()` VRAM/OAM/palette reset between states
+- VRAM bank remapping defaults
+- Shared ARGB15 color constants for UI highlights and toggles
 
 ### [Gameplay Rendering](gameplay.md)
 The core rendering system for the racing screen.
@@ -162,16 +161,16 @@ High-level introduction to the item system and its role in gameplay.
 Detailed system design and module organization.
 
 **Topics covered:**
-- Item type enumeration (8 items)
-- State management for active items
-- Module breakdown (spawning, inventory, effects, update, render)
-- Memory pools for item entities
+- Item types and fixed pools
+- Module breakdown (state, spawning, inventory, navigation, render, update)
+- Homing/navigation approach for red shells and missiles
+- Shared constants and probability tables
 
 ### [Items API](items_api.md)
 Public interface for item system integration.
 
 **Functions covered:**
-- `Items_Initialize()` - Setup item boxes and sprites
+- `Items_Init()` - Setup item boxes and sprites for a map
 - `Items_Update()` - Physics and collision updates
 - `Items_Render()` - Sprite rendering with camera offset
 - `Items_CheckCollisions()` - Item box pickup + projectile/hazard collisions
