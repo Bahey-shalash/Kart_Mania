@@ -441,7 +441,6 @@ static void checkCheckpointProgression(const Car* car, int carIndex) {
     bool isOnLeftSide = (carX < CHECKPOINT_DIVIDE_X);
     bool isOnTopSide = (carY < CHECKPOINT_DIVIDE_Y);
 
-    // ... rest of function stays the same
     switch (cpState[carIndex]) {
         case CP_STATE_START:
             if (!wasOnTopSide[carIndex] && isOnTopSide) {

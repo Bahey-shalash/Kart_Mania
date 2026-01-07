@@ -366,9 +366,7 @@ ISR for pause toggle (START key pressed).
 **Behavior:**
 - Debounces key press (15 frames = ~250ms)
 - Toggles `isPaused` flag
-- Pauses/resumes race timer via `RaceTick_TimerPause()` / `RaceTick_TimerEnable()`
-
-**Note:** Does NOT pause chrono timer (race time keeps running).
+- Pauses/resumes both physics and chronometer timers via `RaceTick_TimerPause()` / `RaceTick_TimerEnable()`
 
 ---
 
@@ -592,27 +590,25 @@ static void handlePlayerInput(Car* car, int carIndex) {
 
 ```c
 static void applyTerrainEffects(Car* car) {
-    TerrainType terrain = Terrain_GetTypeAtPosition(car->position, loadedQuadrant);
+    int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
 
-    if (terrain == TERRAIN_SAND) {
-        // Apply sand friction (slower deceleration)
+    if (Terrain_IsOnSand(carX, carY, loadedQuadrant)) {
         car->friction = SAND_FRICTION;
-
-        // Cap speed on sand
         if (car->speed > SAND_MAX_SPEED) {
-            car->speed = SAND_MAX_SPEED;
+            Q16_8 excessSpeed = car->speed - SAND_MAX_SPEED;
+            car->speed -= (excessSpeed / SAND_SPEED_DIVISOR);
         }
     } else {
-        // Normal friction
         car->friction = FRICTION_50CC;
     }
 }
 ```
 
 **Terrain Detection:**
-- Uses loaded quadrant ID to determine which terrain tileset is active
-- Reads tile data at car position
-- Tile ID determines terrain type (road, sand, wall)
+- Uses palette-based sand test (`Terrain_IsOnSand`) with the active quadrant
+- Samples the kart sprite center (adds `CAR_SPRITE_CENTER_OFFSET`)
+- Applies extra slowdown via `SAND_SPEED_DIVISOR` when over the sand cap
 
 ---
 
@@ -620,30 +616,39 @@ static void applyTerrainEffects(Car* car) {
 
 ```c
 static void clampToMapBounds(Car* car, int carIndex) {
-    int carX = FixedToInt(car->position.x);
-    int carY = FixedToInt(car->position.y);
+    // Get the visual center of the car (where it actually appears on screen)
+    int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
+    int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
 
-    // Check wall collision
-    if (Wall_IsColliding(carX, carY, loadedQuadrant)) {
-        // Bounce back to previous position
-        car->position = car->prevPosition;
+    QuadrantID quad = determineCarQuadrant(carX, carY);
 
-        // Reduce speed significantly
-        car->speed = car->speed / BANANA_SPEED_DIVISOR;  // /3
+    if (Wall_CheckCollision(carX, carY, CAR_RADIUS, quad)) {
+        int nx, ny;
+        Wall_GetCollisionNormal(carX, carY, quad, &nx, &ny);
 
-        // Lock out acceleration for 60 frames (1 second)
-        collisionLockoutTimer[carIndex] = COLLISION_LOCKOUT_FRAMES;
+        if (nx != 0 || ny != 0) {
+            int pushDistance = CAR_RADIUS;
+            car->position.x += IntToFixed(nx * pushDistance);
+            car->position.y += IntToFixed(ny * pushDistance);
 
-        return;
+            car->speed = 0;
+            collisionLockoutTimer[carIndex] = COLLISION_LOCKOUT_FRAMES;
+        }
     }
 
-    // Clamp to world bounds
-    if (car->position.x < 0) car->position.x = 0;
-    if (car->position.y < 0) car->position.y = 0;
-    if (car->position.x > IntToFixed(MAP_SIZE - CAR_SPRITE_SIZE))
-        car->position.x = IntToFixed(MAP_SIZE - CAR_SPRITE_SIZE);
-    if (car->position.y > IntToFixed(MAP_SIZE - CAR_SPRITE_SIZE))
-        car->position.y = IntToFixed(MAP_SIZE - CAR_SPRITE_SIZE);
+    // Map bounds should account for the sprite center offset
+    Q16_8 minPos = IntToFixed(-CAR_SPRITE_CENTER_OFFSET);
+    Q16_8 maxPosX = IntToFixed(1024 - CAR_SPRITE_CENTER_OFFSET);
+    Q16_8 maxPosY = IntToFixed(1024 - CAR_SPRITE_CENTER_OFFSET);
+
+    if (car->position.x < minPos)
+        car->position.x = minPos;
+    if (car->position.y < minPos)
+        car->position.y = minPos;
+    if (car->position.x > maxPosX)
+        car->position.x = maxPosX;
+    if (car->position.y > maxPosY)
+        car->position.y = maxPosY;
 }
 ```
 
@@ -705,27 +710,21 @@ static void checkCheckpointProgression(Car* car, int carIndex) {
 static bool checkFinishLineCross(const Car* car, int carIndex) {
     int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
 
-    bool nowAboveLine = (carY < FINISH_LINE_Y);  // y < 540
-    bool wasBelowLine = wasAboveFinishLine[carIndex] == false;
+    bool isNowAbove = (carY < FINISH_LINE_Y);
+    bool crossedLine = !wasAboveFinishLine[carIndex] && isNowAbove;
+    wasAboveFinishLine[carIndex] = isNowAbove;
 
-    // Detect upward crossing (below → above)
-    if (nowAboveLine && wasBelowLine) {
-        // First crossing after spawn is ignored
-        if (!hasCompletedFirstCrossing[carIndex]) {
-            hasCompletedFirstCrossing[carIndex] = true;
-            wasAboveFinishLine[carIndex] = nowAboveLine;
-            return false;
-        }
-
-        // Must be ready for lap (passed all checkpoints)
-        if (cpState[carIndex] == CP_STATE_READY_FOR_LAP) {
-            wasAboveFinishLine[carIndex] = nowAboveLine;
-            cpState[carIndex] = CP_STATE_NEED_LEFT;  // Reset for next lap
-            return true;  // LAP COMPLETE!
-        }
+    // Ignore first crossing after spawn
+    if (crossedLine && !hasCompletedFirstCrossing[carIndex]) {
+        hasCompletedFirstCrossing[carIndex] = true;
+        return false;
     }
 
-    wasAboveFinishLine[carIndex] = nowAboveLine;
+    if (crossedLine && cpState[carIndex] == CP_STATE_READY_FOR_LAP) {
+        cpState[carIndex] = CP_STATE_START;
+        return true;
+    }
+
     return false;
 }
 ```
@@ -958,8 +957,11 @@ Items_CheckCollisions(KartMania.cars, KartMania.carCount, scrollX, scrollY);
 // Apply item effects to player (speed boosts, spin, etc.)
 Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
 
-// Use held item (L or R button)
-Items_UseItem(car, carIndex);
+// Use held item (L button; DOWN throws backward)
+if (itemPressed) {
+    bool fireForward = !pressingDown;
+    Items_UsePlayerItem(player, fireForward);
+}
 ```
 
 See [items_overview.md](items_overview.md) for detailed item system documentation.
