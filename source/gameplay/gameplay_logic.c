@@ -658,7 +658,6 @@ static volatile int debounceFrames = 0;
 
 void Race_InitPauseInterrupt(void) {
     // BIT(14) = enable key interrupt
-    // Actually, we need to handle this differently - let's use IRQ on press
     REG_KEYCNT = BIT(14) | KEY_START;  // Enable interrupt for START key
     irqSet(IRQ_KEYS, Race_PauseISR);
     irqEnable(IRQ_KEYS);
