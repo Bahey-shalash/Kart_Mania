@@ -17,7 +17,7 @@ The implementation is intentionally minimal in [main.c](../source/core/main.c) t
 
 ### Main Function Structure
 
-The `main()` function ([main.c:20-47](../source/core/main.c#L20-L47)) has two distinct phases:
+The `main()` function (see `source/core/main.c`) has two distinct phases:
 
 **1. Initialization Phase (Once)**
 ```c
@@ -44,8 +44,8 @@ while (true) {
 ### InitGame Call
 
 **Function:** `InitGame()`
-**Defined in:** [init.c:85-98](../source/core/init.c#L85-L98)
-**Called at:** [main.c:22](../source/core/main.c#L22)
+**Defined in:** `source/core/init.c`
+**Called at:** `main.c`
 
 Performs all one-time initialization before entering the game loop. See [init.md](init.md) for complete details on the initialization sequence.
 
@@ -59,7 +59,7 @@ Performs all one-time initialization before entering the game loop. See [init.md
 ### Context Access
 
 **Function:** `GameContext_Get()`
-**Called at:** [main.c:24](../source/core/main.c#L24)
+**Called at:** `main.c`
 
 Retrieves the singleton context pointer used throughout the game loop to check and update the current game state. See [context.md](context.md) for details on the context system.
 
@@ -70,7 +70,7 @@ The infinite loop runs at 60Hz, synchronized to the Nintendo DS vertical blank i
 ### WiFi Update (Critical)
 
 **Function:** `Wifi_Update()`
-**Called at:** [main.c:29](../source/core/main.c#L29)
+**Called at:** `main.c`
 **Frequency:** Every frame (60 times per second)
 
 **Purpose:** Pumps the DSWifi state machine to keep WiFi connections alive.
@@ -86,7 +86,7 @@ The infinite loop runs at 60Hz, synchronized to the Nintendo DS vertical blank i
 ### State Machine Update
 
 **Function:** `StateMachine_Update(GameState state)`
-**Called at:** [main.c:32](../source/core/main.c#L32)
+**Called at:** `main.c`
 **Returns:** Next GameState to transition to
 
 Dispatches to the current state's update function (e.g., `HomePage_Update()`, `Gameplay_Update()`, etc.). Each state processes input, updates logic, and returns either the same state (no transition) or a different state (transition requested).
@@ -96,7 +96,6 @@ Dispatches to the current state's update function (e.g., `HomePage_Update()`, `G
 ### State Transition Handling
 
 **Condition:** `if (nextState != ctx->currentGameState)`
-**Lines:** [main.c:34-39](../source/core/main.c#L34-L39)
 
 When a state transition is detected, the loop performs a carefully ordered cleanup and initialization sequence.
 
@@ -106,7 +105,7 @@ When a state transition is detected, the loop performs a carefully ordered clean
 ```c
 StateMachine_Cleanup(ctx->currentGameState, nextState);
 ```
-**Line:** [main.c:36](../source/core/main.c#L36)
+**Line:** `main.c`
 
 Cleans up resources for the state being exited. The cleanup function knows which state is being entered (`nextState`) so it can conditionally preserve resources like WiFi connections when transitioning between multiplayer screens.
 
@@ -121,7 +120,7 @@ Cleans up resources for the state being exited. The cleanup function knows which
 ```c
 ctx->currentGameState = nextState;
 ```
-**Line:** [main.c:37](../source/core/main.c#L37)
+**Line:** `main.c`
 
 Updates the global context to reflect the new state. This is used by VBlank ISR routing (see [timer.md](timer.md)) and throughout the codebase to check the current screen.
 
@@ -129,7 +128,7 @@ Updates the global context to reflect the new state. This is used by VBlank ISR 
 ```c
 video_nuke();
 ```
-**Line:** [main.c:38](../source/core/main.c#L38)
+**Line:** `main.c`
 
 Clears all video memory (VRAM) to prevent graphical artifacts from the previous state bleeding into the new state. This ensures each state starts with a clean slate.
 
@@ -143,7 +142,7 @@ Clears all video memory (VRAM) to prevent graphical artifacts from the previous 
 ```c
 StateMachine_Init(nextState);
 ```
-**Line:** [main.c:39](../source/core/main.c#L39)
+**Line:** `main.c`
 
 Initializes graphics, timers, and resources for the new state.
 
@@ -157,7 +156,7 @@ Initializes graphics, timers, and resources for the new state.
 ### VBlank Synchronization
 
 **Function:** `swiWaitForVBlank()`
-**Called at:** [main.c:43](../source/core/main.c#L43)
+**Called at:** `main.c`
 **Frequency:** 60Hz
 
 Blocks execution until the next vertical blank interrupt, ensuring the game loop runs at exactly 60 frames per second.
@@ -288,7 +287,7 @@ if (ctx->currentGameState == GAMEPLAY) {
 
 ## Design Notes
 
-- **Minimal main()**: Only 28 lines - all complexity delegated to subsystems
+- **Minimal main()**: Under 50 lines - all complexity delegated to subsystems
 - **Single Responsibility**: Main loop only orchestrates, doesn't implement logic
 - **Predictable Timing**: Always runs at 60 FPS via VBlank sync
 - **Clean Transitions**: Centralized handling prevents state machine bugs

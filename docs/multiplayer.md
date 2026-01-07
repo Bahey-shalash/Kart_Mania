@@ -57,7 +57,7 @@ myPlayerID = macAddr[5] % MAX_MULTIPLAYER_PLAYERS;
 - **Hardware-unique:** Burned into WiFi chip, globally unique (IEEE)
 - **Deterministic:** Same DS always gets same player ID
 - **High entropy:** Last byte varies significantly across devices
-- **Zero collisions:** No two DS units have the same MAC
+- **Very low collision risk:** IDs still use `last_byte % MAX_MULTIPLAYER_PLAYERS`, so modulo collisions are theoretically possible if two devices share the same last-byte modulo; widening `MAX_MULTIPLAYER_PLAYERS` reduces that chance.
 
 **Example:**
 ```

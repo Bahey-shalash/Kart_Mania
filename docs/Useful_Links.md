@@ -10,6 +10,7 @@
 - **WavSource – Sound effects archive**
   https://www.wavsource.com
 
+- **Uppbeat – Sound effects**
   https://uppbeat.io/sfx/category/correct
 
 ## Development Resources

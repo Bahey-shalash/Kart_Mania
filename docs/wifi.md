@@ -40,7 +40,7 @@ The WiFi library provides simplified WiFi connection and UDP socket communicatio
 
 The library implements a careful lifecycle to avoid "works once per boot" bugs on Nintendo DS hardware:
 
-1. **One-Time Initialization** (at game startup in [init.c](../source/core/init.c#L56)):
+1. **One-Time Initialization** (at game startup in [init.c](../source/core/init.c#L78)):
    ```c
    Wifi_InitDefault(false);  // Called ONCE, never again
    ```
@@ -51,7 +51,7 @@ The library implements a careful lifecycle to avoid "works once per boot" bugs o
    openSocket();    // Creates UDP socket
    ```
 
-3. **Continuous Pumping** (every frame in [main.c](../source/core/main.c#L14)):
+3. **Continuous Pumping** (every frame in [main.c](../source/core/main.c#L28)):
    ```c
    Wifi_Update();   // Services ARM7 WiFi firmware
    ```
@@ -70,16 +70,15 @@ The library implements a careful lifecycle to avoid "works once per boot" bugs o
 
 **Problem:** Original code used infinite loops waiting for WiFi connection. If WiFi was off or AP unavailable, the game would freeze forever.
 
-**Solution:** Added frame-based timeout counters:
-
-**Defined in:** [WiFi_minilib.c:15-18](../source/network/WiFi_minilib.c#L15-L18)
+**Solution:** Added frame-based timeout counters (defined in
+[game_constants.h:269-273](../source/core/game_constants.h#L269-L273)):
 
 ```c
-#define WIFI_SCAN_TIMEOUT_FRAMES 300   // 5 seconds at 60Hz
+#define WIFI_SCAN_TIMEOUT_FRAMES 300    // 5 seconds at 60Hz
 #define WIFI_CONNECT_TIMEOUT_FRAMES 600 // 10 seconds at 60Hz
 ```
 
-**AP Scanning Watchdog** ([WiFi_minilib.c:74-90](../source/network/WiFi_minilib.c#L74-L90)):
+**AP Scanning Watchdog** ([WiFi_minilib.c](../source/network/WiFi_minilib.c)):
 ```c
 int scanAttempts = 0;
 while (found == 0 && scanAttempts < WIFI_SCAN_TIMEOUT_FRAMES) {
@@ -98,7 +97,7 @@ if (!found) {
 }
 ```
 
-**Connection Watchdog** ([WiFi_minilib.c:126-145](../source/network/WiFi_minilib.c#L126-L145)):
+**Connection Watchdog** ([WiFi_minilib.c](../source/network/WiFi_minilib.c)):
 ```c
 int connectAttempts = 0;
 while ((status != ASSOCSTATUS_ASSOCIATED) &&
@@ -124,7 +123,7 @@ while ((status != ASSOCSTATUS_ASSOCIATED) &&
 Wifi_InitDefault(false);  // Initialize ARM7↔ARM9 communication ONCE
 ```
 
-**Per-session (in WiFi_minilib.c:48):**
+**Per-session (in WiFi_minilib.c:87):**
 ```c
 int initWiFi() {
     Wifi_EnableWifi();  // Only enable radio, don't re-initialize
@@ -132,7 +131,11 @@ int initWiFi() {
 }
 ```
 
-**Disconnect (in WiFi_minilib.c:258-270):**
+**WiFi pumping:** `Wifi_Update()` is called every frame in the main loop
+([main.c](../source/core/main.c)) so the stack stays alive even outside
+multiplayer.
+
+**Disconnect (in WiFi_minilib.c:294-317):**
 ```c
 void disconnectFromWiFi() {
     Wifi_DisconnectAP();
@@ -154,7 +157,7 @@ void disconnectFromWiFi() {
 
 **Problem:** Original didn't support reopening sockets after disconnect. Port 8888 would show "address already in use" error when trying to reconnect.
 
-**Solution:** Added socket options and cleanup ([WiFi_minilib.c:162-171](../source/network/WiFi_minilib.c#L162-L171)):
+**Solution:** Added socket options and cleanup ([WiFi_minilib.c:207-235](../source/network/WiFi_minilib.c#L207-L235)):
 
 ```c
 int openSocket() {
@@ -184,7 +187,7 @@ int openSocket() {
 
 **Problem:** Original calculated subnet-specific broadcast (e.g., 192.168.1.255) using bitwise operations on IP and netmask. This had endianness issues between `Wifi_GetIP()` (host order) and `snmask.s_addr` (network order).
 
-**Solution:** Changed to limited broadcast ([WiFi_minilib.c:209](../source/network/WiFi_minilib.c#L209)):
+**Solution:** Changed to limited broadcast ([WiFi_minilib.c:251-262](../source/network/WiFi_minilib.c#L251-L262)):
 
 ```c
 // Old (endianness issues):
@@ -204,14 +207,14 @@ sa_out.sin_addr.s_addr = htonl(0xFFFFFFFF);  // 255.255.255.255
 
 **Solution:** Added debug counters and console output:
 
-**Statistics Tracking** ([WiFi_minilib.c:32-35](../source/network/WiFi_minilib.c#L32-L35)):
+**Statistics Tracking** ([WiFi_minilib.c:78-81](../source/network/WiFi_minilib.c#L78-L81)):
 ```c
 static int total_recvfrom_calls = 0;
 static int total_recvfrom_success = 0;
 static int total_filtered_own = 0;
 ```
 
-**Statistics API** ([WiFi_minilib.c:326-333](../source/network/WiFi_minilib.c#L326-L333)):
+**Statistics API** ([WiFi_minilib.c:371-378](../source/network/WiFi_minilib.c#L371-L378)):
 ```c
 void getReceiveDebugStats(int* calls, int* success, int* filtered) {
     if (calls) *calls = total_recvfrom_calls;
@@ -243,13 +246,13 @@ recvfrom(socket_id, data_buff, bytes, 0, ...);
 
 Since the socket is already configured for non-blocking I/O via `ioctl(socket_id, FIONBIO, &nonblock)`, the correct flags parameter is `0` (no special flags), which uses standard receive behavior: read data and remove it from the queue.
 
-**shutdown() Removal** ([WiFi_minilib.c:240-241](../source/network/WiFi_minilib.c#L240-L241)):
+**shutdown() Removal** ([WiFi_minilib.c:286-290](../source/network/WiFi_minilib.c#L286-L290)):
 ```c
 // Skip shutdown() - can hang on DS hardware
 closesocket(socket_id);
 ```
 
-**Broadcast Permission** ([WiFi_minilib.c:218-220](../source/network/WiFi_minilib.c#L218-L220)):
+**Broadcast Permission** ([WiFi_minilib.c:263-266](../source/network/WiFi_minilib.c#L263-L266)):
 ```c
 int broadcast_permission = 1;
 setsockopt(socket_id, SOL_SOCKET, SO_BROADCAST,
@@ -261,7 +264,7 @@ setsockopt(socket_id, SOL_SOCKET, SO_BROADCAST,
 ### initWiFi
 
 **Signature:** `int initWiFi(void)`
-**Defined in:** [WiFi_minilib.c:41-155](../source/network/WiFi_minilib.c#L41-L155)
+**Defined in:** [WiFi_minilib.c:87-201](../source/network/WiFi_minilib.c#L87-L201)
 
 Initializes WiFi connection to "MES-NDS" access point with timeout protection.
 
@@ -289,7 +292,7 @@ if (!initWiFi()) {
 ### openSocket
 
 **Signature:** `int openSocket(void)`
-**Defined in:** [WiFi_minilib.c:161-229](../source/network/WiFi_minilib.c#L161-L229)
+**Defined in:** [WiFi_minilib.c:207-274](../source/network/WiFi_minilib.c#L207-L274)
 
 Creates and configures UDP socket for broadcast communication on port 8888.
 
@@ -319,7 +322,7 @@ if (!openSocket()) {
 ### sendData
 
 **Signature:** `int sendData(char* data_buff, int bytes)`
-**Defined in:** [WiFi_minilib.c:273-288](../source/network/WiFi_minilib.c#L273-L288)
+**Defined in:** [WiFi_minilib.c:319-333](../source/network/WiFi_minilib.c#L319-L333)
 
 Sends data via UDP broadcast to all devices on port 8888.
 
@@ -345,7 +348,7 @@ sendData((char*)&packet, sizeof(NetworkPacket));
 ### receiveData
 
 **Signature:** `int receiveData(char* data_buff, int bytes)`
-**Defined in:** [WiFi_minilib.c:290-323](../source/network/WiFi_minilib.c#L290-L323)
+**Defined in:** [WiFi_minilib.c:336-369](../source/network/WiFi_minilib.c#L336-L369)
 
 Non-blocking receive from UDP socket with self-packet filtering.
 
@@ -375,7 +378,7 @@ if (bytesReceived > 0) {
 ### closeSocket
 
 **Signature:** `void closeSocket(void)`
-**Defined in:** [WiFi_minilib.c:231-246](../source/network/WiFi_minilib.c#L231-L246)
+**Defined in:** [WiFi_minilib.c:277-292](../source/network/WiFi_minilib.c#L277-L292)
 
 Closes the UDP socket and releases port 8888.
 
@@ -394,7 +397,7 @@ closeSocket();  // Safe to call even if already closed
 ### disconnectFromWiFi
 
 **Signature:** `void disconnectFromWiFi(void)`
-**Defined in:** [WiFi_minilib.c:248-271](../source/network/WiFi_minilib.c#L248-L271)
+**Defined in:** [WiFi_minilib.c:294-317](../source/network/WiFi_minilib.c#L294-L317)
 
 Disconnects from WiFi access point while keeping WiFi stack alive.
 
@@ -415,7 +418,7 @@ disconnectFromWiFi();
 ### getReceiveDebugStats
 
 **Signature:** `void getReceiveDebugStats(int* calls, int* success, int* filtered)`
-**Defined in:** [WiFi_minilib.c:326-333](../source/network/WiFi_minilib.c#L326-L333)
+**Defined in:** [WiFi_minilib.c:371-378](../source/network/WiFi_minilib.c#L371-L378)
 
 Retrieves low-level packet reception statistics for debugging.
 
@@ -536,7 +539,7 @@ openSocket();  // Works! SO_REUSEADDR allows rebind
 ### Problem: No packets received after reconnection
 
 **Check:**
-1. Is `Wifi_Update()` called every frame? (main loop)
+1. Is `Wifi_Update()` called every frame? 
 2. Is `Wifi_InitDefault()` called only once? (not in initWiFi)
 3. Is `Wifi_DisableWifi()` being called? (should be removed)
 4. Are there settle delays after disconnect? (60 frames minimum)

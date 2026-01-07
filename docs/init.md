@@ -17,7 +17,7 @@ The implementation is in [init.c](../source/core/init.c) and [init.h](../source/
 
 ### Initialization Flow
 
-The `InitGame()` function ([init.c:85-98](../source/core/init.c#L85-L98)) orchestrates five initialization steps in strict order:
+The `InitGame()` function (see `source/core/init.c`) orchestrates four initialization steps in strict order:
 
 ```c
 void InitGame(void) {
@@ -49,8 +49,8 @@ void InitGame(void) {
 ### init_storage_and_context
 
 **Function:** `static void init_storage_and_context(void)`
-**Defined in:** [init.c:32-43](../source/core/init.c#L32-L43)
-**Called by:** [InitGame()](../source/core/init.c#L86)
+**Defined in:** `source/core/init.c`
+**Called by:** `InitGame()`
 
 Initializes the FAT filesystem and game context, then loads saved settings if storage is available.
 
@@ -100,8 +100,8 @@ static void init_storage_and_context(void) {
 ### init_audio_system
 
 **Function:** `static void init_audio_system(void)`
-**Defined in:** [init.c:51-65](../source/core/init.c#L51-L65)
-**Called by:** [InitGame()](../source/core/init.c#L90)
+**Defined in:** `source/core/init.c`
+**Called by:** `InitGame()`
 
 Initializes the MaxMod audio library and applies user audio settings from the context.
 
@@ -164,8 +164,8 @@ static void init_audio_system(void) {
 ### init_wifi_stack
 
 **Function:** `static void init_wifi_stack(void)`
-**Defined in:** [init.c:77-79](../source/core/init.c#L77-L79)
-**Called by:** [InitGame()](../source/core/init.c#L93)
+**Defined in:** `source/core/init.c`
+**Called by:** `InitGame()`
 
 Initializes the Nintendo DS WiFi stack ONCE at program startup. This is the most critical initialization step for multiplayer.
 
@@ -204,7 +204,7 @@ static void init_wifi_stack(void) {
 ### State Machine Init Call
 
 **Function:** `StateMachine_Init(GameState state)`
-**Called at:** [init.c:97](../source/core/init.c#L97)
+**Called at:** `source/core/init.c`
 **Parameter:** `ctx->currentGameState` (defaults to HOME_PAGE)
 
 Initializes graphics, timers, and resources for the starting game state.

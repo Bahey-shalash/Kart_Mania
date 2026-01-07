@@ -56,7 +56,7 @@ Initializes the VBlank interrupt for the current game state. Sets up `timerISRVb
 - GAMEPLAY
 - PLAYAGAIN
 
-**Called:** Once per state transition in `init_state()`
+**Current wiring:** `initTimer()` is invoked from `HomePage_Initialize()` so VBlank IRQ setup occurs when entering the home screen and stays enabled as the state machine transitions through other animated screens. If you add new animated states or want per-state reconfiguration, call `initTimer()` from their init paths as well.
 
 ```c
 void initTimer(void) {
@@ -112,7 +112,9 @@ Initializes both hardware timers for gameplay:
 - ISR: `ChronoTick_ISR()` ([timer.c:125-127](../source/core/timer.c#L125-L127))
 - Calls `Gameplay_IncrementTimer()` for race time tracking
 
-**Called:** At the start of gameplay when entering GAMEPLAY state
+**Called:** When the countdown finishes, from `Race_CountdownTick()` in
+`gameplay_logic.c` (starts after showing “GO”). It is not invoked when entering
+GAMEPLAY; the countdown gate starts the timers.
 
 ```c
 void RaceTick_TimerInit(void) {

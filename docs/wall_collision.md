@@ -9,7 +9,7 @@ The wall collision module detects collisions between circular kart hitboxes and 
 - **Circle-to-Segment Collision**: Fast perpendicular distance testing with range checks
 - **Global Coordinates**: Wall geometry pre-converted to world space (no runtime transforms)
 - **Collision Normals**: Computes unit normal vectors for realistic bounce physics
-- **Per-Quadrant Geometry**: 9 quadrants with 4-9 wall segments each (total: 55 walls)
+- **Per-Quadrant Geometry**: 9 quadrants with 4-11 wall segments each (total: 69 walls)
 
 ## Architecture
 

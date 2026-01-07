@@ -493,15 +493,35 @@ static void Race_InitMultiplayerCars(void) {
 static void updateCountdown(void) {
     countdownTimer++;
 
-    if (countdownTimer >= COUNTDOWN_FRAMES_PER_STEP) {  // 60 frames
-        countdownTimer = 0;
-        countdownState++;
-
-        if (countdownState > COUNTDOWN_GO) {
-            countdownState = COUNTDOWN_FINISHED;
-            raceCanStart = true;
-            RaceTick_TimerEnable();  // Start race timer
-        }
+    switch (countdownState) {
+        case COUNTDOWN_3:
+            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
+                countdownState = COUNTDOWN_2;
+                countdownTimer = 0;
+            }
+            break;
+        case COUNTDOWN_2:
+            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
+                countdownState = COUNTDOWN_1;
+                countdownTimer = 0;
+            }
+            break;
+        case COUNTDOWN_1:
+            if (countdownTimer >= COUNTDOWN_NUMBER_DURATION) {
+                countdownState = COUNTDOWN_GO;
+                countdownTimer = 0;
+            }
+            break;
+        case COUNTDOWN_GO:
+            if (countdownTimer >= COUNTDOWN_GO_DURATION) {
+                countdownState = COUNTDOWN_FINISHED;
+                countdownTimer = 0;
+                raceCanStart = true;
+                RaceTick_TimerInit();  // Start timers when countdown ends
+            }
+            break;
+        case COUNTDOWN_FINISHED:
+            break;
     }
 }
 
@@ -520,39 +540,48 @@ CountdownState Race_GetCountdownState(void) {
 
 ```c
 static void handlePlayerInput(Car* car, int carIndex) {
-    if (isPaused) {
-        return;  // No input during pause
+    // CRITICAL: Ignore input after race finish
+    if (KartMania.raceFinished) {
+        return;
     }
 
     scanKeys();
-    int held = keysHeld();
+    uint32 held = keysHeld();
 
-    // Steering (LEFT/RIGHT)
-    if (held & KEY_LEFT) {
-        car->angle512 = (car->angle512 + TURN_STEP_50CC) & ANGLE_MASK;
-    }
-    if (held & KEY_RIGHT) {
-        car->angle512 = (car->angle512 - TURN_STEP_50CC) & ANGLE_MASK;
-    }
+    bool pressingA = held & KEY_A;
+    bool pressingB = held & KEY_B;
+    bool pressingLeft = held & KEY_LEFT;
+    bool pressingRight = held & KEY_RIGHT;
+    bool pressingDown = held & KEY_DOWN;
+    bool pressingL = held & KEY_L;
 
-    // Acceleration (A button)
-    if (held & KEY_A) {
-        if (collisionLockoutTimer[carIndex] == 0) {
-            car->accelActive = true;
+    // Item usage (L press). Pressing DOWN aims backward.
+    if (pressingL && !itemButtonHeldLast) {
+        bool fireForward = !pressingDown;
+        Items_UsePlayerItem(car, fireForward);
+    }
+    itemButtonHeldLast = pressingL;
+
+    const PlayerItemEffects* effects = Items_GetPlayerEffects();
+    bool invertControls = effects->confusionActive;
+
+    // Steering only while accelerating; mushroom can invert controls
+    if (pressingA && car->speed >= 0) {
+        if (pressingLeft && !pressingRight) {
+            int turnAmount = invertControls ? TURN_STEP_50CC : -TURN_STEP_50CC;
+            Car_Steer(car, turnAmount);
+        } else if (pressingRight && !pressingLeft) {
+            int turnAmount = invertControls ? -TURN_STEP_50CC : TURN_STEP_50CC;
+            Car_Steer(car, turnAmount);
         }
-    } else {
-        car->accelActive = false;
     }
 
-    // Braking (B button)
-    car->brakeActive = (held & KEY_B) ? true : false;
+    bool isLockedOut = (collisionLockoutTimer[carIndex] > 0);
 
-    // Item usage (L or R button, single press)
-    if ((held & (KEY_L | KEY_R)) && !itemButtonHeldLast) {
-        Items_UseItem(car, carIndex);
-        itemButtonHeldLast = true;
-    } else if (!(held & (KEY_L | KEY_R))) {
-        itemButtonHeldLast = false;
+    if (pressingA && !pressingB && !isLockedOut) {
+        Car_Accelerate(car);
+    } else if (pressingB && car->speed > 0) {
+        Car_Brake(car);
     }
 }
 ```
@@ -933,7 +962,6 @@ Items_UpdatePlayerEffects(player, Items_GetPlayerEffects());
 Items_UseItem(car, carIndex);
 ```
 
-See [items_overview.md](items_overview.md) for detailed item system documentation.
 See [items_overview.md](items_overview.md) for detailed item system documentation.
 
 ---
