@@ -51,7 +51,7 @@ The library implements a careful lifecycle to avoid "works once per boot" bugs o
    openSocket();    // Creates UDP socket
    ```
 
-3. **Continuous Pumping** (every frame in [main.c](../source/core/main.c#L28)):
+3. **Continuous Pumping** (multiple locations - see "Where Wifi_Update() is Called" below):
    ```c
    Wifi_Update();   // Services ARM7 WiFi firmware
    ```
@@ -131,9 +131,10 @@ int initWiFi() {
 }
 ```
 
-**WiFi pumping:** `Wifi_Update()` is called every frame in the main loop
-([main.c](../source/core/main.c)) so the stack stays alive even outside
-multiplayer.
+**WiFi pumping:** `Wifi_Update()` is called in multiple places throughout the codebase:
+- **Main loop** ([main.c:29](../source/core/main.c#L29)): Baseline 60Hz heartbeat
+- **WiFi operations** (scanning, connecting, cleanup): Tight loops for faster servicing
+- See "Where Wifi_Update() is Called" section below for complete list
 
 **Disconnect (in WiFi_minilib.c:294-317):**
 ```c
@@ -436,6 +437,89 @@ getReceiveDebugStats(&calls, &success, &filtered);
 printf("Recv: %d/%d (filtered: %d)\n", success, calls, filtered);
 ```
 
+## Where Wifi_Update() is Called
+
+`Wifi_Update()` services the ARM7 WiFi firmware and must be called frequently. The codebase calls it in **multiple locations** to ensure responsive WiFi communication:
+
+### 1. Main Loop Heartbeat
+**Location:** [main.c:29](../source/core/main.c#L29)
+**Frequency:** 60Hz (once per VBlank)
+**Purpose:** Provides **baseline heartbeat** when no WiFi operations are active
+```c
+while (true) {
+    Wifi_Update();  // Baseline 60Hz
+    // ... state updates ...
+    swiWaitForVBlank();
+}
+```
+
+### 2. Access Point Scanning
+**Location:** [WiFi_minilib.c:132](../source/network/WiFi_minilib.c#L132)
+**Frequency:** Up to 60Hz during scan (5 second timeout)
+**Purpose:** Keep WiFi responsive while waiting for AP list
+```c
+while (found == 0 && scanAttempts < WIFI_SCAN_TIMEOUT_FRAMES) {
+    Wifi_Update();       // Fast pumping during scan
+    swiWaitForVBlank();
+    scanAttempts++;
+}
+```
+
+### 3. Connection Establishment
+**Location:** [WiFi_minilib.c:186](../source/network/WiFi_minilib.c#L186)
+**Frequency:** Up to 60Hz during connect (10 second timeout)
+**Purpose:** Service WiFi stack during DHCP negotiation
+```c
+while (status != ASSOCSTATUS_ASSOCIATED && connectAttempts < WIFI_CONNECT_TIMEOUT_FRAMES) {
+    Wifi_Update();       // Fast pumping during connect
+    swiWaitForVBlank();
+    connectAttempts++;
+}
+```
+
+### 4. Disconnect Settling
+**Location:** [WiFi_minilib.c:310](../source/network/WiFi_minilib.c#L310)
+**Frequency:** 60Hz for exactly 1 second (60 frames)
+**Purpose:** Let WiFi stack settle after disconnect to prevent corruption
+```c
+for (int i = 0; i < 60; i++) {
+    Wifi_Update();  // Pump during 1-second settle
+    swiWaitForVBlank();
+}
+```
+
+### 5. Multiplayer Cleanup Settling
+**Location:** [multiplayer.c:1070](../source/network/multiplayer.c#L1070)
+**Frequency:** 60Hz for exactly 1 second (60 frames)
+**Purpose:** Keep WiFi alive during nuclear cleanup after multiplayer session
+```c
+for (int i = 0; i < 60; i++) {
+    Wifi_Update();  // CRITICAL: Keep WiFi stack alive
+    swiWaitForVBlank();
+}
+```
+
+### 6. Multiplayer Sync Timeouts
+**Locations:** [multiplayer.c:440, 470](../source/network/multiplayer.c#L440)
+**Frequency:** 60Hz during player sync (up to 10 second timeout)
+**Purpose:** Service WiFi while waiting for other players
+```c
+while (elapsed < MULTIPLAYER_SYNC_TIMEOUT_FRAMES) {
+    Wifi_Update();       // Keep WiFi alive during sync
+    // ... check for packets ...
+    swiWaitForVBlank();
+}
+```
+
+### Summary: Multiple Pumping Strategies
+
+The key insight: **`Wifi_Update()` is NOT just called in the main loop** - it's called:
+- **Main loop**: Baseline 60Hz heartbeat (minimum frequency)
+- **WiFi operations**: Tight loops at 60Hz for responsive communication
+- **Cleanup operations**: Settle periods to prevent stack corruption
+
+This multi-location approach ensures WiFi remains responsive during blocking operations while maintaining a baseline heartbeat when idle.
+
 ## Nintendo DS WiFi Best Practices
 
 Based on extensive debugging of the "works once per boot" bug, here are the critical rules for DS WiFi:
@@ -443,7 +527,7 @@ Based on extensive debugging of the "works once per boot" bug, here are the crit
 ### ✅ DO:
 
 1. **Initialize `Wifi_InitDefault()` ONCE at program startup** (in main.c)
-2. **Call `Wifi_Update()` every single frame** (main loop, menus, everywhere)
+2. **Call `Wifi_Update()` frequently** - main loop provides 60Hz baseline, operations pump in tight loops
 3. **Only enable/disable the radio**, never destroy the WiFi stack
 4. **Pump `Wifi_Update()` during cleanup** for at least 1 second
 5. **Use limited broadcast (255.255.255.255)** for maximum compatibility
@@ -453,7 +537,7 @@ Based on extensive debugging of the "works once per boot" bug, here are the crit
 
 1. **Never call `Wifi_InitDefault()` more than once** per program execution
 2. **Never call `Wifi_DisableWifi()`** if you want to reconnect
-3. **Never stop calling `Wifi_Update()`** - must run continuously
+3. **Never stop calling `Wifi_Update()`** - must be pumped continuously
 4. **Never use calculated subnet broadcast** (endianness issues)
 5. **Never skip settle delays** after disconnect
 
@@ -578,7 +662,8 @@ if (calls > 0 && success == 0) {
 
 - **Multiplayer System:** [multiplayer.md](multiplayer.md) - Uses WiFi_minilib for network communication
 - **Initialization:** [init.md](init.md) - Calls `Wifi_InitDefault()` once at startup
-- **Main Loop:** [main.md](main.md) - Pumps `Wifi_Update()` every frame
+- **Main Loop:** [main.md](main.md) - Provides baseline 60Hz `Wifi_Update()` heartbeat
+- **Where Wifi_Update() is Called:** See section above for complete list of pumping locations
 - **State Machine:** [state_machine.md](state_machine.md) - Manages multiplayer connection lifecycle
 - **Reconnection Flow:** [Reconnection](#reconnection) - Current reconnect behavior and usage
 

@@ -51,7 +51,7 @@ static void handleItemBoxPickup(Car* car, ItemBoxSpawn* box, int carIndex,
 //=============================================================================
 
 void Items_Update(void) {
-    const RaceState* raceState = Race_GetState();
+    RaceState* raceState = Race_GetState();
 
     // In multiplayer, receive item placements from other players
     if (raceState->gameMode == MultiPlayer) {
@@ -227,7 +227,7 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
         }
     }
 
-    Vec2 targetPoint;
+    Vec2 targetPoint = item->position;
 
     // If we have a locked target, check if we should stay locked
     if (item->targetCarIndex >= 0 && item->targetCarIndex < carCount) {

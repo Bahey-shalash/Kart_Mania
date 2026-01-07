@@ -1,17 +1,21 @@
-# Main Game Loop
+# Main Loop (Housekeeping Task)
 
 ## Overview
 
-The main game loop is the central orchestrator for Kart Mania, responsible for coordinating all major subsystems. It performs one-time initialization, then runs an infinite loop that updates WiFi, processes the current game state, handles state transitions, and synchronizes to the display.
+**IMPORTANT:** The main loop is NOT the game loop. Kart Mania uses an **interrupt-driven architecture** where hardware timers drive gameplay. The main loop is a lightweight housekeeping task that maintains WiFi and handles state transitions.
 
-The implementation is intentionally minimal in [main.c](../source/core/main.c) to maintain clean architecture - all initialization logic lives in [init.c](../source/core/init.c) (see [init.md](init.md)) and state management lives in [state_machine.c](../source/core/state_machine.c) (see [state_machine.md](state_machine.md)).
+The implementation is intentionally minimal in [main.c](../source/core/main.c) - all initialization logic lives in [init.c](../source/core/init.c) (see [init.md](init.md)) and state management lives in [state_machine.c](../source/core/state_machine.c) (see [state_machine.md](state_machine.md)).
 
 **Key Responsibilities:**
 - One-time initialization via `InitGame()`
-- Continuous WiFi stack pumping (critical for multiplayer)
-- State machine update dispatch
-- State transition handling
-- 60Hz frame synchronization
+- Baseline WiFi heartbeat at 60Hz (WiFi operations pump faster when needed)
+- State transition handling (cleanup, context update, VRAM clear, init)
+- VBlank synchronization (blocks ~16.67ms per frame)
+
+**What the main loop does NOT do:**
+- Gameplay logic (handled by TIMER0 ISR calling `Race_Tick()`)
+- Sprite updates (handled by VBlank ISR)
+- Race timing (handled by TIMER1 ISR)
 
 ## Architecture
 
@@ -63,33 +67,37 @@ Performs all one-time initialization before entering the game loop. See [init.md
 
 Retrieves the singleton context pointer used throughout the game loop to check and update the current game state. See [context.md](context.md) for details on the context system.
 
-## Game Loop
+## Housekeeping Loop
 
-The infinite loop runs at 60Hz, synchronized to the Nintendo DS vertical blank interrupt.
+The `while(true)` loop has no inherent frequency - it runs as fast as the code executes, then **blocks on `swiWaitForVBlank()`** which limits it to 60Hz. The actual "loop" behavior is just sleeping between VBlanks.
 
-### WiFi Update (Critical)
+### WiFi Heartbeat
 
 **Function:** `Wifi_Update()`
-**Called at:** `main.c`
-**Frequency:** Every frame (60 times per second)
+**Called at:** `main.c:29`
+**Frequency:** At least 60Hz (this is the baseline heartbeat)
 
-**Purpose:** Pumps the DSWifi state machine to keep WiFi connections alive.
+**Purpose:** Provides continuous WiFi firmware servicing.
 
-**Why every frame:**
-- The Nintendo DS WiFi firmware requires continuous updates
-- Skipping frames causes connection drops and timeouts
-- Must run even when WiFi is "disabled" in settings because the stack is initialized once and kept alive
-- See wifi.md for details on WiFi architecture
+**Why the main loop calls it:**
+- Guarantees WiFi stack receives updates even when no blocking operations are running
+- The Nintendo DS WiFi firmware requires regular servicing
+- Must run even when WiFi is "disabled" in settings because the stack is initialized once at startup
+- See [wifi.md](wifi.md) for details on WiFi architecture
 
-**CRITICAL:** This call cannot be conditional or paused. Even in singleplayer mode or with WiFi "disabled" in settings, `Wifi_Update()` must run every frame to prevent WiFi stack corruption.
+**CRITICAL:** This is just the **baseline heartbeat**. WiFi operations (scanning, connecting, cleanup) pump `Wifi_Update()` much more frequently in tight loops. The main loop ensures a minimum 60Hz rate between those operations.
+
+**Note:** During blocking WiFi operations (e.g., access point scanning, connection establishment), `Wifi_Update()` is pumped at much higher frequencies (tight loops) to ensure responsive WiFi stack communication.
 
 ### State Machine Update
 
 **Function:** `StateMachine_Update(GameState state)`
-**Called at:** `main.c`
+**Called at:** `main.c:32`
 **Returns:** Next GameState to transition to
 
-Dispatches to the current state's update function (e.g., `HomePage_Update()`, `Gameplay_Update()`, etc.). Each state processes input, updates logic, and returns either the same state (no transition) or a different state (transition requested).
+Dispatches to the current state's update function (e.g., `HomePage_Update()`, `Gameplay_Update()`, etc.).
+
+**IMPORTANT:** During GAMEPLAY, `Gameplay_Update()` returns immediately - all gameplay logic runs in the TIMER0 ISR (`Race_Tick()`). State update functions primarily check for state transition conditions, not game logic.
 
 **See:** [state_machine.md](state_machine.md) for complete state machine documentation
 
@@ -156,62 +164,68 @@ Initializes graphics, timers, and resources for the new state.
 ### VBlank Synchronization
 
 **Function:** `swiWaitForVBlank()`
-**Called at:** `main.c`
-**Frequency:** 60Hz
+**Called at:** `main.c:43`
+**Frequency:** 60Hz (hardware-enforced)
 
-Blocks execution until the next vertical blank interrupt, ensuring the game loop runs at exactly 60 frames per second.
+Blocks execution until the next vertical blank interrupt. This is what gives the main loop its 60Hz frequency - without this call, the `while(true)` would spin millions of times per second.
 
-**Why synchronize:**
-- Prevents screen tearing (updating graphics mid-draw)
-- Locks game speed to 60 FPS for consistent gameplay
-- Coordinates with VBlank ISR (see [timer.md](timer.md))
-- Matches Nintendo DS hardware refresh rate
+**Why this matters:**
+- Main loop spends ~16.67ms blocked here (most of its time)
+- During this blocking period, hardware timers continue firing independently
+- TIMER0 ISR continues calling `Race_Tick()` for gameplay
+- TIMER1 ISR continues incrementing race chronometer
+- VBlank ISR continues updating sprites
+- This is just a sleep mechanism, not a game driver
 
 **What happens during VBlank:**
 - The `timerISRVblank()` ISR runs automatically (see [timer.md](timer.md))
-- Safe window to update sprites and backgrounds without visual artifacts
-- Race tick timers continue running independently
+- Hardware timers (TIMER0, TIMER1) continue firing independently
+- Gameplay continues in interrupt handlers while main loop sleeps
 
-## Frame Execution Flow
+## Execution Flow
 
-Here's what happens in a single frame (1/60th of a second):
+Here's what happens in a single main loop iteration (synchronized to VBlank at 60Hz):
 
 ```
-Frame N:
-├─ Wifi_Update()                    ← Pump WiFi firmware
-├─ StateMachine_Update()            ← Run current state logic
-│  └─ (e.g., HomePage_Update())
-│     ├─ Process touch input
-│     ├─ Update menu animations
-│     └─ Return next state
-├─ State transition? (if changed)
+Main Loop Iteration (60Hz):
+├─ Wifi_Update()                    ← WiFi heartbeat (~microseconds)
+├─ StateMachine_Update()            ← Check for state changes (~microseconds)
+│  └─ (e.g., Gameplay_Update())    ← Returns immediately during gameplay
+│     └─ Return GAMEPLAY           ← No transition, stay in gameplay
+├─ State transition? (rarely)
 │  ├─ StateMachine_Cleanup()        ← Clean up old state
 │  ├─ ctx->currentGameState = new  ← Update context
 │  ├─ video_nuke()                  ← Clear VRAM
 │  └─ StateMachine_Init()           ← Initialize new state
-└─ swiWaitForVBlank()               ← Wait for 60Hz sync
+└─ swiWaitForVBlank()               ← BLOCK HERE for ~16.67ms
 
-[VBlank occurs - timerISRVblank() runs in background]
+[While main loop is blocked, interrupts continue firing independently:]
+  - VBlank ISR fires (60Hz) → Sprite updates
+  - TIMER0 ISR fires (60Hz) → Race_Tick() → Physics, collisions, input
+  - TIMER1 ISR fires (1000Hz) → Race chronometer increments
 
-Frame N+1:
+Main Loop Iteration N+1:
 └─ Loop repeats...
 ```
 
-## Timing Relationship
+## Interrupt-Driven Architecture
 
-The main loop and VBlank ISR work together but run independently:
+**CRITICAL UNDERSTANDING:** The game is driven by hardware interrupts, not the main loop.
 
-**Main Loop (Foreground):**
-- Runs at 60 FPS (blocked by `swiWaitForVBlank()`)
-- Handles game logic and state transitions
-- Processes WiFi and input
+**Hardware Interrupts (Precise Frequencies):**
+- **VBlank ISR** (60Hz): Sprite updates, display refresh - fires at hardware VBlank signal
+- **TIMER0 ISR** (60Hz): Calls `Race_Tick()` - physics, collisions, input handling
+- **TIMER1 ISR** (1000Hz): Race chronometer - millisecond precision timing
+- These run **independently** of the main loop
 
-**VBlank ISR (Background):**
-- Triggered by hardware at 60Hz (independent of main loop)
-- Updates sprite positions and displays
-- Routes to state-specific OnVBlank handlers
+**Main Loop (VBlank-Synchronized, 60Hz):**
+- **NOT a game loop** - just housekeeping
+- Provides baseline WiFi heartbeat
+- Handles state transitions when requested
+- Spends most time blocked on `swiWaitForVBlank()`
+- Gameplay continues in ISRs while main loop sleeps
 
-**See:** [timer.md](timer.md) for complete VBlank ISR documentation
+**See:** [timer.md](timer.md) for complete ISR documentation
 
 ## State Transition Guarantees
 
@@ -287,11 +301,12 @@ if (ctx->currentGameState == GAMEPLAY) {
 
 ## Design Notes
 
-- **Minimal main()**: Under 50 lines - all complexity delegated to subsystems
-- **Single Responsibility**: Main loop only orchestrates, doesn't implement logic
-- **Predictable Timing**: Always runs at 60 FPS via VBlank sync
-- **Clean Transitions**: Centralized handling prevents state machine bugs
-- **WiFi Reliability**: Continuous `Wifi_Update()` prevents connection drops
+- **Interrupt-Driven**: Gameplay runs in TIMER0 ISR, not main loop
+- **Minimal main()**: Under 50 lines - just WiFi heartbeat and state transitions
+- **Single Responsibility**: Main loop is housekeeping, not a game loop
+- **VBlank Synchronization**: Main loop blocked 16.67ms per iteration
+- **WiFi Baseline**: Main loop ensures 60Hz minimum (operations pump faster)
+- **Clean Transitions**: Centralized cleanup/init handling prevents bugs
 
 ## Cross-References
 

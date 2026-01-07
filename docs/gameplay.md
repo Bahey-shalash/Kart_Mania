@@ -500,7 +500,7 @@ static void Gameplay_UpdateItemDisplay_Sub(void) {
 ```c
 void Gameplay_OnVBlank(void) {
     const Car* player = Race_GetPlayerCar();
-    const RaceState* state = Race_GetState();
+    RaceState* state = Race_GetState();  // Returned mutable; treat as read-only here
 
     // Phase 1: Final Time Display (2.5 seconds after finish)
     if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES) {
@@ -579,7 +579,7 @@ case GAMEPLAY:
         Gameplay_UpdateChronoDisplay(Gameplay_GetRaceMin(),
                                      Gameplay_GetRaceSec(),
                                      Gameplay_GetRaceMsec());
-        const RaceState* state = Race_GetState();
+        RaceState* state = Race_GetState();  // Returned mutable; treat as read-only here
         Gameplay_UpdateLapDisplay(Gameplay_GetCurrentLap(),
                                   state->totalLaps);
     }

@@ -157,8 +157,7 @@ bool StoragePB_SaveBestTime(Map map, int min, int sec, int msec) {
                     updatedExisting = true;
                 } else {
                     // Keep existing line
-                    strncpy(lines[lineCount], line, sizeof(lines[lineCount]) - 1);
-                    lines[lineCount][sizeof(lines[lineCount]) - 1] = '\0';
+                    snprintf(lines[lineCount], sizeof(lines[lineCount]), "%s", line);
                 }
                 lineCount++;
             }

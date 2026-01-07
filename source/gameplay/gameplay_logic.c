@@ -79,7 +79,7 @@ static void updateCountdown(void);
 //=============================================================================
 // Public API - State Queries
 //=============================================================================
-const RaceState* Race_GetState(void) {
+RaceState* Race_GetState(void) {
     return &KartMania;
 }
 
@@ -478,7 +478,6 @@ static void checkCheckpointProgression(const Car* car, int carIndex) {
 // Finish Line Detection
 //=============================================================================
 static bool checkFinishLineCross(const Car* car, int carIndex) {
-    int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
     int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
     
     bool isNowAbove = (carY < FINISH_LINE_Y);

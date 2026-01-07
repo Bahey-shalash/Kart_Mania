@@ -1,31 +1,34 @@
-# Timer System
+# Timer System (Interrupt-Driven Architecture)
 
 ## Overview
 
-The timer system manages all interrupt service routines (ISRs) for the game, providing two distinct timer subsystems:
+**CRITICAL:** Kart Mania uses an **interrupt-driven architecture**. The game is NOT driven by the main loop - it's driven by hardware timer interrupts with precise frequencies. The timer system manages all ISRs that actually run the game.
 
-1. **VBlank Timer** - 60Hz graphics updates for all animated screens
-2. **Race Tick Timers** - Hardware timers for physics (TIMER0) and chronometer (TIMER1) during gameplay
+The timer system provides two distinct timer subsystems:
 
-The timer system is implemented in [timer.c](../source/core/timer.c) and [timer.h](../source/core/timer.h), using the Nintendo DS hardware interrupt system to achieve precise timing for graphics synchronization and gameplay logic.
+1. **VBlank ISR** - 60Hz hardware interrupt for sprite updates and display refresh
+2. **Race Tick ISRs** - Hardware timers for physics (TIMER0) and chronometer (TIMER1) during gameplay
+
+The timer system is implemented in [timer.c](../source/core/timer.c) and [timer.h](../source/core/timer.h), using the Nintendo DS hardware interrupt system to achieve precise timing independent of the main loop.
 
 ## Architecture
 
-### Dual Timer System
+### Interrupt-Driven Gameplay
 
-The game uses two independent timing mechanisms:
+**IMPORTANT DISTINCTION:** The main loop ([main.c](../source/core/main.c)) is NOT the game loop. It's a housekeeping task that handles WiFi and state transitions. The actual game runs in these hardware interrupts:
 
-**VBlank ISR (60Hz):**
-- Triggered by hardware vertical blank interrupt
+**VBlank ISR (60Hz Hardware Interrupt):**
+- Triggered by Nintendo DS vertical blank signal (independent of main loop)
 - Active on all animated screens (HOME_PAGE, MAPSELECTION, GAMEPLAY, PLAYAGAIN)
 - Routes to state-specific handlers for sprite updates and display refreshes
-- Runs continuously at 60Hz synchronized with screen refresh
+- Fires at exactly 60Hz regardless of main loop state
 
-**Hardware Timers (Gameplay Only):**
+**Hardware Timers (Gameplay Only - Independent of Main Loop):**
 - **TIMER0**: Physics tick at `RACE_TICK_FREQ` Hz (default 60Hz) - calls `Race_Tick()` for movement, collisions, item logic
 - **TIMER1**: Chronometer at 1000Hz (1ms precision) - calls `Gameplay_IncrementTimer()` for race time tracking
 - Only active during GAMEPLAY state
 - Can be paused/resumed for game pause functionality
+- Fire independently - main loop can be blocked and these continue running
 
 ### RACE_TICK_FREQ Configuration
 
@@ -91,9 +94,11 @@ VBlank interrupt service routine called at 60Hz by the hardware. Routes to state
 - During active race: Updates lap display and chronometer display every frame
 - After race completion: Displays final time
 
-## Race Tick Timer System
+## Race Tick Timer System (THE ACTUAL GAME LOOP)
 
-Hardware timers (TIMER0 and TIMER1) used exclusively during GAMEPLAY state for physics and race time tracking.
+**CRITICAL:** This is where the game actually runs. Not in the main loop - in these hardware timer ISRs.
+
+Hardware timers (TIMER0 and TIMER1) used exclusively during GAMEPLAY state for physics and race time tracking. These fire independently of the main loop and continue running even while the main loop is blocked on `swiWaitForVBlank()`.
 
 ### RaceTick_TimerInit
 
@@ -102,15 +107,22 @@ Hardware timers (TIMER0 and TIMER1) used exclusively during GAMEPLAY state for p
 
 Initializes both hardware timers for gameplay:
 
-**TIMER0 - Physics Tick:**
+**TIMER0 - Physics Tick (THE REAL GAME LOOP):**
 - Frequency: `RACE_TICK_FREQ` Hz (60Hz default)
 - ISR: `RaceTick_ISR()` ([timer.c:121-123](../source/core/timer.c#L121-L123))
-- Calls `Race_Tick()` for game logic updates (movement, collisions, items)
+- **Calls `Race_Tick()` - THIS IS WHERE ALL GAMEPLAY HAPPENS**
+  - Input handling
+  - Physics updates
+  - Collision detection
+  - Item logic
+  - AI updates
+- Runs independently of main loop
 
 **TIMER1 - Chronometer:**
 - Frequency: 1000 Hz (1ms precision)
 - ISR: `ChronoTick_ISR()` ([timer.c:125-127](../source/core/timer.c#L125-L127))
 - Calls `Gameplay_IncrementTimer()` for race time tracking
+- Runs independently of main loop
 
 **Called:** When the countdown finishes, from `Race_CountdownTick()` in
 `gameplay_logic.c` (starts after showing “GO”). It is not invoked when entering
@@ -185,16 +197,32 @@ void RaceTick_TimerEnable(void) {
 }
 ```
 
-## Private ISRs
+## Private ISRs (Where the Game Actually Runs)
 
-### RaceTick_ISR
+### RaceTick_ISR (THE ACTUAL GAME LOOP)
 
 **Signature:** `static void RaceTick_ISR(void)`
 **Defined in:** [timer.c:121-123](../source/core/timer.c#L121-L123)
 
-Physics update interrupt handler called at `RACE_TICK_FREQ` Hz by TIMER0.
+**CRITICAL:** This is the actual game loop. Hardware triggers this ISR at `RACE_TICK_FREQ` Hz (60Hz default), completely independent of the main loop.
 
-**Purpose:** Calls `Race_Tick()` to update game physics (movement, collisions, item logic)
+**What it does:**
+```c
+static void RaceTick_ISR(void) {
+    Race_Tick();  // ALL gameplay happens here
+}
+```
+
+**Inside `Race_Tick()` ([gameplay_logic.c:326](../source/gameplay/gameplay_logic.c#L326)):**
+- Reads controller input
+- Updates car physics (acceleration, steering, braking)
+- Checks wall/terrain collisions
+- Updates item effects
+- Processes checkpoint progression
+- Handles network synchronization
+- **This is the ENTIRE game logic, running in an interrupt**
+
+**Frequency:** Hardware-enforced 60Hz (or `RACE_TICK_FREQ` if configured differently)
 
 ### ChronoTick_ISR
 
@@ -204,6 +232,8 @@ Physics update interrupt handler called at `RACE_TICK_FREQ` Hz by TIMER0.
 Chronometer interrupt handler called at 1000 Hz (1ms precision) by TIMER1.
 
 **Purpose:** Calls `Gameplay_IncrementTimer()` to increment race time by 1ms
+
+**Frequency:** Hardware-enforced 1000Hz (runs independently of main loop and TIMER0)
 
 ## Usage Patterns
 
@@ -285,7 +315,7 @@ void timerISRVblank(void) {
 
 ### Adjusting Physics Rate
 
-To make the game run smoother at the cost of battery life:
+Since gameplay runs in the TIMER0 ISR (not the main loop), you can independently adjust physics frequency:
 
 1. Edit [game_constants.h:210-214](../source/core/game_constants.h#L210-L214):
    ```c
@@ -294,7 +324,14 @@ To make the game run smoother at the cost of battery life:
 
 2. Rebuild the project
 
-3. Physics updates will now run at 120Hz while VBlank remains at 60Hz
+3. **TIMER0 ISR will now fire at 120Hz** (calling `Race_Tick()` 120 times per second)
+4. VBlank ISR remains at 60Hz (sprite updates)
+5. Main loop remains at 60Hz (WiFi heartbeat)
+
+**Why this works:** Each system runs independently:
+- **TIMER0** (physics) → 120Hz
+- **VBlank** (sprites) → 60Hz (hardware-enforced)
+- **Main loop** (WiFi) → 60Hz (VBlank-synchronized)
 
 **Trade-offs:**
 - **Higher RACE_TICK_FREQ**: Smoother physics, more responsive controls, faster battery drain
@@ -302,12 +339,11 @@ To make the game run smoother at the cost of battery life:
 
 ## Design Notes
 
-- **Separation of Concerns**: VBlank for graphics, hardware timers for gameplay logic
-- **State-Specific ISRs**: VBlank routes to different handlers based on game state
-- **Pause/Resume**: Hardware timers can be paused without losing state
-- **Synchronized Updates**: Default 60Hz physics matches 60Hz VBlank for smooth gameplay
-- **Millisecond Precision**: 1000Hz chronometer provides accurate race time tracking
-- **Nintendo DS Hardware**: Uses IRQ_VBLANK, IRQ_TIMER0, and IRQ_TIMER1 interrupts
+- **Interrupt-driven**: Gameplay in TIMER0 ISR, graphics in VBlank ISR, independent of main loop
+- **Hardware precision**: Exact frequencies regardless of main loop state
+- **State-specific routing**: VBlank dispatches to different handlers per game state
+- **Tunable physics**: RACE_TICK_FREQ can be adjusted independently of display refresh
+- **Pause/resume support**: Timers disable/enable without losing state
 
 
 ---

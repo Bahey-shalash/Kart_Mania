@@ -252,9 +252,9 @@ Gets read-only pointer to player's car (local player).
 
 ---
 
-#### `const RaceState* Race_GetState(void)`
+#### `RaceState* Race_GetState(void)`
 
-Gets read-only pointer to complete race state.
+Gets a pointer to the complete race state. Treat as read-only in most callers; mutation is reserved for systems that must update shared state (e.g., item explosions adjusting car physics).
 
 **RaceState Structure:**
 ```c

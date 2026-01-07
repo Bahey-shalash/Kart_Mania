@@ -197,7 +197,7 @@ const Car* Race_GetPlayerCar(void);
 /**
  * Gets read-only pointer to complete race state.
  */
-const RaceState* Race_GetState(void);
+RaceState* Race_GetState(void);
 
 /**
  * Returns true if race is started and not finished.
