@@ -43,7 +43,7 @@ void initTimer(void);
  *
  * State-specific behavior:
  *   HOME_PAGE    - HomePage_OnVBlank() for animated kart sprites
- *   MAPSELECTION - Map_selection_OnVBlank() for cloud animations
+ *   MAPSELECTION - MapSelection_OnVBlank() for cloud animations
  *   PLAYAGAIN    - PlayAgain_OnVBlank() for UI updates
  *   GAMEPLAY     - Gameplay_OnVBlank() + lap/time display updates
  *

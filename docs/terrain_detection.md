@@ -87,7 +87,7 @@ Each quadrant's background is rendered using 8×8 pixel tiles:
 bool Terrain_IsOnSand(int x, int y, QuadrantID quad);
 ```
 
-**Location:** [terrain_detection.c:97](../source/gameplay/terrain_detection.c#L97)
+**Location:** [terrain_detection.c:78](../source/gameplay/terrain_detection.c#L78)
 
 Determines if a world position is on sand terrain (off-track).
 
@@ -137,7 +137,7 @@ static inline bool Terrain_ColorMatches5bit(int r5, int g5, int b5,
                                              int tolerance);
 ```
 
-**Location:** [terrain_detection.c:61](../source/gameplay/terrain_detection.c#L61)
+**Location:** [terrain_detection.c:42-45](../source/gameplay/terrain_detection.c#L42-L45)
 
 Checks if a 5-bit RGB color matches a target color within tolerance.
 
@@ -161,7 +161,7 @@ return (abs(r5 - targetR5) <= tolerance &&
 static inline bool Terrain_IsGrayTrack5bit(int r5, int g5, int b5);
 ```
 
-**Location:** [terrain_detection.c:79](../source/gameplay/terrain_detection.c#L79)
+**Location:** [terrain_detection.c:60-72](../source/gameplay/terrain_detection.c#L60-L72)
 
 Checks if a 5-bit RGB color represents gray track surface.
 
@@ -200,7 +200,7 @@ Matches against two known sand colors. Returns `true` if either matches, `false`
 
 ### Color Constants
 
-**Private Constants** ([terrain_detection.c:22-45](../source/gameplay/terrain_detection.c#L22-L45)):
+**Constants Location:** [game_constants.h:240-257](../source/core/game_constants.h#L240-L257) (moved from terrain_detection.c)
 
 ```c
 // Gray track colors (5-bit RGB, 0-31 range)

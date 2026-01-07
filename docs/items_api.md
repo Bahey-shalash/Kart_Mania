@@ -44,7 +44,7 @@ Items_LoadGraphics();
 Items_Init(ScorchingSands);
 ```
 
-**See:** [items_state.c:31-39](../source/gameplay/items/items_state.c#L31-L39)
+**See:** [items_state.c:46-54](../source/gameplay/items/items_state.c#L46-L54)
 
 ---
 
@@ -68,7 +68,7 @@ void Items_Reset(void);
 Items_Reset();
 ```
 
-**See:** [items_state.c:41-52](../source/gameplay/items/items_state.c#L41-L52)
+**See:** [items_state.c:56-68](../source/gameplay/items/items_state.c#L56-L68)
 
 ---
 

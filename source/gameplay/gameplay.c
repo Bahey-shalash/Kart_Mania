@@ -48,7 +48,6 @@
 //=============================================================================
 // PRIVATE CONSTANTS
 //=============================================================================
-// All timing constants moved to game_constants.h
 
 //! DEBUGGING FLAG
 // #define console_on_debug  // Uncomment to enable debug console on sub screen

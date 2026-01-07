@@ -245,7 +245,7 @@ void loadMUSIC(void);
 
 **When to call:** During initialization or when entering a game state that requires music.
 
-**See:** [sound.c:92-94](../source/audio/sound.c#L92-L94)
+**See:** [sound.c:107-109](../source/audio/sound.c#L107-L109)
 
 ---
 
@@ -264,7 +264,7 @@ void MusicSetEnabled(bool enabled);
 
 **Note:** Music must be loaded with `loadMUSIC()` first.
 
-**See:** [sound.c:96-103](../source/audio/sound.c#L96-L103)
+**See:** [sound.c:111-118](../source/audio/sound.c#L111-L118)
 
 ---
 
@@ -276,7 +276,7 @@ void MusicSetEnabled(bool enabled);
 ```
 **Description:** Default music volume level (25% of maximum).
 
-**See:** [sound.h:20](../source/audio/sound.h#L20)
+**Location:** [game_constants.h:204](../source/core/game_constants.h#L204) (moved from sound.h)
 
 ---
 
