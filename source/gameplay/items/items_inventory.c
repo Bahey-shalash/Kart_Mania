@@ -23,8 +23,14 @@
 // Internal Helper Prototypes
 //=============================================================================
 static int findCarAhead(int currentRank, int carCount);
-static int findCarInDirection(Vec2 fromPosition, int direction512, int playerIndex,
+static int findCarInDirection(const Vec2* fromPosition, int direction512,
+                              int playerIndex,
                               const Car* cars, int carCount);
+static int Items_GetFireAngle(const Car* player, bool fireForward);
+static void Items_DropHazardBehind(const Car* player, Item itemType, int offsetPixels);
+static void Items_FireShell(const Car* player, Item itemType, bool fireForward,
+                            Q16_8 speedMultiplier);
+static void Items_FireMissile(const Car* player);
 
 //=============================================================================
 // Public API - Item Usage
@@ -39,77 +45,30 @@ void Items_UsePlayerItem(Car* player, bool fireForward) {
 
     switch (itemType) {
         case ITEM_BANANA: {
-            // Calculate backward direction (180° from facing direction)
-            int backwardAngle = (player->angle512 + ANGLE_HALF) & ANGLE_MASK;  // +180°
-            Vec2 backward = Vec2_FromAngle(backwardAngle);
-            Vec2 offset = Vec2_Scale(backward, IntToFixed(BANANA_DROP_OFFSET));
-            Vec2 dropPos = Vec2_Add(player->position, offset);
-            Items_PlaceHazard(itemType, dropPos);
+            Items_DropHazardBehind(player, itemType, BANANA_DROP_OFFSET);
             break;
         }
         case ITEM_BOMB: {
-            // Calculate backward direction (180° from facing direction)
-            int backwardAngle = (player->angle512 + ANGLE_HALF) & ANGLE_MASK;  // +180°
-            Vec2 backward = Vec2_FromAngle(backwardAngle);
-            Vec2 offset = Vec2_Scale(backward, IntToFixed(BOMB_DROP_OFFSET));
-            Vec2 dropPos = Vec2_Add(player->position, offset);
-            Items_PlaceHazard(itemType, dropPos);
+            Items_DropHazardBehind(player, itemType, BOMB_DROP_OFFSET);
             break;
         }
         case ITEM_OIL: {
-            // Calculate backward direction (180° from facing direction)
-            int backwardAngle = (player->angle512 + ANGLE_HALF) & ANGLE_MASK;  // +180°
-            Vec2 backward = Vec2_FromAngle(backwardAngle);
-            Vec2 offset = Vec2_Scale(backward, IntToFixed(HAZARD_DROP_OFFSET));
-            Vec2 dropPos = Vec2_Add(player->position, offset);
-            Items_PlaceHazard(itemType, dropPos);
+            Items_DropHazardBehind(player, itemType, HAZARD_DROP_OFFSET);
             break;
         }
 
         case ITEM_GREEN_SHELL: {
-            // Fire in specified direction
-            int fireAngle = fireForward
-                                ? player->angle512
-                                : ((player->angle512 + ANGLE_HALF) & ANGLE_MASK);
-
-            // Spawn shell slightly ahead of player to avoid immediate collision
-            Vec2 forward = Vec2_FromAngle(fireAngle);
-            Vec2 offset = Vec2_Scale(forward, IntToFixed(PROJECTILE_SPAWN_OFFSET));
-            Vec2 spawnPos = Vec2_Add(player->position, offset);
-
-            Q16_8 shellSpeed = FixedMul(player->maxSpeed, GREEN_SHELL_SPEED_MULT);
-            Items_FireProjectile(ITEM_GREEN_SHELL, spawnPos, fireAngle, shellSpeed,
-                                 INVALID_CAR_INDEX);
+            Items_FireShell(player, itemType, fireForward, GREEN_SHELL_SPEED_MULT);
             break;
         }
 
         case ITEM_RED_SHELL: {
-            // Fire using car's current angle (forward or backward)
-            int fireAngle = fireForward
-                                ? player->angle512
-                                : ((player->angle512 + ANGLE_HALF) & ANGLE_MASK);
-
-            // Spawn shell slightly ahead of player to avoid immediate collision
-            Vec2 forward = Vec2_FromAngle(fireAngle);
-            Vec2 offset = Vec2_Scale(forward, IntToFixed(PROJECTILE_SPAWN_OFFSET));
-            Vec2 spawnPos = Vec2_Add(player->position, offset);
-
-            Q16_8 shellSpeed = FixedMul(player->maxSpeed, RED_SHELL_SPEED_MULT);
-
-            // Red shell follows the racing line and locks onto any nearby car
-            // targetCarIndex = INVALID_CAR_INDEX means "attack first car you get close
-            // to"
-            Items_FireProjectile(ITEM_RED_SHELL, spawnPos, fireAngle, shellSpeed,
-                                 INVALID_CAR_INDEX);
+            Items_FireShell(player, itemType, fireForward, RED_SHELL_SPEED_MULT);
             break;
         }
 
         case ITEM_MISSILE: {
-            // Fire at 1st place
-            int targetIndex = findCarAhead(1, MAX_CARS);  // Find 1st place car
-            Q16_8 missileSpeed = FixedMul(player->maxSpeed, MISSILE_SPEED_MULT);
-            Items_FireProjectile(ITEM_MISSILE, player->position, player->angle512,
-                                 missileSpeed, targetIndex);
+            Items_FireMissile(player);
             break;
         }
 
@@ -128,6 +87,39 @@ void Items_UsePlayerItem(Car* player, bool fireForward) {
         default:
             break;
     }
+}
+
+static int Items_GetFireAngle(const Car* player, bool fireForward) {
+    return fireForward ? player->angle512
+                       : ((player->angle512 + ANGLE_HALF) & ANGLE_MASK);
+}
+
+static void Items_DropHazardBehind(const Car* player, Item itemType,
+                                   int offsetPixels) {
+    int backwardAngle = (player->angle512 + ANGLE_HALF) & ANGLE_MASK;
+    Vec2 backward = Vec2_FromAngle(backwardAngle);
+    Vec2 offset = Vec2_Scale(backward, IntToFixed(offsetPixels));
+    Vec2 dropPos = Vec2_Add(player->position, offset);
+    Items_PlaceHazard(itemType, &dropPos);
+}
+
+static void Items_FireShell(const Car* player, Item itemType, bool fireForward,
+                            Q16_8 speedMultiplier) {
+    int fireAngle = Items_GetFireAngle(player, fireForward);
+    Vec2 forward = Vec2_FromAngle(fireAngle);
+    Vec2 offset = Vec2_Scale(forward, IntToFixed(PROJECTILE_SPAWN_OFFSET));
+    Vec2 spawnPos = Vec2_Add(player->position, offset);
+
+    Q16_8 shellSpeed = FixedMul(player->maxSpeed, speedMultiplier);
+    Items_FireProjectile(itemType, &spawnPos, fireAngle, shellSpeed,
+                         INVALID_CAR_INDEX);
+}
+
+static void Items_FireMissile(const Car* player) {
+    int targetIndex = findCarAhead(1, MAX_CARS);
+    Q16_8 missileSpeed = FixedMul(player->maxSpeed, MISSILE_SPEED_MULT);
+    Items_FireProjectile(ITEM_MISSILE, &player->position, player->angle512,
+                         missileSpeed, targetIndex);
 }
 
 Item Items_GetRandomItem(int playerRank) {
@@ -195,13 +187,14 @@ static int findCarAhead(int currentRank, int carCount) {
     const Car* player = &state->cars[playerIndex];
 
     // Use the player's current facing direction to find targets ahead
-    return findCarInDirection(player->position, player->angle512, playerIndex,
+    return findCarInDirection(&player->position, player->angle512, playerIndex,
                               state->cars, carCount);
 }
 
 // Find the car that is most ahead in the given direction
 // direction512: The angle to search in (typically player's facing angle)
-static int findCarInDirection(Vec2 fromPosition, int direction512, int playerIndex,
+static int findCarInDirection(const Vec2* fromPosition, int direction512,
+                              int playerIndex,
                               const Car* cars, int carCount) {
     // If there's only one car (player), return invalid
     if (carCount <= 1) {
@@ -223,7 +216,7 @@ static int findCarInDirection(Vec2 fromPosition, int direction512, int playerInd
         const Car* otherCar = &cars[i];
 
         // Vector from player to other car
-        Vec2 toOther = Vec2_Sub(otherCar->position, fromPosition);
+        Vec2 toOther = Vec2_Sub(otherCar->position, *fromPosition);
 
         // Skip if other car is at the same position
         if (Vec2_IsZero(toOther)) {
@@ -240,7 +233,7 @@ static int findCarInDirection(Vec2 fromPosition, int direction512, int playerInd
         }
 
         // Get angle between our direction and the car
-        int angleToOther = Vec2_ToAngle(toOther);
+        int angleToOther = Vec2_ToAngle(&toOther);
         int angleDiff = (angleToOther - direction512) & ANGLE_MASK;
         if (angleDiff > ANGLE_HALF) {
             angleDiff = ANGLE_FULL - angleDiff;

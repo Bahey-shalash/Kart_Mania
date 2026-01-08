@@ -308,6 +308,148 @@ static void retransmitUnackedPackets(void) {
     }
 }
 
+static void resendJoinIfNeeded(uint32_t currentTime) {
+    if (currentTime < joinResendDeadlineMs &&
+        currentTime - lastJoinResendMs >= 300) {
+        NetworkPacket joinAgain = {
+            .version = PROTOCOL_VERSION,
+            .msgType = MSG_LOBBY_JOIN,
+            .playerID = myPlayerID,
+            .seqNum = 0,
+            .payload.lobby = {.isReady = players[myPlayerID].ready}};
+        sendData((char*)&joinAgain, sizeof(NetworkPacket));
+        lastJoinResendMs = currentTime;
+    }
+}
+
+static void sendLobbyHeartbeatIfNeeded(uint32_t currentTime) {
+    if (currentTime - lastLobbyBroadcastMs >= 1000) {
+        NetworkPacket heartbeat = {
+            .version = PROTOCOL_VERSION,
+            .msgType = MSG_LOBBY_UPDATE,
+            .playerID = myPlayerID,
+            .seqNum = 0,
+            .payload.lobby = {.isReady = players[myPlayerID].ready}};
+        sendReliableLobbyMessage(&heartbeat);
+        lastLobbyBroadcastMs = currentTime;
+        players[myPlayerID].lastPacketTime = currentTime;
+    }
+}
+
+static void handleLobbyPacket(const NetworkPacket* packet, uint32_t currentTime) {
+    switch (packet->msgType) {
+        case MSG_LOBBY_JOIN: {
+            players[packet->playerID].connected = true;
+            players[packet->playerID].ready = false;
+            players[packet->playerID].lastPacketTime = currentTime;
+            players[packet->playerID].lastSeqNumReceived = packet->seqNum;
+
+            NetworkPacket ack = {.version = PROTOCOL_VERSION,
+                                 .msgType = MSG_LOBBY_ACK,
+                                 .playerID = myPlayerID,
+                                 .seqNum = 0,
+                                 .payload.ack = {.ackSeqNum = packet->seqNum}};
+            sendData((char*)&ack, sizeof(NetworkPacket));
+
+            NetworkPacket response = {
+                .version = PROTOCOL_VERSION,
+                .msgType = MSG_LOBBY_UPDATE,
+                .playerID = myPlayerID,
+                .seqNum = 0,
+                .payload.lobby = {.isReady = players[myPlayerID].ready}};
+            sendReliableLobbyMessage(&response);
+            break;
+        }
+
+        case MSG_LOBBY_UPDATE:
+        case MSG_READY: {
+            players[packet->playerID].connected = true;
+            players[packet->playerID].ready = packet->payload.lobby.isReady;
+            players[packet->playerID].lastPacketTime = currentTime;
+            players[packet->playerID].lastSeqNumReceived = packet->seqNum;
+
+            NetworkPacket updateAck = {
+                .version = PROTOCOL_VERSION,
+                .msgType = MSG_LOBBY_ACK,
+                .playerID = myPlayerID,
+                .seqNum = 0,
+                .payload.ack = {.ackSeqNum = packet->seqNum}};
+            sendData((char*)&updateAck, sizeof(NetworkPacket));
+            break;
+        }
+
+        case MSG_LOBBY_ACK:
+            processAck(packet->playerID, packet->payload.ack.ackSeqNum);
+            break;
+
+        case MSG_DISCONNECT:
+            players[packet->playerID].connected = false;
+            players[packet->playerID].ready = false;
+
+            for (int i = 0; i < MAX_PENDING_ACKS; i++) {
+                players[packet->playerID].pendingAcks[i].active = false;
+            }
+            break;
+
+        default:
+            break;
+    }
+}
+
+static void processLobbyPackets(uint32_t currentTime) {
+    NetworkPacket packet;
+
+    int packetsReceived = 0;
+    while (receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
+        packetsReceived++;
+        totalPacketsReceived++;
+
+        if (packet.version != PROTOCOL_VERSION)
+            continue;
+        if (packet.playerID >= MAX_MULTIPLAYER_PLAYERS)
+            continue;
+        if (packet.playerID == myPlayerID)
+            continue;
+
+        handleLobbyPacket(&packet, currentTime);
+    }
+}
+
+static void handlePlayerTimeouts(uint32_t currentTime) {
+    for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
+        if (i == myPlayerID)
+            continue;
+
+        if (players[i].connected) {
+            uint32_t timeSinceLastPacket = currentTime - players[i].lastPacketTime;
+            if (timeSinceLastPacket > PLAYER_TIMEOUT_MS) {
+                players[i].connected = false;
+                players[i].ready = false;
+
+                for (int j = 0; j < MAX_PENDING_ACKS; j++) {
+                    players[i].pendingAcks[j].active = false;
+                }
+            }
+        }
+    }
+}
+
+static bool areAllConnectedPlayersReady(void) {
+    int connectedCount = 0;
+    int readyCount = 0;
+
+    for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
+        if (players[i].connected) {
+            connectedCount++;
+            if (players[i].ready) {
+                readyCount++;
+            }
+        }
+    }
+
+    return (connectedCount >= 2 && readyCount == connectedCount);
+}
+
 //=============================================================================
 // Public API - Initialization
 //=============================================================================
@@ -675,154 +817,15 @@ void Multiplayer_JoinLobby(void) {
 }
 
 bool Multiplayer_UpdateLobby(void) {
-    NetworkPacket packet;
     uint32_t currentTime = getTimeMs();
 
-    // Retransmit unacknowledged packets (Selective Repeat ARQ)
     retransmitUnackedPackets();
+    resendJoinIfNeeded(currentTime);
+    sendLobbyHeartbeatIfNeeded(currentTime);
+    processLobbyPackets(currentTime);
+    handlePlayerTimeouts(currentTime);
 
-    // During the first 2 seconds after joining, aggressively resend JOIN
-    // This helps with initial discovery when no players are connected yet
-    if (currentTime < joinResendDeadlineMs &&
-        currentTime - lastJoinResendMs >= 300) {  // every 300ms
-        NetworkPacket joinAgain = {
-            .version = PROTOCOL_VERSION,
-            .msgType = MSG_LOBBY_JOIN,
-            .playerID = myPlayerID,
-            .seqNum = 0,
-            .payload.lobby = {.isReady = players[myPlayerID].ready}};
-        // Don't use sendReliableLobbyMessage here - just broadcast
-        sendData((char*)&joinAgain, sizeof(NetworkPacket));
-        lastJoinResendMs = currentTime;
-    }
-
-    // Periodic heartbeat so peers don't time out (every ~1s)
-    // Heartbeats use reliable delivery now
-    if (currentTime - lastLobbyBroadcastMs >= 1000) {
-        NetworkPacket heartbeat = {
-            .version = PROTOCOL_VERSION,
-            .msgType = MSG_LOBBY_UPDATE,
-            .playerID = myPlayerID,
-            .seqNum = 0,  // Will be set by sendReliableLobbyMessage
-            .payload.lobby = {.isReady = players[myPlayerID].ready}};
-        sendReliableLobbyMessage(&heartbeat);
-        lastLobbyBroadcastMs = currentTime;
-        players[myPlayerID].lastPacketTime = currentTime;
-    }
-
-    // Receive all pending packets (non-blocking)
-    int packetsReceived = 0;
-    while (receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
-        packetsReceived++;
-        totalPacketsReceived++;
-
-        // Validate packet
-        if (packet.version != PROTOCOL_VERSION)
-            continue;
-        if (packet.playerID >= MAX_MULTIPLAYER_PLAYERS)
-            continue;
-        if (packet.playerID == myPlayerID)
-            continue;  // Skip own packets
-
-        // Update player info based on message type
-        switch (packet.msgType) {
-            case MSG_LOBBY_JOIN:
-                players[packet.playerID].connected = true;
-                players[packet.playerID].ready = false;
-                players[packet.playerID].lastPacketTime = currentTime;
-                players[packet.playerID].lastSeqNumReceived = packet.seqNum;
-
-                // Send ACK for this packet
-                NetworkPacket ack = {.version = PROTOCOL_VERSION,
-                                     .msgType = MSG_LOBBY_ACK,
-                                     .playerID = myPlayerID,
-                                     .seqNum = 0,  // ACKs don't need sequence numbers
-                                     .payload.ack = {.ackSeqNum = packet.seqNum}};
-                sendData((char*)&ack, sizeof(NetworkPacket));
-
-                // CRITICAL: Immediately respond so the joining player discovers us!
-                // Send our own state as a reliable message
-                NetworkPacket response = {
-                    .version = PROTOCOL_VERSION,
-                    .msgType = MSG_LOBBY_UPDATE,
-                    .playerID = myPlayerID,
-                    .seqNum = 0,  // Will be set by sendReliableLobbyMessage
-                    .payload.lobby = {.isReady = players[myPlayerID].ready}};
-                sendReliableLobbyMessage(&response);
-                break;
-
-            case MSG_LOBBY_UPDATE:
-            case MSG_READY:
-                players[packet.playerID].connected = true;
-                players[packet.playerID].ready = packet.payload.lobby.isReady;
-                players[packet.playerID].lastPacketTime = currentTime;
-                players[packet.playerID].lastSeqNumReceived = packet.seqNum;
-
-                // Send ACK for this packet
-                NetworkPacket updateAck = {
-                    .version = PROTOCOL_VERSION,
-                    .msgType = MSG_LOBBY_ACK,
-                    .playerID = myPlayerID,
-                    .seqNum = 0,
-                    .payload.ack = {.ackSeqNum = packet.seqNum}};
-                sendData((char*)&updateAck, sizeof(NetworkPacket));
-                break;
-
-            case MSG_LOBBY_ACK:
-                // Process ACK - remove packet from retransmission queue
-                processAck(packet.playerID, packet.payload.ack.ackSeqNum);
-                break;
-
-            case MSG_DISCONNECT:
-                players[packet.playerID].connected = false;
-                players[packet.playerID].ready = false;
-
-                // Clear pending ACKs for this player (they're gone, stop waiting)
-                for (int i = 0; i < MAX_PENDING_ACKS; i++) {
-                    players[packet.playerID].pendingAcks[i].active = false;
-                }
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    // Check for player timeouts (no packets for 3 seconds = disconnected)
-    for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
-        if (i == myPlayerID)
-            continue;  // Don't timeout ourselves
-
-        if (players[i].connected) {
-            uint32_t timeSinceLastPacket = currentTime - players[i].lastPacketTime;
-            if (timeSinceLastPacket > PLAYER_TIMEOUT_MS) {
-                // Player timed out
-                players[i].connected = false;
-                players[i].ready = false;
-
-                // Clear pending ACKs for this player (they timed out, stop waiting)
-                for (int j = 0; j < MAX_PENDING_ACKS; j++) {
-                    players[i].pendingAcks[j].active = false;
-                }
-            }
-        }
-    }
-
-    // Check if all connected players are ready
-    int connectedCount = 0;
-    int readyCount = 0;
-
-    for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
-        if (players[i].connected) {
-            connectedCount++;
-            if (players[i].ready) {
-                readyCount++;
-            }
-        }
-    }
-
-    // Need at least 2 players, and all must be ready
-    return (connectedCount >= 2 && readyCount == connectedCount);
+    return areAllConnectedPlayersReady();
 }
 
 void Multiplayer_SetReady(bool ready) {
@@ -911,7 +914,7 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
 // Public API - Item Synchronization
 //=============================================================================
 
-void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512,
+void Multiplayer_SendItemPlacement(Item itemType, const Vec2* position, int angle512,
                                    Q16_8 speed, int shooterCarIndex) {
     if (!initialized) {
         return;
@@ -922,7 +925,7 @@ void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512,
         .msgType = MSG_ITEM_PLACED,
         .playerID = myPlayerID,
         .payload.itemPlaced = {.itemType = itemType,
-                               .position = position,
+                               .position = *position,
                                .angle512 = angle512,
                                .speed = speed,
                                .shooterCarIndex = shooterCarIndex}};

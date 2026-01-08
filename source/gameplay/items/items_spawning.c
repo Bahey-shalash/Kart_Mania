@@ -24,7 +24,7 @@
 
 static int findInactiveItemSlot(void);
 
-void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
+void fireProjectileInternal(Item type, const Vec2* pos, int angle512, Q16_8 speed,
                             int targetCarIndex, bool sendNetwork,
                             int shooterCarIndex) {
     const RaceState* state = Race_GetState();
@@ -41,7 +41,7 @@ void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
 
     TrackItem* item = &activeItems[slot];
     item->type = type;
-    item->position = pos;
+    item->position = *pos;
     item->speed = speed;
     item->angle512 = angle512;
     item->targetCarIndex = targetCarIndex;
@@ -93,14 +93,14 @@ void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
     }
 }
 
-void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
+void Items_FireProjectile(Item type, const Vec2* pos, int angle512, Q16_8 speed,
                           int targetCarIndex) {
     const RaceState* state = Race_GetState();
     fireProjectileInternal(type, pos, angle512, speed, targetCarIndex, true,
                            state->playerIndex);
 }
 
-void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork) {
+void placeHazardInternal(Item type, const Vec2* pos, bool sendNetwork) {
     // In multiplayer, broadcast item placement to other players
     if (sendNetwork) {
         const RaceState* state = Race_GetState();
@@ -116,8 +116,8 @@ void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork) {
 
     TrackItem* item = &activeItems[slot];
     item->type = type;
-    item->position = pos;
-    item->startPosition = pos;
+    item->position = *pos;
+    item->startPosition = *pos;
     item->speed = 0;
     item->angle512 = 0;
     item->active = true;
@@ -141,7 +141,7 @@ void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork) {
     }
 }
 
-void Items_PlaceHazard(Item type, Vec2 pos) {
+void Items_PlaceHazard(Item type, const Vec2* pos) {
     placeHazardInternal(type, pos, true);
 }
 

@@ -22,7 +22,7 @@ This document provides detailed documentation for all public functions in the Ca
 ### Car_Init
 
 ```c
-void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed,
+void Car_Init(Car* car, const Vec2* pos, const char* name, Q16_8 maxSpeed,
               Q16_8 accelRate, Q16_8 friction);
 ```
 
@@ -37,7 +37,7 @@ void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed,
 - `friction` - Friction multiplier (0-256, where 256 = 100%)
 
 **Behavior:**
-1. Sets position to `pos`
+1. Sets position to `*pos`
 2. Sets speed to 0
 3. Sets angle512 to 0 (facing right/east)
 4. Sets maxSpeed, accelRate, friction (clamped to [0, FIXED_ONE])
@@ -50,8 +50,9 @@ void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed,
 **Example:**
 ```c
 Car player;
+Vec2 startPos = Vec2_Create(IntToFixed(904), IntToFixed(580));
 Car_Init(&player,
-         Vec2_Create(IntToFixed(904), IntToFixed(580)),
+         &startPos,
          "Lightning",
          SPEED_50CC,
          ACCEL_50CC,
@@ -65,7 +66,7 @@ Car_Init(&player,
 ### Car_Reset
 
 ```c
-void Car_Reset(Car* car, Vec2 spawnPos);
+void Car_Reset(Car* car, const Vec2* spawnPos);
 ```
 
 **Description:** Resets car to spawn position with zeroed race state. Preserves physics parameters (maxSpeed, accelRate, friction) and car name.
@@ -75,7 +76,7 @@ void Car_Reset(Car* car, Vec2 spawnPos);
 - `spawnPos` - Respawn position ([Q16.8 fixed-point](fixedmath.md))
 
 **Behavior:**
-1. Sets position to `spawnPos`
+1. Sets position to `*spawnPos`
 2. Sets speed to 0
 3. Sets angle512 to 0 (facing right/east)
 4. Sets Lap to 0, rank to 0, lastCheckpoint to -1
@@ -88,7 +89,7 @@ void Car_Reset(Car* car, Vec2 spawnPos);
 ```c
 // Respawn at last checkpoint
 if (fellOffTrack) {
-    Car_Reset(&player, lastCheckpointPos);
+    Car_Reset(&player, &lastCheckpointPos);
     Car_SetAngle(&player, checkpointFacingAngle);
 }
 ```
@@ -383,7 +384,7 @@ if (Car_GetSpeed(&cpu) > TURN_SAFE_SPEED && sharpTurnAhead) {
 ### Car_SetPosition
 
 ```c
-void Car_SetPosition(Car* car, Vec2 pos);
+void Car_SetPosition(Car* car, const Vec2* pos);
 ```
 
 **Description:** Directly sets car position. Use for respawn/teleport effects.
@@ -393,7 +394,7 @@ void Car_SetPosition(Car* car, Vec2 pos);
 - `pos` - New position ([Q16.8 fixed-point](fixedmath.md))
 
 **Behavior:**
-- Sets `car->position = pos`
+- Sets `car->position = *pos`
 - Does not affect speed, angle, or other state
 
 **When to call:**
@@ -404,7 +405,7 @@ void Car_SetPosition(Car* car, Vec2 pos);
 **Example:**
 ```c
 // Respawn at checkpoint
-Car_SetPosition(&player, checkpointPos);
+Car_SetPosition(&player, &checkpointPos);
 Car_SetAngle(&player, ANGLE_UP);
 player.speed = 0;
 ```
@@ -416,7 +417,7 @@ player.speed = 0;
 ### Car_SetVelocity
 
 ```c
-void Car_SetVelocity(Car* car, Vec2 velocity);
+void Car_SetVelocity(Car* car, const Vec2* velocity);
 ```
 
 **Description:** Sets car speed and direction from a velocity vector. Use for boosts, collisions, and hazard effects. Speed is capped to maxSpeed.
@@ -445,7 +446,7 @@ void Car_SetVelocity(Car* car, Vec2 velocity);
 Vec2 currentVel = Vec2_FromAngle(player.angle512);
 currentVel = Vec2_Scale(currentVel, player.speed);
 Vec2 boostedVel = Vec2_Scale(currentVel, IntToFixed(2));
-Car_SetVelocity(&player, boostedVel);
+Car_SetVelocity(&player, &boostedVel);
 ```
 
 **See:** [Car.c:318-323](../source/gameplay/Car.c#L318-L323)
@@ -455,7 +456,7 @@ Car_SetVelocity(&player, boostedVel);
 ### Car_ApplyImpulse
 
 ```c
-void Car_ApplyImpulse(Car* car, Vec2 impulse);
+void Car_ApplyImpulse(Car* car, const Vec2* impulse);
 ```
 
 **Description:** Applies an instant velocity change to the car. Useful for collision responses and item effects. Speed is capped to maxSpeed.
@@ -478,18 +479,19 @@ void Car_ApplyImpulse(Car* car, Vec2 impulse);
 **Example:**
 ```c
 // Shell hit - spin the car
-int shellAngle = Vec2_ToAngle(Vec2_Sub(player.position, shellPos));
+Vec2 shellToPlayer = Vec2_Sub(player.position, shellPos);
+int shellAngle = Vec2_ToAngle(&shellToPlayer);
 Vec2 knockback = Vec2_FromAngle(shellAngle);
 knockback = Vec2_Scale(knockback, IntToFixed(5));
-Car_ApplyImpulse(&player, knockback);
+Car_ApplyImpulse(&player, &knockback);
 
 // Bomb explosion - radial knockback
 Vec2 toPlayer = Vec2_Sub(player.position, bombPos);
-Q16_8 dist = Vec2_Len(toPlayer);
+Q16_8 dist = Vec2_Len(&toPlayer);
 if (dist < BOMB_EXPLOSION_RADIUS) {
-    Vec2 knockback = Vec2_Normalize(toPlayer);
+    Vec2 knockback = Vec2_Normalize(&toPlayer);
     knockback = Vec2_Scale(knockback, BOMB_KNOCKBACK_IMPULSE);
-    Car_ApplyImpulse(&player, knockback);
+    Car_ApplyImpulse(&player, &knockback);
 }
 ```
 
@@ -525,13 +527,13 @@ void Car_SetAngle(Car* car, int angle512);
 ```c
 // Spawn cars facing north at start
 for (int i = 0; i < 8; i++) {
-    Car_Init(&cars[i], startPositions[i], names[i],
+    Car_Init(&cars[i], &startPositions[i], names[i],
              SPEED_50CC, ACCEL_50CC, FRICTION_50CC);
     Car_SetAngle(&cars[i], ANGLE_UP);
 }
 
 // Respawn facing checkpoint direction
-Car_Reset(&player, checkpointPos);
+Car_Reset(&player, &checkpointPos);
 Car_SetAngle(&player, checkpointAngle);
 ```
 
@@ -655,7 +657,7 @@ cpu.accelRate = ACCEL_50CC;
 cpu.friction = FRICTION_50CC;
 
 Vec2 spawnPos = getAIStartPosition(1);
-Car_SetPosition(&cpu, spawnPos);
+Car_SetPosition(&cpu, &spawnPos);
 Car_SetAngle(&cpu, ANGLE_UP);
 ```
 
@@ -670,8 +672,9 @@ Car_SetAngle(&cpu, ANGLE_UP);
 ```c
 // Initialize player
 Car player;
+Vec2 startPos = Vec2_Create(IntToFixed(904), IntToFixed(580));
 Car_Init(&player,
-         Vec2_Create(IntToFixed(904), IntToFixed(580)),
+         &startPos,
          "Player 1",
          SPEED_50CC,
          ACCEL_50CC,
@@ -685,7 +688,7 @@ for (int i = 0; i < 7; i++) {
     snprintf(name, 32, "CPU %d", i + 1);
 
     Vec2 spawnPos = getStartingGridPosition(i + 1);
-    Car_Init(&opponents[i], spawnPos, name,
+    Car_Init(&opponents[i], &spawnPos, name,
              SPEED_50CC, ACCEL_50CC, FRICTION_50CC);
     Car_SetAngle(&opponents[i], ANGLE_UP);
 }

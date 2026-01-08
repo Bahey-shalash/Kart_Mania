@@ -108,11 +108,15 @@ Items_Init(ScorchingSands);  // Initialize for specific map
 ### Game Loop
 ```c
 // Every frame (60 FPS)
-Items_Update();                              // Update projectiles, timers, respawns
+Items_Update();                              // Receive network updates, tick items, respawns
 Items_CheckCollisions(cars, carCount, scrollX, scrollY);  // Check item interactions
 Items_UpdatePlayerEffects(player, effects); // Update status effect timers
 Items_Render(scrollX, scrollY);             // Draw items on screen
 ```
+
+**Internal update phases:** `Items_Update()` now delegates to
+`Items_ReceiveMultiplayerUpdates()`, `Items_UpdateTrackItems()`, and
+`Items_UpdateItemBoxRespawns()` for clearer separation of concerns.
 
 ### Player Interaction
 ```c

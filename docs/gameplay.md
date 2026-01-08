@@ -29,23 +29,23 @@ The **Gameplay** module handles all graphics rendering and visual updates for th
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                      GAMEPLAY ARCHITECTURE                   │
+│                      GAMEPLAY ARCHITECTURE                  │
 ├─────────────────────────────────────────────────────────────┤
-│                                                               │
+│                                                             │
 │  ┌───────────────────┐         ┌───────────────────┐        │
 │  │   gameplay.c      │         │ gameplay_logic.c  │        │
 │  │  (RENDERING)      │ ◄─────► │  (PHYSICS/STATE)  │        │
 │  └───────────────────┘         └───────────────────┘        │
-│          │                              │                    │
-│          │                              │                    │
-│  ┌───────▼──────────┐          ┌───────▼──────────┐        │
-│  │ - Camera scroll  │          │ - Car physics    │        │
-│  │ - Quadrant load  │          │ - Input handling │        │
-│  │ - Sprite render  │          │ - Collision      │        │
-│  │ - Timer display  │          │ - Lap tracking   │        │
-│  │ - Final time     │          │ - Network sync   │        │
-│  └──────────────────┘          └──────────────────┘        │
-│                                                               │
+│          │                              │                   │
+│          │                              │                   │
+│  ┌───────▼──────────┐          ┌───────-▼─────────┐         │
+│  │ - Camera scroll  │          │ - Car physics    │         │
+│  │ - Quadrant load  │          │ - Input handling │         │
+│  │ - Sprite render  │          │ - Collision      │         │
+│  │ - Timer display  │          │ - Lap tracking   │         │
+│  │ - Final time     │          │ - Network sync   │         │
+│  └──────────────────┘          └──────────────────┘         │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -56,17 +56,14 @@ VBlank (60 Hz)
     │
     ├─► Gameplay_OnVBlank()
     │       │
-    │       ├─► Race finished? → Display final time (2.5s)
-    │       │
-    │       ├─► Countdown active? → Render countdown (3/2/1/0)
-    │       │       │
-    │       │       └─► Update camera, render cars, no physics
-    │       │
-    │       └─► Racing phase
+    │       ├─► Gameplay_HandleFinishDisplay() → Final time (2.5s) + early return
+    │       ├─► Gameplay_DebugPrintRedShells() → Debug-only logging
+    │       ├─► Gameplay_HandleCountdownPhase() → Countdown render + car render + early return
+    │       ├─► Gameplay_ClearCountdownDisplayOnce()
+    │       └─► Gameplay_HandleRacePhase()
     │               │
     │               ├─► Check finish line crossing → Update lap/complete race
-    │               ├─► Update camera position
-    │               ├─► Load quadrant if needed
+    │               ├─► Update camera position + quadrant load
     │               ├─► Render cars (single/multiplayer)
     │               ├─► Render items
     │               └─► Update sub-screen item display
@@ -126,6 +123,8 @@ VBlank interrupt handler for all rendering updates (60 Hz).
 - Sub-screen updates (timer, lap, item)
 
 **Called automatically** by VBlank interrupt (configured in `timer.c`).
+
+**Internal phases:** finish display, debug logging (optional), countdown render, and race render.
 
 ---
 
@@ -500,63 +499,22 @@ static void Gameplay_UpdateItemDisplay_Sub(void) {
 ```c
 void Gameplay_OnVBlank(void) {
     const Car* player = Race_GetPlayerCar();
-    RaceState* state = Race_GetState();  // Returned mutable; treat as read-only here
+    const RaceState* state = Race_GetState();
 
-    // Phase 1: Final Time Display (2.5 seconds after finish)
-    if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES) {
-        Gameplay_DisplayFinalTime(totalRaceMin, totalRaceSec, totalRaceMsec);
+    if (Gameplay_HandleFinishDisplay(state)) {
         return;
     }
 
-    // Phase 2: Countdown (3, 2, 1, 0)
-    if (Race_IsCountdownActive()) {
-        Race_UpdateCountdown();
-        Gameplay_RenderCountdown(Race_GetCountdownState());
+#ifdef console_on_debug
+    Gameplay_DebugPrintRedShells(player);
+#endif
 
-        // Update camera (no car movement during countdown)
-        int carX = FixedToInt(player->position.x);
-        int carY = FixedToInt(player->position.y);
-        scrollX = carX - (SCREEN_WIDTH / 2);
-        scrollY = carY - (SCREEN_HEIGHT / 2);
-        // ... clamp scrollX/scrollY ...
-
-        Gameplay_ApplyCameraScroll();
-
-        // Render cars at spawn
-        if (state->gameMode == SinglePlayer) {
-            Gameplay_RenderSinglePlayerCar(player, carX, carY);
-        } else {
-            Gameplay_RenderMultiplayerCars(state);
-        }
-
-        oamUpdate(&oamMain);
+    if (Gameplay_HandleCountdownPhase(player, state)) {
         return;
     }
 
-    // Clear countdown display (once)
-    if (!countdownCleared) {
-        Gameplay_ClearCountdownDisplay();
-        countdownCleared = true;
-    }
-
-    // Phase 3: Racing
-    Gameplay_HandleFinishLineCrossing(player);
-    Gameplay_UpdateCameraPosition(player);
-    Gameplay_ApplyCameraScroll();
-
-    // Render cars
-    if (state->gameMode == SinglePlayer) {
-        int carX = FixedToInt(player->position.x);
-        int carY = FixedToInt(player->position.y);
-        Gameplay_RenderSinglePlayerCar(player, carX, carY);
-    } else {
-        Gameplay_RenderMultiplayerCars(state);
-    }
-
-    // Render items and update displays
-    Items_Render(scrollX, scrollY);
-    Gameplay_UpdateItemDisplay_Sub();
-    oamUpdate(&oamMain);
+    Gameplay_ClearCountdownDisplayOnce();
+    Gameplay_HandleRacePhase(player, state);
 }
 ```
 

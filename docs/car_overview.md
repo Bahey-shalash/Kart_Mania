@@ -185,7 +185,7 @@ void gameLoop() {
 
 ```c
 // Respawn at checkpoint
-Car_SetPosition(&player, checkpointPos);
+Car_SetPosition(&player, &checkpointPos);
 Car_SetAngle(&player, ANGLE_UP);
 ```
 
@@ -195,12 +195,12 @@ Car_SetAngle(&player, ANGLE_UP);
 // Speed boost item (doubles max speed temporarily)
 Vec2 currentVel = buildVelocityFromCar(&player);
 Vec2 boostedVel = Vec2_Scale(currentVel, IntToFixed(2));
-Car_SetVelocity(&player, boostedVel);
+Car_SetVelocity(&player, &boostedVel);
 
 // Collision knockback
 Vec2 knockback = Vec2_FromAngle(impactAngle);
 knockback = Vec2_Scale(knockback, IntToFixed(5));
-Car_ApplyImpulse(&player, knockback);
+Car_ApplyImpulse(&player, &knockback);
 ```
 
 **Note:** Speed is always capped to `maxSpeed` in these operations.
@@ -213,8 +213,9 @@ Car_ApplyImpulse(&player, knockback);
 
 ```c
 Car player;
+Vec2 startPos = Vec2_Create(IntToFixed(904), IntToFixed(580));
 Car_Init(&player,
-         startPos,           // Spawn position
+         &startPos,          // Spawn position
          "Player 1",         // Car name
          SPEED_50CC,         // Max speed
          ACCEL_50CC,         // Accel rate
@@ -231,7 +232,7 @@ Car_Init(&player,
 ### Reset (Mid-Race Respawn)
 
 ```c
-Car_Reset(&player, respawnPos);
+Car_Reset(&player, &respawnPos);
 ```
 
 **Preserves:**
@@ -317,7 +318,7 @@ if (player.item == ITEM_SPEEDBOOST) {
 if (hitByShell) {
     Vec2 spinImpulse = Vec2_FromAngle(shellAngle);
     spinImpulse = Vec2_Scale(spinImpulse, IntToFixed(3));
-    Car_ApplyImpulse(&player, spinImpulse);
+    Car_ApplyImpulse(&player, &spinImpulse);
 }
 ```
 
@@ -339,9 +340,9 @@ if (onSandTerrain) {
 // Car hitbox for item collisions
 #define CAR_COLLISION_SIZE 32
 
-bool checkCarItemCollision(Car* car, Vec2 itemPos, int itemHitbox) {
+bool checkCarItemCollision(Car* car, const Vec2* itemPos, int itemHitbox) {
     int combinedRadius = (CAR_COLLISION_SIZE + itemHitbox) / 2;
-    Q16_8 dist = Vec2_Distance(car->position, itemPos);
+    Q16_8 dist = Vec2_Distance(&car->position, itemPos);
     return (dist <= IntToFixed(combinedRadius));
 }
 ```
@@ -392,8 +393,9 @@ Car opponents[7];            // ~560 bytes
 
 ```c
 Car player;
+Vec2 startPos = Vec2_Create(IntToFixed(904), IntToFixed(580));
 Car_Init(&player,
-         Vec2_Create(IntToFixed(904), IntToFixed(580)),
+         &startPos,
          "Player",
          SPEED_50CC,
          ACCEL_50CC,
@@ -412,7 +414,7 @@ for (int i = 0; i < 7; i++) {
 
     Vec2 spawnPos = getStartingPosition(i + 1);  // Grid positions
 
-    Car_Init(&opponents[i], spawnPos, name,
+    Car_Init(&opponents[i], &spawnPos, name,
              SPEED_50CC, ACCEL_50CC, FRICTION_50CC);
 
     opponents[i].angle512 = ANGLE_UP;
@@ -424,7 +426,7 @@ for (int i = 0; i < 7; i++) {
 ```c
 // Snap to edge and stop
 if (wallCollision) {
-    Car_SetPosition(&car, validPosition);
+    Car_SetPosition(&car, &validPosition);
     car.speed = 0;
 }
 ```

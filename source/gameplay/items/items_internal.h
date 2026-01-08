@@ -55,7 +55,7 @@ extern u16* oilSlickGfx;
  *   sendNetwork     - Whether to broadcast to multiplayer peers
  *   shooterCarIndex - Index of car that fired the projectile
  */
-void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
+void fireProjectileInternal(Item type, const Vec2* pos, int angle512, Q16_8 speed,
                             int targetCarIndex, bool sendNetwork,
                             int shooterCarIndex);
 
@@ -70,6 +70,6 @@ void fireProjectileInternal(Item type, Vec2 pos, int angle512, Q16_8 speed,
  *   pos         - Position to place the hazard
  *   sendNetwork - Whether to broadcast to multiplayer peers
  */
-void placeHazardInternal(Item type, Vec2 pos, bool sendNetwork);
+void placeHazardInternal(Item type, const Vec2* pos, bool sendNetwork);
 
 #endif  // ITEMS_INTERNAL_H

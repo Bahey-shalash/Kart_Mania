@@ -94,7 +94,7 @@ void Items_CheckCollisions(Car* cars, int carCount, int scrollX, int scrollY);
  *   speed          - Projectile speed (Q16.8 fixed-point)
  *   targetCarIndex - Target car for homing (-1 for none)
  */
-void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
+void Items_FireProjectile(Item type, const Vec2* pos, int angle512, Q16_8 speed,
                           int targetCarIndex);
 
 /**
@@ -106,7 +106,7 @@ void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed,
  *   type - Type of hazard (OIL, BOMB, BANANA)
  *   pos  - Position to place the hazard
  */
-void Items_PlaceHazard(Item type, Vec2 pos);
+void Items_PlaceHazard(Item type, const Vec2* pos);
 
 //=============================================================================
 // Player Items and Effects

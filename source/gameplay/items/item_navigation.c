@@ -186,7 +186,7 @@ static const Waypoint* getWaypointsForMap(Map map, int* count) {
 // Public API
 //=============================================================================
 
-int ItemNav_FindNearestWaypoint(Vec2 position, Map map) {
+int ItemNav_FindNearestWaypoint(const Vec2* position, Map map) {
     int count;
     const Waypoint* waypoints = getWaypointsForMap(map, &count);
 
@@ -198,7 +198,7 @@ int ItemNav_FindNearestWaypoint(Vec2 position, Map map) {
     Q16_8 minDist = 0x7FFFFFFF;  // Max value
 
     for (int i = 0; i < count; i++) {
-        Q16_8 dist = Vec2_Distance(position, waypoints[i].pos);
+        Q16_8 dist = Vec2_Distance(position, &waypoints[i].pos);
         if (dist < minDist) {
             minDist = dist;
             nearestIndex = i;
@@ -230,7 +230,7 @@ int ItemNav_GetNextWaypoint(int currentWaypoint, Map map) {
     return waypoints[currentWaypoint].next;
 }
 
-bool ItemNav_IsWaypointReached(Vec2 itemPos, Vec2 waypointPos) {
+bool ItemNav_IsWaypointReached(const Vec2* itemPos, const Vec2* waypointPos) {
     Q16_8 dist = Vec2_Distance(itemPos, waypointPos);
     return (dist <= WAYPOINT_REACHED_DIST);
 }

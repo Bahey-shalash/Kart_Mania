@@ -30,7 +30,7 @@
 static void copy_name(char destination[32], const char* name);
 static Q16_8 clamp_friction(Q16_8 friction);
 static Vec2 build_velocity(const Car* car);
-static void apply_velocity(Car* car, Vec2 velocity);
+static void apply_velocity(Car* car, const Vec2* velocity);
 
 //=============================================================================
 // Private Helper Implementations
@@ -84,12 +84,12 @@ static Vec2 build_velocity(const Car* car) {
  * Converts a velocity vector into the car's internal speed/angle representation.
  * Speed is capped to maxSpeed.
  */
-static void apply_velocity(Car* car, Vec2 velocity) {
+static void apply_velocity(Car* car, const Vec2* velocity) {
     if (car == NULL) {
         return;
     }
 
-    if (Vec2_IsZero(velocity)) {
+    if (Vec2_IsZero(*velocity)) {
         car->speed = 0;
         return;
     }
@@ -111,13 +111,13 @@ static void apply_velocity(Car* car, Vec2 velocity) {
  * ------------------
  * Initializes a car with starting position, name, and physics parameters.
  */
-void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelRate,
-              Q16_8 friction) {
+void Car_Init(Car* car, const Vec2* pos, const char* name, Q16_8 maxSpeed,
+              Q16_8 accelRate, Q16_8 friction) {
     if (car == NULL) {
         return;
     }
 
-    car->position = pos;
+    car->position = *pos;
     car->speed = 0;
     car->maxSpeed = maxSpeed;
     car->accelRate = accelRate;
@@ -136,12 +136,12 @@ void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelR
  * Resets car to spawn position with zeroed race state. Preserves physics
  * parameters and car name.
  */
-void Car_Reset(Car* car, Vec2 spawnPos) {
+void Car_Reset(Car* car, const Vec2* spawnPos) {
     if (car == NULL) {
         return;
     }
 
-    car->position = spawnPos;
+    car->position = *spawnPos;
     car->speed = 0;
     car->angle512 = 0;  // reset facing direction
     car->Lap = 0;
@@ -302,11 +302,11 @@ Q16_8 Car_GetSpeed(const Car* car) {
  * -------------------------
  * Directly sets car position for respawn/teleport effects.
  */
-void Car_SetPosition(Car* car, Vec2 pos) {
+void Car_SetPosition(Car* car, const Vec2* pos) {
     if (car == NULL) {
         return;
     }
-    car->position = pos;
+    car->position = *pos;
 }
 
 /**
@@ -315,7 +315,7 @@ void Car_SetPosition(Car* car, Vec2 pos) {
  * Sets car speed and direction from a velocity vector. Use for boosts,
  * collisions, and hazard effects. Speed is capped to maxSpeed.
  */
-void Car_SetVelocity(Car* car, Vec2 velocity) {
+void Car_SetVelocity(Car* car, const Vec2* velocity) {
     if (car == NULL) {
         return;
     }
@@ -328,13 +328,13 @@ void Car_SetVelocity(Car* car, Vec2 velocity) {
  * Applies an instant velocity change to the car. Useful for collision
  * responses and item effects. Speed is capped to maxSpeed.
  */
-void Car_ApplyImpulse(Car* car, Vec2 impulse) {
+void Car_ApplyImpulse(Car* car, const Vec2* impulse) {
     if (car == NULL) {
         return;
     }
     Vec2 currentVelocity = build_velocity(car);
-    Vec2 newVelocity = Vec2_Add(currentVelocity, impulse);
-    apply_velocity(car, newVelocity);
+    Vec2 newVelocity = Vec2_Add(currentVelocity, *impulse);
+    apply_velocity(car, &newVelocity);
 }
 
 /**

@@ -175,8 +175,8 @@ static uint32_t isqrt(uint64_t n) {
  *   - Uses integer sqrt to get Q16.8 result
  *   - Avoids floating point entirely
  */
-Q16_8 Vec2_Len(Vec2 a) {
-    Q16_8 len2 = Vec2_LenSquared(a);
+Q16_8 Vec2_Len(const Vec2* a) {
+    Q16_8 len2 = Vec2_LenSquared(*a);
     if (len2 <= 0) {
         return 0;
     }
@@ -204,8 +204,8 @@ Q16_8 Vec2_Len(Vec2 a) {
  *
  * Note: Expensive operation due to length calculation and division
  */
-Vec2 Vec2_Normalize(Vec2 a) {
-    if (Vec2_IsZero(a)) {
+Vec2 Vec2_Normalize(const Vec2* a) {
+    if (Vec2_IsZero(*a)) {
         return Vec2_Zero();
     }
 
@@ -214,7 +214,7 @@ Vec2 Vec2_Normalize(Vec2 a) {
         return Vec2_Zero();
     }
 
-    return Vec2_Create(FixedDiv(a.x, len), FixedDiv(a.y, len));
+    return Vec2_Create(FixedDiv(a->x, len), FixedDiv(a->y, len));
 }
 
 /**
@@ -230,16 +230,16 @@ Vec2 Vec2_Normalize(Vec2 a) {
  *
  * Optimization: Compares len² to avoid sqrt if length is already within bounds
  */
-Vec2 Vec2_ClampLen(Vec2 v, Q16_8 maxLen) {
+Vec2 Vec2_ClampLen(const Vec2* v, Q16_8 maxLen) {
     if (maxLen <= 0) {
         return Vec2_Zero();
     }
 
-    Q16_8 len2 = Vec2_LenSquared(v);
+    Q16_8 len2 = Vec2_LenSquared(*v);
     Q16_8 max2 = FixedMul(maxLen, maxLen);
 
     if (len2 <= max2) {
-        return v;
+        return *v;
     }
 
     /* Scale down to maxLen */
@@ -285,13 +285,13 @@ Vec2 Vec2_FromAngle(int angle) {
  *     * Quadrant 3 (x<0, y<0): 256-384
  *     * Quadrant 4 (x≥0, y<0): 384-512
  */
-int Vec2_ToAngle(Vec2 v) {
-    if (Vec2_IsZero(v)) {
+int Vec2_ToAngle(const Vec2* v) {
+    if (Vec2_IsZero(*v)) {
         return 0;
     }
 
     /* Get absolute values for first-quadrant lookup */
-    Q16_8 ay = FixedAbs(v.y);
+    Q16_8 ay = FixedAbs(v->y);
 
     /* Normalize (approximately - we just need the ratio) */
     Q16_8 len = Vec2_Len(v);
@@ -317,13 +317,13 @@ int Vec2_ToAngle(Vec2 v) {
     int angle = lo;
 
     /* Adjust based on quadrant */
-    if (v.x < 0 && v.y >= 0) {
+    if (v->x < 0 && v->y >= 0) {
         /* Quadrant 2: 128-256 */
         angle = ANGLE_HALF - angle;
-    } else if (v.x < 0 && v.y < 0) {
+    } else if (v->x < 0 && v->y < 0) {
         /* Quadrant 3: 256-384 */
         angle = ANGLE_HALF + angle;
-    } else if (v.x >= 0 && v.y < 0) {
+    } else if (v->x >= 0 && v->y < 0) {
         /* Quadrant 4: 384-512 */
         angle = ANGLE_FULL - angle;
     }
@@ -347,12 +347,12 @@ int Vec2_ToAngle(Vec2 v) {
  *   Uses rotation matrix: | cos -sin | * | x |
  *                         | sin  cos |   | y |
  */
-Vec2 Vec2_Rotate(Vec2 v, int angle) {
+Vec2 Vec2_Rotate(const Vec2* v, int angle) {
     Q16_8 c = Fixed_Cos(angle);
     Q16_8 s = Fixed_Sin(angle);
 
-    return Vec2_Create(FixedMul(v.x, c) - FixedMul(v.y, s),
-                       FixedMul(v.x, s) + FixedMul(v.y, c));
+    return Vec2_Create(FixedMul(v->x, c) - FixedMul(v->y, s),
+                       FixedMul(v->x, s) + FixedMul(v->y, c));
 }
 
 /*=============================================================================
@@ -415,9 +415,9 @@ Mat2 Mat2_Rotate(int angle) {
  *
  * Note: Expensive (uses sqrt). Use Vec2_DistanceSquared for comparisons.
  */
-Q16_8 Vec2_Distance(Vec2 a, Vec2 b) {
-    Vec2 diff = Vec2_Sub(a, b);
-    return Vec2_Len(diff);
+Q16_8 Vec2_Distance(const Vec2* a, const Vec2* b) {
+    Vec2 diff = Vec2_Sub(*a, *b);
+    return Vec2_Len(&diff);
 }
 
 /**
@@ -437,15 +437,15 @@ Q16_8 Vec2_Distance(Vec2 a, Vec2 b) {
  *   2. Rotate around origin
  *   3. Translate back
  */
-Vec2 Vec2_RotateAround(Vec2 point, Vec2 pivot, int angle) {
+Vec2 Vec2_RotateAround(const Vec2* point, const Vec2* pivot, int angle) {
     /* Translate point so pivot is at origin */
-    Vec2 offset = Vec2_Sub(point, pivot);
+    Vec2 offset = Vec2_Sub(*point, *pivot);
 
     /* Rotate around origin */
-    Vec2 rotated = Vec2_Rotate(offset, angle);
+    Vec2 rotated = Vec2_Rotate(&offset, angle);
 
     /* Translate back */
-    return Vec2_Add(rotated, pivot);
+    return Vec2_Add(rotated, *pivot);
 }
 
 /**
@@ -461,16 +461,16 @@ Vec2 Vec2_RotateAround(Vec2 point, Vec2 pivot, int angle) {
  *
  * Formula: (dot(v, onto) / dot(onto, onto)) * onto
  */
-Vec2 Vec2_Project(Vec2 v, Vec2 onto) {
-    if (Vec2_IsZero(onto)) {
+Vec2 Vec2_Project(const Vec2* v, const Vec2* onto) {
+    if (Vec2_IsZero(*onto)) {
         return Vec2_Zero();
     }
 
-    Q16_8 dot_v_onto = Vec2_Dot(v, onto);
-    Q16_8 dot_onto_onto = Vec2_LenSquared(onto);
+    Q16_8 dot_v_onto = Vec2_Dot(*v, *onto);
+    Q16_8 dot_onto_onto = Vec2_LenSquared(*onto);
 
     Q16_8 scalar = FixedDiv(dot_v_onto, dot_onto_onto);
-    return Vec2_Scale(onto, scalar);
+    return Vec2_Scale(*onto, scalar);
 }
 
 /**
@@ -486,7 +486,7 @@ Vec2 Vec2_Project(Vec2 v, Vec2 onto) {
  *
  * Formula: v - project(v, from)
  */
-Vec2 Vec2_Reject(Vec2 v, Vec2 from) {
+Vec2 Vec2_Reject(const Vec2* v, const Vec2* from) {
     Vec2 projected = Vec2_Project(v, from);
-    return Vec2_Sub(v, projected);
+    return Vec2_Sub(*v, projected);
 }

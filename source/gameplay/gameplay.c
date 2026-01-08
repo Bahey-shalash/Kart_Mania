@@ -142,6 +142,15 @@ static void Gameplay_ApplyCameraScroll(void);
 static void Gameplay_RenderSinglePlayerCar(const Car* player, int carX, int carY);
 static void Gameplay_RenderMultiplayerCars(const RaceState* state);
 static void Gameplay_HandleFinishLineCrossing(const Car* player);
+static bool Gameplay_HandleFinishDisplay(const RaceState* state);
+#ifdef console_on_debug
+static void Gameplay_DebugPrintRedShells(const Car* player);
+#endif
+static bool Gameplay_HandleCountdownPhase(const Car* player, const RaceState* state);
+static void Gameplay_ClearCountdownDisplayOnce(void);
+static void Gameplay_HandleRacePhase(const Car* player, const RaceState* state);
+static void Gameplay_RenderCarsForMode(const RaceState* state, const Car* player,
+                                       int carX, int carY);
 
 //=============================================================================
 // PUBLIC API - Timer Access
@@ -218,10 +227,14 @@ static void Gameplay_InitializeCamera(const Car* player) {
     scrollX = FixedToInt(player->position.x) - (SCREEN_WIDTH / 2);
     scrollY = FixedToInt(player->position.y) - (SCREEN_HEIGHT / 2);
 
-    if (scrollX < 0) scrollX = 0;
-    if (scrollY < 0) scrollY = 0;
-    if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
-    if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
+    if (scrollX < 0)
+        scrollX = 0;
+    if (scrollY < 0)
+        scrollY = 0;
+    if (scrollX > MAX_SCROLL_X)
+        scrollX = MAX_SCROLL_X;
+    if (scrollY > MAX_SCROLL_Y)
+        scrollY = MAX_SCROLL_Y;
 
     currentQuadrant = Gameplay_DetermineQuadrant(scrollX, scrollY);
     Gameplay_LoadQuadrant(currentQuadrant);
@@ -395,8 +408,8 @@ static void Gameplay_RenderMultiplayerCars(const RaceState* state) {
                    false, false, false, false);
         } else {
             oamSet(&oamMain, oamSlot, -64, -64, OBJPRIORITY_0, 0, SpriteSize_32x32,
-                   SpriteColorFormat_16Color, car->gfx, i, true, false, false,
-                   false, false);
+                   SpriteColorFormat_16Color, car->gfx, i, true, false, false, false,
+                   false);
         }
     }
 }
@@ -420,26 +433,24 @@ static void Gameplay_HandleFinishLineCrossing(const Car* player) {
         finishDisplayCounter = 0;
 #ifndef console_on_debug
         // Hide item sprite when race finishes
-        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,
-               SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false,
-               false, false, false);
+        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32, SpriteColorFormat_16Color,
+               itemDisplayGfx_Sub, -1, true, false, false, false, false);
         oamUpdate(&oamSub);
 #endif
     }
 }
 
-void Gameplay_OnVBlank(void) {
-    const Car* player = Race_GetPlayerCar();
-    const RaceState* state = Race_GetState();
-
-    // Display final time for 2.5 seconds after race completion
+static bool Gameplay_HandleFinishDisplay(const RaceState* state) {
     if (state->raceFinished && finishDisplayCounter < FINISH_DISPLAY_FRAMES) {
         Gameplay_DisplayFinalTime(totalRaceMin, totalRaceSec, totalRaceMsec);
-        return;
+        return true;
     }
 
+    return false;
+}
+
 #ifdef console_on_debug
-    // Debug: Print red shell positions
+static void Gameplay_DebugPrintRedShells(const Car* player) {
     consoleClear();
     printf("=== RED SHELL DEBUG ===\n");
     int itemCount = 0;
@@ -449,70 +460,96 @@ void Gameplay_OnVBlank(void) {
         if (items[i].active && items[i].type == ITEM_RED_SHELL) {
             printf("Shell %d: (%d, %d)\n", redShellCount,
                    FixedToInt(items[i].position.x), FixedToInt(items[i].position.y));
-            printf("  Angle: %d, Target: %d, Waypoint: %d\n",
-                   items[i].angle512, items[i].targetCarIndex, items[i].currentWaypoint);
+            printf("  Angle: %d, Target: %d, Waypoint: %d\n", items[i].angle512,
+                   items[i].targetCarIndex, items[i].currentWaypoint);
             redShellCount++;
         }
     }
-    if (redShellCount == 0) printf("No red shells active\n");
+    if (redShellCount == 0)
+        printf("No red shells active\n");
     printf("\nPlayer: (%d, %d)\n", FixedToInt(player->position.x),
            FixedToInt(player->position.y));
+}
 #endif
 
-    // COUNTDOWN PHASE: Update and render countdown (3, 2, 1, GO)
-    if (Race_IsCountdownActive()) {
-        Race_UpdateCountdown();
-        Gameplay_RenderCountdown(Race_GetCountdownState());
-
-        // Update camera during countdown (no car movement yet)
-        int carX = FixedToInt(player->position.x);
-        int carY = FixedToInt(player->position.y);
-        scrollX = carX - (SCREEN_WIDTH / 2);
-        scrollY = carY - (SCREEN_HEIGHT / 2);
-        if (scrollX < 0) scrollX = 0;
-        if (scrollY < 0) scrollY = 0;
-        if (scrollX > MAX_SCROLL_X) scrollX = MAX_SCROLL_X;
-        if (scrollY > MAX_SCROLL_Y) scrollY = MAX_SCROLL_Y;
-
-        Gameplay_ApplyCameraScroll();
-
-        // Render cars during countdown
-        if (state->gameMode == SinglePlayer) {
-            Gameplay_RenderSinglePlayerCar(player, carX, carY);
-        } else {
-            Gameplay_RenderMultiplayerCars(state);
-        }
-
-        oamUpdate(&oamMain);
-        return;
-    }
-
-    // Clear countdown display once (after countdown finishes)
-    if (!countdownCleared) {
-        Gameplay_ClearCountdownDisplay();
-        countdownCleared = true;
-    }
-
-    // RACING PHASE: Normal gameplay updates
-    Gameplay_HandleFinishLineCrossing(player);
-    Gameplay_UpdateCameraPosition(player);
-    Gameplay_ApplyCameraScroll();
-
-    // Render cars based on game mode
+static void Gameplay_RenderCarsForMode(const RaceState* state, const Car* player,
+                                       int carX, int carY) {
     if (state->gameMode == SinglePlayer) {
-        int carX = FixedToInt(player->position.x);
-        int carY = FixedToInt(player->position.y);
         Gameplay_RenderSinglePlayerCar(player, carX, carY);
     } else {
         Gameplay_RenderMultiplayerCars(state);
     }
+}
 
-    // Render items and update OAM
+static bool Gameplay_HandleCountdownPhase(const Car* player, const RaceState* state) {
+    if (!Race_IsCountdownActive()) {
+        return false;
+    }
+
+    Race_UpdateCountdown();
+    Gameplay_RenderCountdown(Race_GetCountdownState());
+
+    int carX = FixedToInt(player->position.x);
+    int carY = FixedToInt(player->position.y);
+    scrollX = carX - (SCREEN_WIDTH / 2);
+    scrollY = carY - (SCREEN_HEIGHT / 2);
+    if (scrollX < 0)
+        scrollX = 0;
+    if (scrollY < 0)
+        scrollY = 0;
+    if (scrollX > MAX_SCROLL_X)
+        scrollX = MAX_SCROLL_X;
+    if (scrollY > MAX_SCROLL_Y)
+        scrollY = MAX_SCROLL_Y;
+
+    Gameplay_ApplyCameraScroll();
+    Gameplay_RenderCarsForMode(state, player, carX, carY);
+
+    oamUpdate(&oamMain);
+    return true;
+}
+
+static void Gameplay_ClearCountdownDisplayOnce(void) {
+    if (!countdownCleared) {
+        Gameplay_ClearCountdownDisplay();
+        countdownCleared = true;
+    }
+}
+
+static void Gameplay_HandleRacePhase(const Car* player, const RaceState* state) {
+    Gameplay_HandleFinishLineCrossing(player);
+    Gameplay_UpdateCameraPosition(player);
+    Gameplay_ApplyCameraScroll();
+
+    int carX = FixedToInt(player->position.x);
+    int carY = FixedToInt(player->position.y);
+    Gameplay_RenderCarsForMode(state, player, carX, carY);
+
     Items_Render(scrollX, scrollY);
 #ifndef console_on_debug
     Gameplay_UpdateItemDisplay_Sub();
 #endif
     oamUpdate(&oamMain);
+}
+
+void Gameplay_OnVBlank(void) {
+    const Car* player = Race_GetPlayerCar();
+    const RaceState* state = Race_GetState();
+
+    if (Gameplay_HandleFinishDisplay(state)) {
+        return;
+    }
+
+#ifdef console_on_debug
+    Gameplay_DebugPrintRedShells(player);
+#endif
+
+    if (Gameplay_HandleCountdownPhase(player, state)) {
+        return;
+    }
+
+    Gameplay_ClearCountdownDisplayOnce();
+    Gameplay_HandleRacePhase(player, state);
 }
 
 void Gameplay_Cleanup(void) {
@@ -733,7 +770,8 @@ static void Gameplay_LoadItemDisplay_Sub(void) {
 
 // Helper: Get item sprite properties for a given item type
 static void Gameplay_GetItemSpriteInfo(Item item, const unsigned int** outTiles,
-                                       int* outPalette, SpriteSize* outSize, int* outX) {
+                                       int* outPalette, SpriteSize* outSize,
+                                       int* outX) {
     *outX = 220;  // Default position (256 - 16 - margin)
 
     switch (item) {
@@ -789,9 +827,8 @@ static void Gameplay_UpdateItemDisplay_Sub(void) {
 
     if (player->item == ITEM_NONE) {
         // Hide sprite when no item
-        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32,
-               SpriteColorFormat_16Color, itemDisplayGfx_Sub, -1, true, false, false,
-               false, false);
+        oamSet(&oamSub, 0, 0, 192, 0, 0, SpriteSize_32x32, SpriteColorFormat_16Color,
+               itemDisplayGfx_Sub, -1, true, false, false, false, false);
     } else {
         // Get item sprite properties
         const unsigned int* itemTiles = NULL;
@@ -799,13 +836,13 @@ static void Gameplay_UpdateItemDisplay_Sub(void) {
         SpriteSize spriteSize = SpriteSize_16x16;
         int itemX = 0;
 
-        Gameplay_GetItemSpriteInfo(player->item, &itemTiles, &paletteNum,
-                                   &spriteSize, &itemX);
+        Gameplay_GetItemSpriteInfo(player->item, &itemTiles, &paletteNum, &spriteSize,
+                                   &itemX);
 
         if (itemTiles != NULL) {
             // Copy item graphics to sub screen sprite memory
             int tilesLen = (player->item == ITEM_MISSILE) ? missileTilesLen
-                         : (player->item == ITEM_OIL)     ? oil_slickTilesLen
+                           : (player->item == ITEM_OIL)   ? oil_slickTilesLen
                                                           : bananaTilesLen;
             dmaCopy(itemTiles, itemDisplayGfx_Sub, tilesLen);
 

@@ -489,7 +489,7 @@ for (int i = 0; i < 60; i++) {
 ```
 
 ### 5. Multiplayer Cleanup Settling
-**Location:** [multiplayer.c:1070](../source/network/multiplayer.c#L1070)
+**Location:** [multiplayer.c:1071](../source/network/multiplayer.c#L1071)
 **Frequency:** 60Hz for exactly 1 second (60 frames)
 **Purpose:** Keep WiFi alive during nuclear cleanup after multiplayer session
 ```c
@@ -500,7 +500,7 @@ for (int i = 0; i < 60; i++) {
 ```
 
 ### 6. Multiplayer Sync Timeouts
-**Locations:** [multiplayer.c:440, 470](../source/network/multiplayer.c#L440)
+**Locations:** [multiplayer.c:582, 612](../source/network/multiplayer.c#L582)
 **Frequency:** 60Hz during player sync (up to 10 second timeout)
 **Purpose:** Service WiFi while waiting for other players
 ```c

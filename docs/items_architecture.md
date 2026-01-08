@@ -227,7 +227,7 @@ Cumulative:
 
 **Complexity:** O(n) where n = number of item types (10)
 
-**See:** [items_inventory.c:114-167](../source/gameplay/items/items_inventory.c#L114-L167)
+**See:** [items_inventory.c:124-176](../source/gameplay/items/items_inventory.c#L124-L176)
 
 ---
 
@@ -278,7 +278,7 @@ if (angleDiff < -HOMING_TURN_RATE) angleDiff = -HOMING_TURN_RATE;
 - Predictable trajectories
 - Can be dodged with skill
 
-**See:** [items_update.c:181-270](../source/gameplay/items/items_update.c#L181-L270)
+**See:** [items_update.c:210-299](../source/gameplay/items/items_update.c#L210-L299)
 
 ---
 
@@ -358,14 +358,14 @@ for each active hazard:
 
 **Hitbox Check:**
 ```c
-bool checkItemCarCollision(Vec2 itemPos, Vec2 carPos, int itemHitbox) {
+bool checkItemCarCollision(const Vec2* itemPos, const Vec2* carPos, int itemHitbox) {
     Q16_8 dist = Vec2_Distance(itemPos, carPos);
     int hitRadius = (itemHitbox + CAR_COLLISION_SIZE) / 2;
     return (dist <= IntToFixed(hitRadius));
 }
 ```
 
-**See:** [items_update.c:143-497](../source/gameplay/items/items_update.c#L143-L497)
+**See:** [items_update.c:301-539](../source/gameplay/items/items_update.c#L301-L539)
 
 ---
 
@@ -414,7 +414,7 @@ if (!hasCompletedLap && waypointsVisited > 100) {
 - More predictable for AI opponents
 - Prevents exploits in single-player
 
-**See:** [items_update.c:82-118](../source/gameplay/items/items_update.c#L82-L118)
+**See:** [items_update.c:159-187](../source/gameplay/items/items_update.c#L159-L187)
 
 ---
 
@@ -461,7 +461,7 @@ oamRotateScale(&oamMain, affineSlot, rotation, scale_x, scale_y);
 
 **DS Affine Slots:** 32 available, items use 1-4
 
-**See:** [items_render.c:118-128](../source/gameplay/items/items_render.c#L118-L128)
+**See:** [items_render.c:123-135](../source/gameplay/items/items_render.c#L123-L135)
 
 ---
 
@@ -523,7 +523,7 @@ User presses button
 - Periodic state reconciliation
 - Client-side prediction with rollback
 
-**See:** [items_update.c:38-59](../source/gameplay/items/items_update.c#L38-L59)
+**See:** [items_update.c:85-104](../source/gameplay/items/items_update.c#L85-L104)
 
 ---
 

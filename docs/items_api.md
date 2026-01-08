@@ -77,15 +77,12 @@ Items_Reset();
 void Items_Update(void);
 ```
 
-**Description:** Updates all active items each frame. Handles projectile movement, homing behavior, lifetime tracking, item box respawning, and multiplayer synchronization.
+**Description:** Updates all active items each frame. Handles multiplayer intake, per-item ticking (lifetime/immunity/movement/homing), and item box respawning.
 
 **Behavior:**
-1. Receives and processes multiplayer item placements
-2. Updates projectile positions and angles
-3. Updates homing behavior for red shells and missiles
-4. Decrements lifetime timers and despawns expired items
-5. Updates immunity timers (time-based and lap-based)
-6. Updates item box respawn timers
+1. Receives and processes multiplayer item placements/box pickups
+2. Ticks active items (lifetime, immunity, projectile motion, homing)
+3. Updates item box respawn timers
 
 **When to call:** Every frame in the main gameplay loop.
 
@@ -100,7 +97,7 @@ while (gameActive) {
 }
 ```
 
-**See:** [items_update.c:38-141](../source/gameplay/items/items_update.c#L38-L141)
+**See:** [items_update.c:58](../source/gameplay/items/items_update.c#L58)
 
 ---
 
@@ -130,7 +127,7 @@ void Items_CheckCollisions(Car* cars, int carCount, int scrollX, int scrollY);
 Items_CheckCollisions(race->cars, race->carCount, camera.scrollX, camera.scrollY);
 ```
 
-**See:** [items_update.c:143-147](../source/gameplay/items/items_update.c#L143-L147)
+**See:** [items_update.c:66-69](../source/gameplay/items/items_update.c#L66-L69)
 
 ---
 
@@ -138,14 +135,15 @@ Items_CheckCollisions(race->cars, race->carCount, camera.scrollX, camera.scrollY
 
 ### Items_FireProjectile
 ```c
-void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed, int targetCarIndex);
+void Items_FireProjectile(Item type, const Vec2* pos, int angle512, Q16_8 speed,
+                          int targetCarIndex);
 ```
 
 **Description:** Fires a projectile item (shell or missile) from a position. Broadcasts to multiplayer peers and initializes homing behavior for red shells and missiles.
 
 **Parameters:**
 - `type` - Type of projectile (`ITEM_GREEN_SHELL`, `ITEM_RED_SHELL`, `ITEM_MISSILE`)
-- `pos` - Starting position (Q16.8 fixed-point)
+- `pos` - Pointer to starting position (Q16.8 fixed-point)
 - `angle512` - Launch angle (0-511, where 512 = 360°)
 - `speed` - Projectile speed (Q16.8 fixed-point)
 - `targetCarIndex` - Target car for homing (-1 for none)
@@ -164,23 +162,23 @@ void Items_FireProjectile(Item type, Vec2 pos, int angle512, Q16_8 speed, int ta
 // Fire green shell forward
 Vec2 spawnPos = Vec2_Add(player.position, forward_offset);
 Q16_8 shellSpeed = FixedMul(player.maxSpeed, GREEN_SHELL_SPEED_MULT);
-Items_FireProjectile(ITEM_GREEN_SHELL, spawnPos, player.angle512, shellSpeed, -1);
+Items_FireProjectile(ITEM_GREEN_SHELL, &spawnPos, player.angle512, shellSpeed, -1);
 ```
 
-**See:** [items_spawning.c:84-89](../source/gameplay/items/items_spawning.c#L84-L89)
+**See:** [items_spawning.c:96-100](../source/gameplay/items/items_spawning.c#L96-L100)
 
 ---
 
 ### Items_PlaceHazard
 ```c
-void Items_PlaceHazard(Item type, Vec2 pos);
+void Items_PlaceHazard(Item type, const Vec2* pos);
 ```
 
 **Description:** Places a stationary hazard item on the track (banana, oil slick, or bomb).
 
 **Parameters:**
 - `type` - Type of hazard (`ITEM_OIL`, `ITEM_BOMB`, `ITEM_BANANA`)
-- `pos` - Position to place the hazard (Q16.8 fixed-point)
+- `pos` - Pointer to position to place the hazard (Q16.8 fixed-point)
 
 **Behavior:**
 1. Finds inactive item slot
@@ -197,10 +195,10 @@ void Items_PlaceHazard(Item type, Vec2 pos);
 // Drop banana behind player
 Vec2 backward = Vec2_FromAngle((player.angle512 + ANGLE_HALF) & ANGLE_MASK);
 Vec2 dropPos = Vec2_Add(player.position, Vec2_Scale(backward, IntToFixed(16)));
-Items_PlaceHazard(ITEM_BANANA, dropPos);
+Items_PlaceHazard(ITEM_BANANA, &dropPos);
 ```
 
-**See:** [items_spawning.c:132-134](../source/gameplay/items/items_spawning.c#L132-L134)
+**See:** [items_spawning.c:144-145](../source/gameplay/items/items_spawning.c#L144-L145)
 
 ---
 
@@ -242,7 +240,7 @@ if (keysDown() & KEY_R) {
 }
 ```
 
-**See:** [items_inventory.c:14-112](../source/gameplay/items/items_inventory.c#L14-L112)
+**See:** [items_inventory.c:38-89](../source/gameplay/items/items_inventory.c#L38-L89)
 
 ---
 
@@ -285,7 +283,7 @@ if (hitItemBox) {
 }
 ```
 
-**See:** [items_inventory.c:114-167](../source/gameplay/items/items_inventory.c#L114-L167)
+**See:** [items_inventory.c:124-176](../source/gameplay/items/items_inventory.c#L124-L176)
 
 ---
 
@@ -457,7 +455,7 @@ Items_Render(camera.scrollX, camera.scrollY);
 oamUpdate(&oamMain);
 ```
 
-**See:** [items_render.c:27-137](../source/gameplay/items/items_render.c#L27-L137)
+**See:** [items_render.c:31-141](../source/gameplay/items/items_render.c#L31-L141)
 
 ---
 
@@ -492,7 +490,7 @@ Items_LoadGraphics();
 Items_Init(currentMap);
 ```
 
-**See:** [items_render.c:139-175](../source/gameplay/items/items_render.c#L139-L175)
+**See:** [items_render.c:143-179](../source/gameplay/items/items_render.c#L143-L179)
 
 ---
 
@@ -515,7 +513,7 @@ void Items_FreeGraphics(void);
 Items_FreeGraphics();
 ```
 
-**See:** [items_render.c:177-206](../source/gameplay/items/items_render.c#L177-L206)
+**See:** [items_render.c:181-209](../source/gameplay/items/items_render.c#L181-L209)
 
 ---
 
@@ -602,7 +600,7 @@ if (boxIndex >= 0) {
 }
 ```
 
-**See:** [items_update.c:149-156](../source/gameplay/items/items_update.c#L149-L156)
+**See:** [items_update.c:72-78](../source/gameplay/items/items_update.c#L72-L78)
 
 ---
 

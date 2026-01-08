@@ -46,7 +46,7 @@ During testing, both DS units were assigned the same player ID (both showing "Pl
 - DS #1: 192.168.1.100 → `100 % 8 = 4` → Player 5
 - DS #2: 192.168.1.108 → `108 % 8 = 4` → Player 5 (COLLISION!)
 
-**Solution ([multiplayer.c:413-416](../source/network/multiplayer.c#L413-L416)):**
+**Solution ([multiplayer.c:623-628](../source/network/multiplayer.c#L623-L628)):**
 ```c
 unsigned char macAddr[6];
 Wifi_GetData(WIFIGETDATA_MACADDRESS, 6, macAddr);
@@ -74,7 +74,7 @@ DS Unit #2:
 
 **Packet Format (32 bytes total):**
 
-**Defined in:** [multiplayer.c:35-83](../source/network/multiplayer.c#L35-L83)
+**Defined in:** [multiplayer.c:94-140](../source/network/multiplayer.c#L94-L140)
 
 ```c
 typedef struct {
@@ -110,7 +110,7 @@ typedef struct {
 
 **Lobby Messages: Selective Repeat ARQ**
 
-**Defined in:** [multiplayer.c:89-127](../source/network/multiplayer.c#L89-L127)
+**Defined in:** [multiplayer.c:159-196](../source/network/multiplayer.c#L159-L196)
 
 Lobby messages (join, ready, heartbeat) use Selective Repeat ARQ for reliability:
 
@@ -135,7 +135,7 @@ Sender                          Receiver
 - Pending queue: 4 slots per remote player
 - Sequence numbers: 0-255 (wraps around)
 
-**Implementation ([multiplayer.c:158-239](../source/network/multiplayer.c#L158-L239)):**
+**Implementation ([multiplayer.c:228-307](../source/network/multiplayer.c#L228-L307)):**
 
 ```c
 static void sendReliableLobbyMessage(NetworkPacket* packet) {
@@ -179,7 +179,7 @@ Car updates during race are sent at 15Hz (every 4 frames) with **no ACKs, no ret
 
 **Frame-Based Timing:**
 
-**Defined in:** [multiplayer.c:118-119](../source/network/multiplayer.c#L118-L119)
+**Defined in:** [multiplayer.c:188-221](../source/network/multiplayer.c#L188-L221)
 
 ```c
 static uint32_t msCounter = 0;  // Approximate milliseconds
@@ -207,7 +207,7 @@ static uint32_t getTimeMs(void) {
 ### 1. Initialization
 
 **Function:** `Multiplayer_Init()`
-**Defined in:** [multiplayer.c:323-442](../source/network/multiplayer.c#L323-L442)
+**Defined in:** [multiplayer.c:535-639](../source/network/multiplayer.c#L535-L639)
 
 ```c
 int playerID = Multiplayer_Init();
@@ -246,7 +246,7 @@ MAC: 00:09:BF:12:34:AB
 ### 2. Joining Lobby
 
 **Function:** `Multiplayer_JoinLobby()`
-**Defined in:** [multiplayer.c:577-605](../source/network/multiplayer.c#L577-L605)
+**Defined in:** [multiplayer.c:789-816](../source/network/multiplayer.c#L789-L816)
 
 ```c
 Multiplayer_JoinLobby();
@@ -259,7 +259,7 @@ Multiplayer_JoinLobby();
 3. Sends `MSG_LOBBY_JOIN` with Selective Repeat ARQ
 4. Sends 3 extra immediate broadcasts (redundancy for fast discovery)
 
-**Critical Fix ([multiplayer.c:579](../source/network/multiplayer.c#L579)):**
+**Critical Fix ([multiplayer.c:792](../source/network/multiplayer.c#L792)):**
 ```c
 resetLobbyState();  // Prevents "ghost players" bug
 ```
@@ -269,7 +269,7 @@ Without this, players from previous sessions would still show as "connected" eve
 ### 3. Lobby Update Loop
 
 **Function:** `Multiplayer_UpdateLobby()`
-**Defined in:** [multiplayer.c:607-756](../source/network/multiplayer.c#L607-L756)
+**Defined in:** [multiplayer.c:819-829](../source/network/multiplayer.c#L819-L829)
 
 Call every frame while in lobby:
 
@@ -303,7 +303,10 @@ while (inLobby) {
 5. **Timeout detection** - 3 seconds without packets = disconnected
 6. **Checks ready status** - returns true if all connected players are ready
 
-**Packet Processing ([multiplayer.c:658-718](../source/network/multiplayer.c#L658-L718)):**
+**Internal helpers:** `resendJoinIfNeeded()`, `sendLobbyHeartbeatIfNeeded()`,
+`processLobbyPackets()`, `handlePlayerTimeouts()`, `areAllConnectedPlayersReady()`.
+
+**Packet Processing ([multiplayer.c:339-390](../source/network/multiplayer.c#L339-L390)):**
 
 ```c
 switch (packet.msgType) {
@@ -338,7 +341,7 @@ switch (packet.msgType) {
 ### 4. Marking Ready
 
 **Function:** `Multiplayer_SetReady(bool ready)`
-**Defined in:** [multiplayer.c:758-768](../source/network/multiplayer.c#L758-L768)
+**Defined in:** [multiplayer.c:831-839](../source/network/multiplayer.c#L831-L839)
 
 ```c
 // When player presses SELECT
@@ -355,7 +358,7 @@ Broadcasts `MSG_READY` with Selective Repeat ARQ to all players.
 ### 1. Starting Race
 
 **Function:** `Multiplayer_StartRace()`
-**Defined in:** [multiplayer.c:779-781](../source/network/multiplayer.c#L779-L781)
+**Defined in:** [multiplayer.c:852-853](../source/network/multiplayer.c#L852-L853)
 
 ```c
 Multiplayer_StartRace();
@@ -367,7 +370,7 @@ Multiplayer_StartRace();
 ### 2. Sending Car State
 
 **Function:** `Multiplayer_SendCarState(const Car* car)`
-**Defined in:** [multiplayer.c:783-794](../source/network/multiplayer.c#L783-L794)
+**Defined in:** [multiplayer.c:856-867](../source/network/multiplayer.c#L856-L867)
 
 Call every 4 frames (15Hz):
 
@@ -399,7 +402,7 @@ void gameplay_update() {
 ### 3. Receiving Car States
 
 **Function:** `Multiplayer_ReceiveCarStates(Car* cars, int carCount)`
-**Defined in:** [multiplayer.c:796-838](../source/network/multiplayer.c#L796-L838)
+**Defined in:** [multiplayer.c:869-934](../source/network/multiplayer.c#L869-L934)
 
 Receives all pending car update packets and directly updates the cars array:
 
@@ -437,7 +440,7 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
 ### Item Placement
 
 **Function:** `Multiplayer_SendItemPlacement(...)`
-**Defined in:** [multiplayer.c:844-861](../source/network/multiplayer.c#L844-L861)
+**Defined in:** [multiplayer.c:917-934](../source/network/multiplayer.c#L917-L934)
 
 ```c
 // When throwing a green shell
@@ -445,7 +448,7 @@ Vec2 position = car.position;
 int angle = car.angle512;
 Q16_8 speed = IntToFixed(10);
 
-Multiplayer_SendItemPlacement(ITEM_GREEN_SHELL, position,
+Multiplayer_SendItemPlacement(ITEM_GREEN_SHELL, &position,
                               angle, speed, myPlayerID);
 
 // Locally create the shell (authoritative for own items)
@@ -460,7 +463,7 @@ createShell(position, angle, speed, myPlayerID);
 - Shooter car index (for immunity - can't hit own projectile)
 
 **Function:** `Multiplayer_ReceiveItemPlacements()`
-**Defined in:** [multiplayer.c:863-897](../source/network/multiplayer.c#L863-L897)
+**Defined in:** [multiplayer.c:936-969](../source/network/multiplayer.c#L936-L969)
 
 ```c
 // Call every frame during race
@@ -479,7 +482,7 @@ if (data.valid) {
 ### Item Box Pickup
 
 **Function:** `Multiplayer_SendItemBoxPickup(int boxIndex)`
-**Defined in:** [multiplayer.c:899-910](../source/network/multiplayer.c#L899-L910)
+**Defined in:** [multiplayer.c:972-982](../source/network/multiplayer.c#L972-L982)
 
 ```c
 // When picking up box #5
@@ -490,7 +493,7 @@ if (collidedWithBox(5)) {
 ```
 
 **Function:** `Multiplayer_ReceiveItemBoxPickup()`
-**Defined in:** [multiplayer.c:912-938](../source/network/multiplayer.c#L912-L938)
+**Defined in:** [multiplayer.c:985-1010](../source/network/multiplayer.c#L985-L1010)
 
 ```c
 // Call every frame during race
@@ -509,7 +512,7 @@ if (boxIndex >= 0) {
 ### Normal Cleanup
 
 **Function:** `Multiplayer_Cleanup()`
-**Defined in:** [multiplayer.c:500-539](../source/network/multiplayer.c#L500-L539)
+**Defined in:** [multiplayer.c:712-749](../source/network/multiplayer.c#L712-L749)
 
 ```c
 Multiplayer_Cleanup();
@@ -528,7 +531,7 @@ Multiplayer_Cleanup();
 ### Nuclear Cleanup
 
 **Function:** `Multiplayer_NukeConnectivity()`
-**Defined in:** [multiplayer.c:949-1003](../source/network/multiplayer.c#L949-L1003)
+**Defined in:** [multiplayer.c:1022-1075](../source/network/multiplayer.c#L1022-L1075)
 
 ```c
 Multiplayer_NukeConnectivity();
@@ -544,7 +547,7 @@ Multiplayer_NukeConnectivity();
 4. Resets ALL module state (players, buffers, counters, flags)
 5. **Pumps `Wifi_Update()` for 1 second** during settling
 
-**Critical Detail ([multiplayer.c:999-1002](../source/network/multiplayer.c#L999-L1002)):**
+**Critical Detail ([multiplayer.c:1071-1074](../source/network/multiplayer.c#L1071-L1074)):**
 ```c
 for (int i = 0; i < 60; i++) {  // 1 second
     Wifi_Update();  // CRITICAL: Keep WiFi stack alive
@@ -558,7 +561,7 @@ Even during "nuclear" cleanup, we keep pumping `Wifi_Update()` to prevent WiFi s
 
 ### PlayerInfo Structure
 
-**Defined in:** [multiplayer.c:99-107](../source/network/multiplayer.c#L99-L107)
+**Defined in:** [multiplayer.c:169-177](../source/network/multiplayer.c#L169-L177)
 
 ```c
 typedef struct {
@@ -609,7 +612,7 @@ for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
 
 ### Timeout Detection
 
-**Defined in:** [multiplayer.c:721-739](../source/network/multiplayer.c#L721-L739)
+**Defined in:** [multiplayer.c:418-432](../source/network/multiplayer.c#L418-L432)
 
 ```c
 #define PLAYER_TIMEOUT_MS 3000  // 3 seconds
@@ -648,7 +651,7 @@ for (int i = 0; i < MAX_MULTIPLAYER_PLAYERS; i++) {
 ### Debug Statistics
 
 **Function:** `Multiplayer_GetDebugStats(int* sentCount, int* receivedCount)`
-**Defined in:** [multiplayer.c:940-947](../source/network/multiplayer.c#L940-L947)
+**Defined in:** [multiplayer.c:1013-1019](../source/network/multiplayer.c#L1013-L1019)
 
 ```c
 int sent, received;
@@ -802,7 +805,7 @@ if (myCar.item == ITEM_BANANA && keysDown() & KEY_A) {
                                         IntToFixed(-10)));
 
     // Broadcast placement
-    Multiplayer_SendItemPlacement(ITEM_BANANA, behindPos, 0, 0, myPlayerID);
+    Multiplayer_SendItemPlacement(ITEM_BANANA, &behindPos, 0, 0, myPlayerID);
 
     // Create locally
     createBanana(behindPos);
@@ -817,7 +820,7 @@ if (myCar.item == ITEM_GREEN_SHELL && keysDown() & KEY_A) {
     Q16_8 shellSpeed = IntToFixed(15);
 
     // Broadcast placement
-    Multiplayer_SendItemPlacement(ITEM_GREEN_SHELL, shellPos,
+    Multiplayer_SendItemPlacement(ITEM_GREEN_SHELL, &shellPos,
                                   shellAngle, shellSpeed, myPlayerID);
 
     // Create locally

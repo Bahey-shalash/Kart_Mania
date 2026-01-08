@@ -375,7 +375,7 @@ Reflects vector off surface with given normal.
 
 **Example:**
 ```c
-Vec2 wallNormal = Vec2_Normalize(wallDir);
+Vec2 wallNormal = Vec2_Normalize(&wallDir);
 Vec2 bounced = Vec2_Reflect(velocity, wallNormal);
 ```
 
@@ -481,7 +481,7 @@ These functions are implemented in [fixedmath.c](../source/math/fixedmath.c) bec
 
 ### Vec2_Len
 
-**Signature:** `Q16_8 Vec2_Len(Vec2 a)`
+**Signature:** `Q16_8 Vec2_Len(const Vec2* a)`
 **Defined in:** [fixedmath.c:178-193](../source/math/fixedmath.c#L178-L193)
 
 Computes length (magnitude) of a vector using integer square root.
@@ -490,7 +490,7 @@ Computes length (magnitude) of a vector using integer square root.
 
 **Implementation:**
 
-1. Compute `len² = Vec2_LenSquared(a)` (cheap: just dot product)
+1. Compute `len² = Vec2_LenSquared(*a)` (cheap: just dot product)
 2. Shift to Q24.16 for proper sqrt scaling: `len2_shifted = len2 << FIXED_SHIFT`
 3. Use integer sqrt: `sqrt_result = isqrt(len2_shifted)` → already Q16.8
 4. Return as Q16.8
@@ -499,12 +499,12 @@ Computes length (magnitude) of a vector using integer square root.
 
 **Example:**
 ```c
-Q16_8 speed = Vec2_Len(velocity);
+Q16_8 speed = Vec2_Len(&velocity);
 ```
 
 ### Vec2_Normalize
 
-**Signature:** `Vec2 Vec2_Normalize(Vec2 a)`
+**Signature:** `Vec2 Vec2_Normalize(const Vec2* a)`
 **Defined in:** [fixedmath.c:207-218](../source/math/fixedmath.c#L207-L218)
 
 Normalizes vector to unit length (length = 1.0 in Q16.8 = 256).
@@ -515,18 +515,18 @@ Normalizes vector to unit length (length = 1.0 in Q16.8 = 256).
 
 1. Check if zero vector → return zero
 2. Compute length via `Vec2_Len(a)`
-3. Divide each component: `Vec2_Create(FixedDiv(a.x, len), FixedDiv(a.y, len))`
+3. Divide each component: `Vec2_Create(FixedDiv(a->x, len), FixedDiv(a->y, len))`
 
 **Why expensive:** Uses both Vec2_Len (sqrt) and two divisions.
 
 **Example:**
 ```c
-Vec2 direction = Vec2_Normalize(velocity);
+Vec2 direction = Vec2_Normalize(&velocity);
 ```
 
 ### Vec2_ClampLen
 
-**Signature:** `Vec2 Vec2_ClampLen(Vec2 v, Q16_8 maxLen)`
+**Signature:** `Vec2 Vec2_ClampLen(const Vec2* v, Q16_8 maxLen)`
 **Defined in:** [fixedmath.c:233-248](../source/math/fixedmath.c#L233-L248)
 
 Clamps vector length to maximum value, preserving direction.
@@ -541,7 +541,7 @@ Clamps vector length to maximum value, preserving direction.
 
 **Implementation:**
 
-1. Compute `len² = Vec2_LenSquared(v)`
+1. Compute `len² = Vec2_LenSquared(*v)`
 2. Compute `max² = FixedMul(maxLen, maxLen)`
 3. If `len² <= max²`: return original (no clamp needed)
 4. Otherwise: normalize and scale to maxLen
@@ -549,7 +549,7 @@ Clamps vector length to maximum value, preserving direction.
 **Example:**
 ```c
 Q16_8 maxSpeed = IntToFixed(5);  // 5 pixels/frame
-velocity = Vec2_ClampLen(velocity, maxSpeed);
+velocity = Vec2_ClampLen(&velocity, maxSpeed);
 ```
 
 ## Vec2 Angle Operations
@@ -574,7 +574,7 @@ Vec2 direction = Vec2_FromAngle(facing);  // (~0.707, ~0.707)
 
 ### Vec2_ToAngle
 
-**Signature:** `int Vec2_ToAngle(Vec2 v)`
+**Signature:** `int Vec2_ToAngle(const Vec2* v)`
 **Defined in:** [fixedmath.c:288-333](../source/math/fixedmath.c#L288-L333)
 
 Converts a vector to its direction angle using atan2 approximation.
@@ -599,12 +599,12 @@ Instead of using `atan2()` (no FPU!), we use binary search on the sin LUT:
 **Example:**
 ```c
 Vec2 dir = Vec2_Create(IntToFixed(1), IntToFixed(1));
-int angle = Vec2_ToAngle(dir);  // ~64 (45°)
+int angle = Vec2_ToAngle(&dir);  // ~64 (45°)
 ```
 
 ### Vec2_Rotate
 
-**Signature:** `Vec2 Vec2_Rotate(Vec2 v, int angle)`
+**Signature:** `Vec2 Vec2_Rotate(const Vec2* v, int angle)`
 **Defined in:** [fixedmath.c:350-356](../source/math/fixedmath.c#L350-L356)
 
 Rotates a vector by a given angle using rotation matrix.
@@ -626,13 +626,13 @@ Uses standard 2D rotation matrix:
 ```c
 Q16_8 c = Fixed_Cos(angle);
 Q16_8 s = Fixed_Sin(angle);
-return Vec2_Create(FixedMul(v.x, c) - FixedMul(v.y, s),
-                   FixedMul(v.x, s) + FixedMul(v.y, c));
+return Vec2_Create(FixedMul(v->x, c) - FixedMul(v->y, s),
+                   FixedMul(v->x, s) + FixedMul(v->y, c));
 ```
 
 **Example:**
 ```c
-Vec2 rotated = Vec2_Rotate(velocity, 128);  // Rotate 90°
+Vec2 rotated = Vec2_Rotate(&velocity, 128);  // Rotate 90°
 ```
 
 ## Mat2 Constructors
@@ -691,7 +691,7 @@ Mat2 rot = Mat2_Rotate(128);  // 90° rotation matrix
 
 ### Vec2_Distance
 
-**Signature:** `Q16_8 Vec2_Distance(Vec2 a, Vec2 b)`
+**Signature:** `Q16_8 Vec2_Distance(const Vec2* a, const Vec2* b)`
 **Defined in:** [fixedmath.c:418-421](../source/math/fixedmath.c#L418-L421)
 
 Computes Euclidean distance between two points.
@@ -706,13 +706,13 @@ Computes Euclidean distance between two points.
 
 **Implementation:**
 ```c
-Vec2 diff = Vec2_Sub(a, b);
-return Vec2_Len(diff);
+Vec2 diff = Vec2_Sub(*a, *b);
+return Vec2_Len(&diff);
 ```
 
 ### Vec2_RotateAround
 
-**Signature:** `Vec2 Vec2_RotateAround(Vec2 point, Vec2 pivot, int angle)`
+**Signature:** `Vec2 Vec2_RotateAround(const Vec2* point, const Vec2* pivot, int angle)`
 **Defined in:** [fixedmath.c:440-449](../source/math/fixedmath.c#L440-L449)
 
 Rotates a point around a pivot by given angle.
@@ -727,19 +727,19 @@ Rotates a point around a pivot by given angle.
 **Implementation:**
 
 1. Translate point so pivot is at origin: `offset = point - pivot`
-2. Rotate around origin: `rotated = Vec2_Rotate(offset, angle)`
+2. Rotate around origin: `rotated = Vec2_Rotate(&offset, angle)`
 3. Translate back: `return rotated + pivot`
 
 **Example:**
 ```c
 // Rotate kart's corner around its center
 Vec2 corner = Vec2_FromInt(16, 8);
-Vec2 worldCorner = Vec2_RotateAround(corner, kart.position, kart.facing);
+Vec2 worldCorner = Vec2_RotateAround(&corner, &kart.position, kart.facing);
 ```
 
 ### Vec2_Project
 
-**Signature:** `Vec2 Vec2_Project(Vec2 v, Vec2 onto)`
+**Signature:** `Vec2 Vec2_Project(const Vec2* v, const Vec2* onto)`
 **Defined in:** [fixedmath.c:464-474](../source/math/fixedmath.c#L464-L474)
 
 Projects vector v onto another vector.
@@ -755,13 +755,13 @@ Projects vector v onto another vector.
 **Example:**
 ```c
 // Get velocity component along slope
-Vec2 slopeDir = Vec2_Normalize(slope);
-Vec2 alongSlope = Vec2_Project(velocity, slopeDir);
+Vec2 slopeDir = Vec2_Normalize(&slope);
+Vec2 alongSlope = Vec2_Project(&velocity, &slopeDir);
 ```
 
 ### Vec2_Reject
 
-**Signature:** `Vec2 Vec2_Reject(Vec2 v, Vec2 from)`
+**Signature:** `Vec2 Vec2_Reject(const Vec2* v, const Vec2* from)`
 **Defined in:** [fixedmath.c:489-492](../source/math/fixedmath.c#L489-L492)
 
 Computes rejection of v from another vector (perpendicular component).
@@ -777,8 +777,8 @@ Computes rejection of v from another vector (perpendicular component).
 **Example:**
 ```c
 // Get velocity component perpendicular to slope
-Vec2 slopeDir = Vec2_Normalize(slope);
-Vec2 intoSlope = Vec2_Reject(velocity, slopeDir);
+Vec2 slopeDir = Vec2_Normalize(&slope);
+Vec2 intoSlope = Vec2_Reject(&velocity, &slopeDir);
 ```
 
 ## Integer Square Root
@@ -834,10 +834,10 @@ facing = (facing + 8) & ANGLE_MASK;        // Turn left ~5.6°
 Vec2 dir = Vec2_FromAngle(facing);
 
 // Rotate velocity
-Vec2 rotated = Vec2_Rotate(vel, facing);
+Vec2 rotated = Vec2_Rotate(&vel, facing);
 
 // Get angle from vector
-int angle = Vec2_ToAngle(velocity);
+int angle = Vec2_ToAngle(&velocity);
 ```
 
 ### Speed Limiting
@@ -845,7 +845,7 @@ int angle = Vec2_ToAngle(velocity);
 ```c
 // Clamp velocity to max speed
 Q16_8 maxSpeed = IntToFixed(5);            // 5 pixels/frame
-velocity = Vec2_ClampLen(velocity, maxSpeed);
+velocity = Vec2_ClampLen(&velocity, maxSpeed);
 
 // Check if moving fast enough
 Q16_8 minSpeedSq = FixedMul(IntToFixed(1), IntToFixed(1));
@@ -870,11 +870,11 @@ Vec2 transformed = Mat2_MulVec(transform, original);
 
 ```c
 // Get wall normal
-Vec2 wallNormal = Vec2_Normalize(wallDir);
+Vec2 wallNormal = Vec2_Normalize(&wallDir);
 
 // Slide along wall (perpendicular component)
 Vec2 slideDir = Vec2_Perp(wallNormal);
-Vec2 slideVel = Vec2_Project(velocity, slideDir);
+Vec2 slideVel = Vec2_Project(&velocity, &slideDir);
 
 // Bounce off wall
 Vec2 bounced = Vec2_Reflect(velocity, wallNormal);
@@ -884,9 +884,9 @@ Vec2 bounced = Vec2_Reflect(velocity, wallNormal);
 
 ```c
 // Split velocity into components
-Vec2 slopeDir = Vec2_Normalize(slope);
-Vec2 alongSlope = Vec2_Project(velocity, slopeDir);    // Sliding component
-Vec2 intoSlope = Vec2_Reject(velocity, slopeDir);      // Penetration component
+Vec2 slopeDir = Vec2_Normalize(&slope);
+Vec2 alongSlope = Vec2_Project(&velocity, &slopeDir);    // Sliding component
+Vec2 intoSlope = Vec2_Reject(&velocity, &slopeDir);      // Penetration component
 
 // Apply gravity along slope
 Vec2 gravity = Vec2_Scale(slopeDir, IntToFixed(1));
@@ -904,7 +904,7 @@ if (distSq < rangeSq) {
 }
 
 // Actual distance when needed
-Q16_8 dist = Vec2_Distance(player.pos, checkpoint.pos);
+Q16_8 dist = Vec2_Distance(&player.pos, &checkpoint.pos);
 if (dist < IntToFixed(50)) {
     // Checkpoint reached
 }
@@ -922,7 +922,7 @@ Vec2 corners[4] = {
 };
 
 for (int i = 0; i < 4; i++) {
-    Vec2 worldPos = Vec2_RotateAround(corners[i], kart.position, kart.facing);
+    Vec2 worldPos = Vec2_RotateAround(&corners[i], &kart.position, kart.facing);
     // Use worldPos for collision detection
 }
 ```

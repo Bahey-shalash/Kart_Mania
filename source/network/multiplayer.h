@@ -214,8 +214,8 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount);
  * @param angle512 - Direction (for projectiles like shells)
  * @param speed - Initial speed (for projectiles)
  */
-void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512, Q16_8 speed,
-                                   int shooterCarIndex);
+void Multiplayer_SendItemPlacement(Item itemType, const Vec2* position, int angle512,
+                                   Q16_8 speed, int shooterCarIndex);
 
 /**
  * Receive item placements from other players

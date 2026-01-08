@@ -179,7 +179,7 @@ The lobby implements **Selective Repeat ARQ** (Automatic Repeat reQuest) to ensu
    - If no ACK after 500ms, resend packet
    - Retry up to 5 times, then give up
 
-**Implementation:** See [multiplayer.c](../source/network/multiplayer.c) lines 228-254 (sendReliableLobbyMessage) and 278-309 (retransmitUnackedPackets).
+**Implementation:** See [multiplayer.c](../source/network/multiplayer.c) lines 228-254 (sendReliableLobbyMessage) and 278-307 (retransmitUnackedPackets).
 
 ### Unreliable Race Updates (No ARQ)
 
@@ -337,7 +337,7 @@ Packets: Sent=42 Recv=38
 - **Sent:** Total packets sent by multiplayer.c (JOIN, UPDATE, READY, ACK, etc.)
 - **Recv:** Total packets received from other players
 
-Source: `Multiplayer_GetDebugStats()` in [multiplayer.c](../source/network/multiplayer.c) lines 1010-1017.
+Source: `Multiplayer_GetDebugStats()` in [multiplayer.c](../source/network/multiplayer.c) lines 1013-1019.
 
 ### Low-Level Socket Stats
 ```
@@ -410,7 +410,7 @@ GameState MultiplayerLobby_Update(void);
 - **B:** Cancels lobby, cleans up multiplayer, returns to HOME_PAGE
 
 **Behavior:**
-1. Receives network packets via `Multiplayer_UpdateLobby()` (see [multiplayer.c](../source/network/multiplayer.c) lines 677-826)
+1. Receives network packets via `Multiplayer_UpdateLobby()` (see [multiplayer.c:819](../source/network/multiplayer.c#L819))
 2. Updates player connection/ready status
 3. Displays player list with ready indicators
 4. Shows debug statistics
@@ -427,6 +427,9 @@ GameState MultiplayerLobby_Update(void);
 - Countdown runs at 60 FPS (180 frames = 3 seconds)
 - Automatically cancels countdown if players < 2 or not all ready
 - Debug info displayed at bottom of screen for troubleshooting
+- `Multiplayer_UpdateLobby()` now delegates to helpers: `resendJoinIfNeeded()`,
+  `sendLobbyHeartbeatIfNeeded()`, `processLobbyPackets()`,
+  `handlePlayerTimeouts()`, `areAllConnectedPlayersReady()`
 
 **Call frequency:** Every frame (60 FPS)
 
@@ -479,15 +482,15 @@ Multiplayer_Cleanup();       // Disconnect WiFi, close socket
 **Critical integration points:**
 
 1. **Lobby State Reset:**
-   - `Multiplayer_JoinLobby()` calls `resetLobbyState()` (see [multiplayer.c:517-535](../source/network/multiplayer.c#L517-L535))
+   - `Multiplayer_JoinLobby()` calls `resetLobbyState()` (see [multiplayer.c:659](../source/network/multiplayer.c#L659))
    - Prevents "ghost players" from previous sessions
 
 2. **ACK Queue Management:**
-   - `Multiplayer_StartRace()` calls `clearPendingAcks()` (see [multiplayer.c:562-568](../source/network/multiplayer.c#L562-L568))
+   - `Multiplayer_StartRace()` calls `clearPendingAcks()` (see [multiplayer.c:704](../source/network/multiplayer.c#L704))
    - Prevents lobby retransmits during race
 
 3. **Timeout Detection:**
-   - `Multiplayer_UpdateLobby()` checks 3-second timeout (see [multiplayer.c:792-809](../source/network/multiplayer.c#L792-L809))
+   - `Multiplayer_UpdateLobby()` checks 3-second timeout via `handlePlayerTimeouts()` (see [multiplayer.c:418](../source/network/multiplayer.c#L418))
    - Disconnects players who haven't sent packets
 
 ### Context System
@@ -532,7 +535,7 @@ MULTIPLAYER_LOBBY → HOME_PAGE   // User presses B
 
 **Fix:** `Multiplayer_JoinLobby()` now calls `resetLobbyState()` which clears all remote player state.
 
-**Code:** [multiplayer.c:517-535](../source/network/multiplayer.c#L517-L535)
+**Code:** [multiplayer.c:659](../source/network/multiplayer.c#L659)
 
 ---
 
@@ -637,7 +640,7 @@ See [Multiplayer System - Player ID Assignment](multiplayer.md#player-id-assignm
 
 **Fix:** `Multiplayer_StartRace()` calls `clearPendingAcks()` to stop retransmitting old lobby messages.
 
-**Code:** [multiplayer.c:562-568](../source/network/multiplayer.c#L562-L568)
+**Code:** [multiplayer.c:704](../source/network/multiplayer.c#L704)
 
 **Why this matters:**
 - Lobby messages retransmit every 500ms if no ACK

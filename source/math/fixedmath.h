@@ -311,13 +311,13 @@ Q16_8 Fixed_Cos(int angle);
  */
 
 /** Length of vector (uses sqrt, expensive) */
-Q16_8 Vec2_Len(Vec2 a);
+Q16_8 Vec2_Len(const Vec2* a);
 
 /** Normalize vector to unit length (length = 1.0) */
-Vec2 Vec2_Normalize(Vec2 a);
+Vec2 Vec2_Normalize(const Vec2* a);
 
 /** Clamp vector length to maxLen (preserves direction) */
-Vec2 Vec2_ClampLen(Vec2 v, Q16_8 maxLen);
+Vec2 Vec2_ClampLen(const Vec2* v, Q16_8 maxLen);
 
 /**
  * Vec2 Angle Operations
@@ -329,10 +329,10 @@ Vec2 Vec2_ClampLen(Vec2 v, Q16_8 maxLen);
 Vec2 Vec2_FromAngle(int angle);
 
 /** Convert vector to binary angle (0-511) using atan2 */
-int Vec2_ToAngle(Vec2 v);
+int Vec2_ToAngle(const Vec2* v);
 
 /** Rotate vector by binary angle (0-511) */
-Vec2 Vec2_Rotate(Vec2 v, int angle);
+Vec2 Vec2_Rotate(const Vec2* v, int angle);
 
 /**
  * Mat2 Constructors
@@ -351,15 +351,15 @@ Mat2 Mat2_Rotate(int angle);
  */
 
 /** Distance between two points (uses sqrt, expensive) */
-Q16_8 Vec2_Distance(Vec2 a, Vec2 b);
+Q16_8 Vec2_Distance(const Vec2* a, const Vec2* b);
 
 /** Rotate point around pivot by binary angle */
-Vec2 Vec2_RotateAround(Vec2 point, Vec2 pivot, int angle);
+Vec2 Vec2_RotateAround(const Vec2* point, const Vec2* pivot, int angle);
 
 /** Project vector v onto vector 'onto' */
-Vec2 Vec2_Project(Vec2 v, Vec2 onto);
+Vec2 Vec2_Project(const Vec2* v, const Vec2* onto);
 
 /** Reject vector v from vector 'from' (orthogonal component) */
-Vec2 Vec2_Reject(Vec2 v, Vec2 from);
+Vec2 Vec2_Reject(const Vec2* v, const Vec2* from);
 
 #endif  // FIXED_MATH_H

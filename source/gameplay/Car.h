@@ -162,7 +162,8 @@ static inline Car emptyCar(const char* name) {
  *   accelRate - Acceleration rate (Q16.8)
  *   friction  - Friction multiplier (0-256)
  */
-void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelRate,
+void Car_Init(Car* car, const Vec2* pos, const char* name, Q16_8 maxSpeed,
+              Q16_8 accelRate,
               Q16_8 friction);
 
 /**
@@ -175,7 +176,7 @@ void Car_Init(Car* car, Vec2 pos, const char* name, Q16_8 maxSpeed, Q16_8 accelR
  *   car      - Pointer to car to reset
  *   spawnPos - Respawn position (Q16.8)
  */
-void Car_Reset(Car* car, Vec2 spawnPos);
+void Car_Reset(Car* car, const Vec2* spawnPos);
 
 //=============================================================================
 // Physics Control
@@ -272,7 +273,7 @@ Q16_8 Car_GetSpeed(const Car* car);
  *   car - Pointer to car
  *   pos - New position (Q16.8)
  */
-void Car_SetPosition(Car* car, Vec2 pos);
+void Car_SetPosition(Car* car, const Vec2* pos);
 
 /**
  * Function: Car_SetVelocity
@@ -284,7 +285,7 @@ void Car_SetPosition(Car* car, Vec2 pos);
  *   car      - Pointer to car
  *   velocity - New velocity vector (Q16.8)
  */
-void Car_SetVelocity(Car* car, Vec2 velocity);
+void Car_SetVelocity(Car* car, const Vec2* velocity);
 
 /**
  * Function: Car_ApplyImpulse
@@ -296,7 +297,7 @@ void Car_SetVelocity(Car* car, Vec2 velocity);
  *   car     - Pointer to car
  *   impulse - Velocity impulse to add (Q16.8)
  */
-void Car_ApplyImpulse(Car* car, Vec2 impulse);
+void Car_ApplyImpulse(Car* car, const Vec2* impulse);
 
 /**
  * Function: Car_SetAngle

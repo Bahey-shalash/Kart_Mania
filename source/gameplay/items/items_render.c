@@ -24,70 +24,68 @@
 //=============================================================================
 // Rendering
 //=============================================================================
+static void Items_RenderItemBoxes(int scrollX, int scrollY);
+static void Items_ClearTrackItemOam(void);
+static void Items_RenderTrackItems(int scrollX, int scrollY);
+
 void Items_Render(int scrollX, int scrollY) {
-    // =========================================================================
-    // ITEM BOXES
-    // =========================================================================
+    Items_RenderItemBoxes(scrollX, scrollY);
+    Items_ClearTrackItemOam();
+    Items_RenderTrackItems(scrollX, scrollY);
+}
+
+static void Items_RenderItemBoxes(int scrollX, int scrollY) {
     for (int i = 0; i < itemBoxCount; i++) {
         int oamSlot = ITEM_BOX_OAM_START + i;
 
         if (!itemBoxSpawns[i].active) {
-            // Hide inactive item boxes
             oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_2, 1, SpriteSize_8x8,
                    SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, true, false,
                    false, false, false);
             continue;
         }
 
-        // Calculate screen position (centered on hitbox)
         int screenX =
             FixedToInt(itemBoxSpawns[i].position.x) - scrollX - (ITEM_BOX_HITBOX / 2);
         int screenY =
             FixedToInt(itemBoxSpawns[i].position.y) - scrollY - (ITEM_BOX_HITBOX / 2);
 
-        // Render if on-screen, otherwise hide
         if (screenX >= -16 && screenX < 256 && screenY >= -16 && screenY < 192) {
-            // Priority 2 so item boxes appear at same layer as track items but below karts
             oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, 1, SpriteSize_8x8,
                    SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, false, false,
                    false, false, false);
         } else {
-            // Hide offscreen boxes
             oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_2, 1, SpriteSize_8x8,
                    SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, true, false,
                    false, false, false);
         }
     }
+}
 
-    // =========================================================================
-    // TRACK ITEMS (Bananas, Shells, etc.)
-    // =========================================================================
-
-    // Clear/hide all track item OAM slots
+static void Items_ClearTrackItemOam(void) {
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         int oamSlot = TRACK_ITEM_OAM_START + i;
         oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_2, 0, SpriteSize_16x16,
                SpriteColorFormat_16Color, NULL, -1, true, false, false, false, false);
     }
+}
 
+static void Items_RenderTrackItems(int scrollX, int scrollY) {
     for (int i = 0; i < MAX_TRACK_ITEMS; i++) {
         if (!activeItems[i].active)
             continue;
 
         TrackItem* item = &activeItems[i];
-        int oamSlot = TRACK_ITEM_OAM_START + i;  // STABLE MAPPING
+        int oamSlot = TRACK_ITEM_OAM_START + i;
 
-        // Calculate screen position
         int screenX =
             FixedToInt(item->position.x) - scrollX - (item->hitbox_width / 2);
         int screenY =
             FixedToInt(item->position.y) - scrollY - (item->hitbox_height / 2);
 
-        // Skip if offscreen (slot already hidden in step 1)
         if (screenX < -32 || screenX > 256 || screenY < -32 || screenY > 192)
             continue;
 
-        // Determine sprite size and palette based on item type
         SpriteSize spriteSize;
         int paletteNum;
 
@@ -122,28 +120,22 @@ void Items_Render(int scrollX, int scrollY) {
                 break;
         }
 
-        // Determine if sprite needs rotation (projectiles)
         bool useRotation =
             (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL ||
              item->type == ITEM_MISSILE);
 
         if (useRotation) {
-            // Use separate affine matrix slots for each rotating item
-            // DS has 32 affine matrices, we'll use slots 1-4 rotating
             int affineSlot = 1 + (i % 4);
-            int rotation = -(item->angle512 << 6);  // Convert to DS angle
+            int rotation = -(item->angle512 << 6);
 
             oamRotateScale(&oamMain, affineSlot, rotation, (1 << 8), (1 << 8));
-            // Priority 2 so items appear below karts (priority 0) but above background (priority 1)
-            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, paletteNum, spriteSize,
-                   SpriteColorFormat_16Color, item->gfx, affineSlot, false, false,
-                   false, false, false);
+            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, paletteNum,
+                   spriteSize, SpriteColorFormat_16Color, item->gfx, affineSlot,
+                   false, false, false, false, false);
         } else {
-            // No rotation - static sprites (oil, bananas, bombs)
-            // Priority 2 so items appear below karts (priority 0) but above background (priority 1)
-            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, paletteNum, spriteSize,
-                   SpriteColorFormat_16Color, item->gfx, -1, false, false, false,
-                   false, false);
+            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, paletteNum,
+                   spriteSize, SpriteColorFormat_16Color, item->gfx, -1, false, false,
+                   false, false, false);
         }
     }
 }

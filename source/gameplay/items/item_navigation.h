@@ -46,7 +46,7 @@ typedef struct {
  * Returns:
  *   Index of nearest waypoint
  */
-int ItemNav_FindNearestWaypoint(Vec2 position, Map map);
+int ItemNav_FindNearestWaypoint(const Vec2* position, Map map);
 
 /**
  * Function: ItemNav_GetWaypointPosition
@@ -88,6 +88,6 @@ int ItemNav_GetNextWaypoint(int currentWaypoint, Map map);
  * Returns:
  *   true if waypoint is reached, false otherwise
  */
-bool ItemNav_IsWaypointReached(Vec2 itemPos, Vec2 waypointPos);
+bool ItemNav_IsWaypointReached(const Vec2* itemPos, const Vec2* waypointPos);
 
 #endif
