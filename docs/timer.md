@@ -125,7 +125,7 @@ Initializes both hardware timers for gameplay:
 - Runs independently of main loop
 
 **Called:** When the countdown finishes, from `Race_CountdownTick()` in
-`gameplay_logic.c` (starts after showing “GO”). It is not invoked when entering
+`gameplay_logic.c` (starts after showing “0”). It is not invoked when entering
 GAMEPLAY; the countdown gate starts the timers.
 
 ```c
