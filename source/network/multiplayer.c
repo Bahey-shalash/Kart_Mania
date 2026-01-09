@@ -399,8 +399,11 @@ static void handleLobbyPacket(const NetworkPacket* packet, uint32_t currentTime)
 static void processLobbyPackets(uint32_t currentTime) {
     NetworkPacket packet;
 
+    // Safety: Cap packets processed per frame to prevent freeze from packet flood
+    const int MAX_LOBBY_PACKETS_PER_FRAME = 32;
     int packetsReceived = 0;
-    while (receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
+    while (packetsReceived < MAX_LOBBY_PACKETS_PER_FRAME &&
+           receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
         packetsReceived++;
         totalPacketsReceived++;
 
@@ -851,6 +854,10 @@ void Multiplayer_SetReady(bool ready) {
  */
 void Multiplayer_StartRace(void) {
     clearPendingAcks();
+
+    // Flush any buffered lobby packets to prevent stale data in race
+    itemPacketCount = 0;
+    boxPacketCount = 0;
 }
 
 void Multiplayer_SendCarState(const Car* car) {
@@ -869,8 +876,15 @@ void Multiplayer_SendCarState(const Car* car) {
 void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
     NetworkPacket packet;
 
+    // Safety: Cap packets processed per frame to prevent freeze from packet flood
+    const int MAX_RACE_PACKETS_PER_FRAME = 64;
+    int packetsProcessed = 0;
+
     // Receive all pending packets (non-blocking)
-    while (receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
+    while (packetsProcessed < MAX_RACE_PACKETS_PER_FRAME &&
+           receiveData((char*)&packet, sizeof(NetworkPacket)) > 0) {
+        packetsProcessed++;
+
         // Validate packet version
         if (packet.version != PROTOCOL_VERSION)
             continue;
@@ -899,12 +913,14 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
             if (itemPacketCount < MAX_BUFFERED_ITEM_PACKETS) {
                 itemPacketBuffer[itemPacketCount++] = packet;
             }
+            // Note: If buffer full, packet is dropped (desync possible but rare)
         }
         // Buffer MSG_ITEM_BOX_PICKUP packets for later processing
         else if (packet.msgType == MSG_ITEM_BOX_PICKUP) {
             if (boxPacketCount < MAX_BUFFERED_BOX_PACKETS) {
                 boxPacketBuffer[boxPacketCount++] = packet;
             }
+            // Note: If buffer full, packet is dropped (desync possible but rare)
         }
         // Ignore other packet types
     }

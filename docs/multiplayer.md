@@ -507,6 +507,111 @@ if (boxIndex >= 0) {
 
 **Synchronization:** All players deactivate the same box when any player picks it up. Prevents multiple players from getting the same box.
 
+## Safety & Performance Guardrails
+
+### Packet Flood Protection
+
+**Problem:** If a malicious player (or buggy client) floods the network with hundreds of packets per frame, the receiving DS would freeze trying to process them all.
+
+**Solution:** Packet processing limits added to both lobby and race receive loops.
+
+**Lobby Packets ([multiplayer.c:403-406](../source/network/multiplayer.c#L403-L406)):**
+```c
+const int MAX_LOBBY_PACKETS_PER_FRAME = 32;
+while (packetsReceived < MAX_LOBBY_PACKETS_PER_FRAME &&
+       receiveData(...) > 0) {
+    // Process packet
+}
+```
+
+**Race Packets ([multiplayer.c:880-885](../source/network/multiplayer.c#L880-L885)):**
+```c
+const int MAX_RACE_PACKETS_PER_FRAME = 64;
+while (packetsProcessed < MAX_RACE_PACKETS_PER_FRAME &&
+       receiveData(...) > 0) {
+    // Process packet
+}
+```
+
+**Why 32 vs 64?**
+- Lobby: Lower throughput (join/ready messages), fewer players active
+- Race: Higher throughput (15Hz car updates + items from 8 players)
+
+**Behavior:** If more packets arrive than the limit, remaining packets stay in OS buffer and are processed next frame. Game never freezes.
+
+---
+
+### Item/Box Buffer Overflow Protection
+
+**Problem:** Item placement packets are buffered in fixed-size arrays (16 items, 16 boxes). If packets arrive faster than they're consumed, buffers overflow.
+
+**Current Behavior ([multiplayer.c:913-916, 920-923](../source/network/multiplayer.c#L913-L916)):**
+```c
+if (itemPacketCount < MAX_BUFFERED_ITEM_PACKETS) {
+    itemPacketBuffer[itemPacketCount++] = packet;
+}
+// If buffer full, packet is silently dropped (desync possible but rare)
+```
+
+**Why This Is Safe:**
+- Max 32 active track items total (shared across all players)
+- Items consumed every frame by `Items_ReceiveMultiplayerUpdates()`
+- Buffer size = 16, half of max capacity
+- Would only overflow if 16+ items placed in a single frame (extremely unlikely)
+
+**Trade-off:** Silent packet drop prevents crash, but causes minor desync if overflow occurs (item doesn't appear on one DS). This is acceptable for a rare edge case vs. crashing.
+
+---
+
+### Race Start Buffer Flush
+
+**Problem:** Leftover lobby packets sitting in item/box buffers could leak into race and spawn items at random positions.
+
+**Solution ([multiplayer.c:855-857](../source/network/multiplayer.c#L855-L857)):**
+```c
+void Multiplayer_StartRace(void) {
+    clearPendingAcks();
+
+    // Flush any buffered lobby packets to prevent stale data in race
+    itemPacketCount = 0;
+    boxPacketCount = 0;
+}
+```
+
+**When This Matters:**
+- Buggy client sends item packet during lobby (shouldn't happen, but defensive)
+- Network delay causes packet to arrive after lobby ends but before race starts
+- Flushing ensures clean state transition
+
+---
+
+### Time Counter Overflow Handling
+
+**Background:** `msCounter` increments by 16ms per frame to approximate real time.
+
+**Overflow Point:** 2^32 milliseconds ≈ 49.7 days
+
+**Current Implementation ([multiplayer.c:220](../source/network/multiplayer.c#L220)):**
+```c
+static uint32_t getTimeMs(void) {
+    msCounter += 16;  // Overflows after ~49 days
+    return msCounter;
+}
+```
+
+**Why This Is Safe:**
+All timeout checks use subtraction, which handles unsigned overflow correctly:
+
+```c
+uint32_t timeSinceLastPacket = currentTime - players[i].lastPacketTime;
+// If overflow: currentTime=5, lastPacketTime=0xFFFFFFF0
+// Result: 5 - 0xFFFFFFF0 = 0x15 (21ms) ✓ Correct due to wraparound
+```
+
+**Conclusion:** No fix needed. Unsigned arithmetic handles 49-day overflow gracefully.
+
+---
+
 ## Cleanup & Disconnection
 
 ### Normal Cleanup
