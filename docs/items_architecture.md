@@ -235,6 +235,11 @@ Cumulative:
 
 **Function:** `updateHoming()`
 
+**Implementation split (items_update.c):**
+- `updateHomingTargetLock()` - clears shooter target in MP and scans for lock-on
+- `updateHomingTargetPoint()` - maintains/clears target, handles waypoint following
+- `applyHomingTurn()` - clamps turn rate and updates heading
+
 **Two-Phase System:**
 
 #### Phase 1: Path Following
@@ -339,6 +344,10 @@ for each active projectile:
             despawn_projectile()
 ```
 
+**Implementation split (items_update.c):**
+- `shouldCheckProjectileCar()` filters MP connectivity/shooter/immunity rules
+- `applyProjectileHit()` applies the item-specific hit effect and despawns
+
 **Culling:** Only checks items within screen bounds + buffer zone
 
 **Complexity:** O(visible_projectiles × cars)
@@ -354,6 +363,10 @@ for each active hazard:
             if (oil): persist (no hit despawn)
 ```
 
+**Implementation split (items_update.c):**
+- `isHazardHit()` wraps the hitbox check
+- `applyHazardHit()` applies item-specific effects and despawn rules
+
 **Complexity:** O(visible_hazards × cars)
 
 **Hitbox Check:**
@@ -365,7 +378,7 @@ bool checkItemCarCollision(const Vec2* itemPos, const Vec2* carPos, int itemHitb
 }
 ```
 
-**See:** [items_update.c:301-539](../source/gameplay/items/items_update.c#L301-L539)
+**See:** [items_update.c:320-460](../source/gameplay/items/items_update.c#L320-L460)
 
 ---
 

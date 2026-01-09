@@ -26,8 +26,20 @@
 //=============================================================================
 // Internal Helper Prototypes
 //=============================================================================
-static void updateProjectile(TrackItem* item, const Car* cars, int carCount);
+static void updateProjectile(TrackItem* item);
 static void updateHoming(TrackItem* item, const Car* cars, int carCount);
+static void updateHomingTargetLock(TrackItem* item, const Car* cars, int carCount,
+                                   bool isMultiplayer);
+static void updateHomingTargetPoint(TrackItem* item, const Car* cars, int carCount,
+                                    bool isMultiplayer, const RaceState* state,
+                                    Vec2* targetPoint);
+static void applyHomingTurn(TrackItem* item, const Vec2* targetPoint);
+static bool shouldCheckProjectileCar(const TrackItem* item, int carIndex,
+                                     bool isMultiplayer);
+static void applyProjectileHit(TrackItem* item, Car* car);
+static bool isHazardHit(const TrackItem* item, const Car* car);
+static void applyHazardHit(TrackItem* item, Car* car, int carIndex, Car* cars,
+                           int carCount);
 static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount);
 static void checkHazardCollision(TrackItem* item, Car* cars, int carCount);
 static void explodeBomb(const Vec2* position, Car* cars, int carCount);
@@ -51,6 +63,9 @@ static void Items_UpdateTrackItems(RaceState* raceState);
 static void Items_UpdateItemBoxRespawns(void);
 static bool Items_TickItemLifetime(TrackItem* item, RaceState* raceState);
 static void Items_TickItemImmunity(TrackItem* item, const RaceState* raceState);
+static bool Item_IsProjectile(Item type);
+static bool Item_IsHoming(Item type);
+static bool Item_IsHazard(Item type);
 
 //=============================================================================
 // Lifecycle
@@ -120,12 +135,11 @@ static void Items_UpdateTrackItems(RaceState* raceState) {
 
         Items_TickItemImmunity(item, raceState);
 
-        if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL ||
-            item->type == ITEM_MISSILE) {
-            updateProjectile(item, raceState->cars, raceState->carCount);
+        if (Item_IsProjectile(item->type)) {
+            updateProjectile(item);
         }
 
-        if (item->type == ITEM_RED_SHELL || item->type == ITEM_MISSILE) {
+        if (Item_IsHoming(item->type)) {
             updateHoming(item, raceState->cars, raceState->carCount);
         }
     }
@@ -189,10 +203,7 @@ static void Items_TickItemImmunity(TrackItem* item, const RaceState* raceState) 
     }
 }
 
-static void updateProjectile(TrackItem* item, const Car* cars, int carCount) {
-    (void)cars;
-    (void)carCount;
-
+static void updateProjectile(TrackItem* item) {
     // Move projectile
     Vec2 velocity = Vec2_FromAngle(item->angle512);
     velocity = Vec2_Scale(velocity, item->speed);
@@ -212,6 +223,16 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
     const RaceState* state = Race_GetState();
     bool isMultiplayer = (state->gameMode == MultiPlayer);
 
+    updateHomingTargetLock(item, cars, carCount, isMultiplayer);
+
+    Vec2 targetPoint = item->position;
+    updateHomingTargetPoint(item, cars, carCount, isMultiplayer, state,
+                            &targetPoint);
+    applyHomingTurn(item, &targetPoint);
+}
+
+static void updateHomingTargetLock(TrackItem* item, const Car* cars, int carCount,
+                                   bool isMultiplayer) {
     // Never keep the shooter as a target in multiplayer
     if (isMultiplayer && item->targetCarIndex == item->shooterCarIndex) {
         item->targetCarIndex = INVALID_CAR_INDEX;
@@ -241,8 +262,12 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
             }
         }
     }
+}
 
-    Vec2 targetPoint = item->position;
+static void updateHomingTargetPoint(TrackItem* item, const Car* cars, int carCount,
+                                    bool isMultiplayer, const RaceState* state,
+                                    Vec2* targetPoint) {
+    *targetPoint = item->position;
 
     // If we have a locked target, check if we should stay locked
     if (item->targetCarIndex >= 0 && item->targetCarIndex < carCount) {
@@ -259,7 +284,7 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
                 item->usePathFollowing = true;
             } else {
                 // Stay locked - aim directly at target
-                targetPoint = target->position;
+                *targetPoint = target->position;
                 item->usePathFollowing = false;
             }
         }
@@ -280,11 +305,13 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
         }
 
         // Aim toward current waypoint
-        targetPoint = waypointPos;
+        *targetPoint = waypointPos;
     }
+}
 
+static void applyHomingTurn(TrackItem* item, const Vec2* targetPoint) {
     // Smooth turn toward target point
-    Vec2 toTarget = Vec2_Sub(targetPoint, item->position);
+    Vec2 toTarget = Vec2_Sub(*targetPoint, item->position);
     int targetAngle = Vec2_ToAngle(&toTarget);
 
     int angleDiff = (targetAngle - item->angle512) & ANGLE_MASK;
@@ -299,42 +326,84 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
     item->angle512 = (item->angle512 + angleDiff) & ANGLE_MASK;
 }
 
+static bool shouldCheckProjectileCar(const TrackItem* item, int carIndex,
+                                     bool isMultiplayer) {
+    // In multiplayer, only check collision for connected players
+    if (isMultiplayer && !Multiplayer_IsPlayerConnected(carIndex)) {
+        return false;
+    }
+
+    // In multiplayer, never collide with the shooter
+    if (isMultiplayer && carIndex == item->shooterCarIndex) {
+        return false;
+    }
+
+    // immunityTimer > 0: multiplayer time-based immunity
+    // immunityTimer == -1 AND !hasCompletedLap: single player lap-based immunity
+    bool hasImmunity = (item->immunityTimer > 0) ||
+                       (item->immunityTimer == -1 && !item->hasCompletedLap);
+
+    // In single player, keep the old immunity-based shooter skip
+    if (!isMultiplayer && hasImmunity && carIndex == item->shooterCarIndex) {
+        return false;  // Can't hit the shooter yet
+    }
+
+    return true;
+}
+
+static void applyProjectileHit(TrackItem* item, Car* car) {
+    // Apply effect based on projectile type
+    if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL) {
+        applyShellHitEffect(car);
+    } else if (item->type == ITEM_MISSILE) {
+        car->speed = 0;
+    }
+
+    item->active = false;  // Despawn projectile
+}
+
+static bool isHazardHit(const TrackItem* item, const Car* car) {
+    return checkItemCarCollision(&item->position, &car->position,
+                                 item->hitbox_width);
+}
+
+static void applyHazardHit(TrackItem* item, Car* car, int carIndex, Car* cars,
+                           int carCount) {
+    // Apply hazard effect based on item type
+    switch (item->type) {
+        case ITEM_BANANA:
+            applyBananaHitEffect(car);
+            item->active = false;
+            break;
+
+        case ITEM_OIL:
+            applyOilHitEffect(car, carIndex);
+            // Oil persists
+            break;
+
+        case ITEM_BOMB:
+            explodeBomb(&item->position, cars, carCount);
+            item->active = false;
+            break;
+
+        default:
+            break;
+    }
+}
+
 static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
     // Get race state to check if we're in multiplayer mode
     const RaceState* state = Race_GetState();
     bool isMultiplayer = (state->gameMode == MultiPlayer);
 
     for (int i = 0; i < carCount; i++) {
-        // In multiplayer, only check collision for connected players
-        if (isMultiplayer && !Multiplayer_IsPlayerConnected(i)) {
+        if (!shouldCheckProjectileCar(item, i, isMultiplayer)) {
             continue;
-        }
-
-        // In multiplayer, never collide with the shooter
-        if (isMultiplayer && i == item->shooterCarIndex) {
-            continue;
-        }
-
-        // immunityTimer > 0: multiplayer time-based immunity
-        // immunityTimer == -1 AND !hasCompletedLap: single player lap-based immunity
-        bool hasImmunity = (item->immunityTimer > 0) ||
-                           (item->immunityTimer == -1 && !item->hasCompletedLap);
-
-        // In single player, keep the old immunity-based shooter skip
-        if (!isMultiplayer && hasImmunity && i == item->shooterCarIndex) {
-            continue;  // Can't hit the shooter yet
         }
 
         if (checkItemCarCollision(&item->position, &cars[i].position,
                                   item->hitbox_width)) {
-            // Apply effect based on projectile type
-            if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL) {
-                applyShellHitEffect(&cars[i]);
-            } else if (item->type == ITEM_MISSILE) {
-                cars[i].speed = 0;
-            }
-
-            item->active = false;  // Despawn projectile
+            applyProjectileHit(item, &cars[i]);
             break;
         }
     }
@@ -342,28 +411,8 @@ static void checkProjectileCollision(TrackItem* item, Car* cars, int carCount) {
 
 static void checkHazardCollision(TrackItem* item, Car* cars, int carCount) {
     for (int i = 0; i < carCount; i++) {
-        if (checkItemCarCollision(&item->position, &cars[i].position,
-                                  item->hitbox_width)) {
-            // Apply hazard effect based on item type
-            switch (item->type) {
-                case ITEM_BANANA:
-                    applyBananaHitEffect(&cars[i]);
-                    item->active = false;
-                    break;
-
-                case ITEM_OIL:
-                    applyOilHitEffect(&cars[i], i);
-                    // Oil persists
-                    break;
-
-                case ITEM_BOMB:
-                    explodeBomb(&item->position, cars, carCount);
-                    item->active = false;
-                    break;
-
-                default:
-                    break;
-            }
+        if (isHazardHit(item, &cars[i])) {
+            applyHazardHit(item, &cars[i], i, cars, carCount);
 
             if (!item->active)
                 break;
@@ -499,8 +548,7 @@ static void checkAllProjectileCollisions(Car* cars, int carCount, int scrollX,
 
         TrackItem* item = &activeItems[i];
 
-        if (item->type == ITEM_GREEN_SHELL || item->type == ITEM_RED_SHELL ||
-            item->type == ITEM_MISSILE) {
+        if (Item_IsProjectile(item->type)) {
             // Only check collision if item is near the screen
             if (isItemNearScreen(&item->position, scrollX, scrollY)) {
                 checkProjectileCollision(item, cars, carCount);
@@ -517,8 +565,7 @@ static void checkAllHazardCollisions(Car* cars, int carCount, int scrollX,
 
         TrackItem* item = &activeItems[i];
 
-        if (item->type == ITEM_BANANA || item->type == ITEM_OIL ||
-            item->type == ITEM_BOMB) {
+        if (Item_IsHazard(item->type)) {
             // Only check collision if item is near the screen
             if (isItemNearScreen(&item->position, scrollX, scrollY)) {
                 checkHazardCollision(item, cars, carCount);
@@ -548,4 +595,17 @@ static QuadrantID getQuadrantFromPos(const Vec2* pos) {
     int row = (y < QUAD_BOUNDARY_LOW) ? 0 : (y < QUAD_BOUNDARY_HIGH) ? 1 : 2;
 
     return (QuadrantID)(row * QUADRANT_GRID_SIZE + col);
+}
+
+static bool Item_IsProjectile(Item type) {
+    return (type == ITEM_GREEN_SHELL || type == ITEM_RED_SHELL ||
+            type == ITEM_MISSILE);
+}
+
+static bool Item_IsHoming(Item type) {
+    return (type == ITEM_RED_SHELL || type == ITEM_MISSILE);
+}
+
+static bool Item_IsHazard(Item type) {
+    return (type == ITEM_BANANA || type == ITEM_OIL || type == ITEM_BOMB);
 }
