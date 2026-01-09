@@ -31,7 +31,7 @@ void fireProjectileInternal(Item type, const Vec2* pos, int angle512, Q16_8 spee
 
     // In multiplayer, broadcast item placement to other players
     if (sendNetwork && state->gameMode == MultiPlayer) {
-        Multiplayer_SendItemPlacement(type, pos, angle512, speed, state->playerIndex);
+        Multiplayer_SendItemPlacement(type, *pos, angle512, speed, state->playerIndex);
     }
 
     int slot = findInactiveItemSlot();
@@ -105,7 +105,7 @@ void placeHazardInternal(Item type, const Vec2* pos, bool sendNetwork) {
     if (sendNetwork) {
         const RaceState* state = Race_GetState();
         if (state->gameMode == MultiPlayer) {
-            Multiplayer_SendItemPlacement(type, pos, 0, 0,
+            Multiplayer_SendItemPlacement(type, *pos, 0, 0,
                                           state->playerIndex);  // Hazards don't move
         }
     }

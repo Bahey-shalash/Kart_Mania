@@ -914,7 +914,7 @@ void Multiplayer_ReceiveCarStates(Car* cars, int carCount) {
 // Public API - Item Synchronization
 //=============================================================================
 
-void Multiplayer_SendItemPlacement(Item itemType, const Vec2* position, int angle512,
+void Multiplayer_SendItemPlacement(Item itemType, Vec2 position, int angle512,
                                    Q16_8 speed, int shooterCarIndex) {
     if (!initialized) {
         return;
@@ -925,7 +925,7 @@ void Multiplayer_SendItemPlacement(Item itemType, const Vec2* position, int angl
         .msgType = MSG_ITEM_PLACED,
         .playerID = myPlayerID,
         .payload.itemPlaced = {.itemType = itemType,
-                               .position = *position,
+                               .position = position,
                                .angle512 = angle512,
                                .speed = speed,
                                .shooterCarIndex = shooterCarIndex}};
