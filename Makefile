@@ -199,12 +199,6 @@ soundbank.bin : $(AUDIOFILES)
 	grit "$$SRCPATH" -fts -o"$$SUBDIR/$(notdir $*)" && \
 	ln -sf "$$SUBDIR/$(notdir $*).s" "$(notdir $*).s" && \
 	ln -sf "$$SUBDIR/$(notdir $*).h" "$(notdir $*).h"
-	@if [ "$(notdir $*)" = "ds_menu" ]; then \
-		SRCPATH=$$(find ../data -name "$(notdir $<)" -print -quit) && \
-		RELPATH=$$(echo "$$SRCPATH" | sed 's|^\.\./||') && \
-		SUBDIR=$$(dirname "$$RELPATH") && \
-		sed -i '' 's/\.hword 0x7C1F/.hword 0x7BBD/' "$$SUBDIR/$(notdir $*).s"; \
-	fi
 
 -include $(DEPENDS)
 
