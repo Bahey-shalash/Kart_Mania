@@ -51,9 +51,9 @@ static void Items_RenderItemBoxes(int scrollX, int scrollY) {
             FixedToInt(itemBoxSpawns[i].position.y) - scrollY - (ITEM_BOX_HITBOX / 2);
 
         if (screenX >= -16 && screenX < 256 && screenY >= -16 && screenY < 192) {
-            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, 1, SpriteSize_8x8,
-                   SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, false, false,
-                   false, false, false);
+            oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, 1,
+                   SpriteSize_8x8, SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1,
+                   false, false, false, false, false);
         } else {
             oamSet(&oamMain, oamSlot, 0, 192, OBJPRIORITY_2, 1, SpriteSize_8x8,
                    SpriteColorFormat_16Color, itemBoxSpawns[i].gfx, 1, true, false,
@@ -130,8 +130,8 @@ static void Items_RenderTrackItems(int scrollX, int scrollY) {
 
             oamRotateScale(&oamMain, affineSlot, rotation, (1 << 8), (1 << 8));
             oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, paletteNum,
-                   spriteSize, SpriteColorFormat_16Color, item->gfx, affineSlot,
-                   false, false, false, false, false);
+                   spriteSize, SpriteColorFormat_16Color, item->gfx, affineSlot, false,
+                   false, false, false, false);
         } else {
             oamSet(&oamMain, oamSlot, screenX, screenY, OBJPRIORITY_2, paletteNum,
                    spriteSize, SpriteColorFormat_16Color, item->gfx, -1, false, false,

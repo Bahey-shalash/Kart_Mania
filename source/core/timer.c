@@ -66,8 +66,9 @@ void timerISRVblank(void) {
 
             // Update lap/time displays only during active racing
             if (!Race_IsCountdownActive() && !Race_IsCompleted()) {
-                Gameplay_UpdateChronoDisplay(Gameplay_GetRaceMin(), Gameplay_GetRaceSec(),
-                                              Gameplay_GetRaceMsec());
+                Gameplay_UpdateChronoDisplay(Gameplay_GetRaceMin(),
+                                             Gameplay_GetRaceSec(),
+                                             Gameplay_GetRaceMsec());
                 const RaceState* state = Race_GetState();
                 Gameplay_UpdateLapDisplay(Gameplay_GetCurrentLap(), state->totalLaps);
             }

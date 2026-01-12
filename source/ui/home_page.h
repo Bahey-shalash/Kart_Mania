@@ -46,8 +46,8 @@ void HomePage_Initialize(void);
  *
  * Returns:
  *   MAPSELECTION     - User selected Singleplayer
- *   MULTIPLAYER_LOBBY - User selected Multiplayer (if WiFi enabled and connection succeeded)
- *   REINIT_HOME      - Multiplayer connection failed, reinitialize home
+ *   MULTIPLAYER_LOBBY - User selected Multiplayer (if WiFi enabled and connection
+ * succeeded) REINIT_HOME      - Multiplayer connection failed, reinitialize home
  *   SETTINGS         - User selected Settings
  *   HOME_PAGE        - Stay on screen (no selection or WiFi disabled for multiplayer)
  *

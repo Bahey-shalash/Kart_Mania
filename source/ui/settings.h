@@ -39,7 +39,8 @@ void Settings_Initialize(void);
  * Updates the Settings screen state. Handles input and toggle logic.
  *
  * Controls:
- *   - D-Pad: Navigate between settings (Up/Down for vertical, Left/Right for bottom row)
+ *   - D-Pad: Navigate between settings (Up/Down for vertical, Left/Right for bottom
+ * row)
  *   - Touch: Direct selection by touching setting labels or toggle pills
  *   - A Button: Toggle selected setting or activate button (Save/Back/Home)
  *   - START+SELECT+A on Save: Factory reset all settings to defaults

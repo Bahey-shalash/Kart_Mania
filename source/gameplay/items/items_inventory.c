@@ -24,8 +24,7 @@
 //=============================================================================
 static int findCarAhead(int currentRank, int carCount);
 static int findCarInDirection(const Vec2* fromPosition, int direction512,
-                              int playerIndex,
-                              const Car* cars, int carCount);
+                              int playerIndex, const Car* cars, int carCount);
 static int Items_GetFireAngle(const Car* player, bool fireForward);
 static void Items_DropHazardBehind(const Car* player, Item itemType, int offsetPixels);
 static void Items_FireShell(const Car* player, Item itemType, bool fireForward,
@@ -131,9 +130,9 @@ Item Items_GetRandomItem(int playerRank) {
         rankIndex = 7;
 
     const RaceState* state = Race_GetState();
-    const ItemProbability* table =
-        (state && state->gameMode == MultiPlayer) ? ITEM_PROBABILITIES_MP
-                                                  : ITEM_PROBABILITIES_SP;
+    const ItemProbability* table = (state && state->gameMode == MultiPlayer)
+                                       ? ITEM_PROBABILITIES_MP
+                                       : ITEM_PROBABILITIES_SP;
     const ItemProbability* prob = &table[rankIndex];
 
     // Calculate total probability
@@ -194,8 +193,7 @@ static int findCarAhead(int currentRank, int carCount) {
 // Find the car that is most ahead in the given direction
 // direction512: The angle to search in (typically player's facing angle)
 static int findCarInDirection(const Vec2* fromPosition, int direction512,
-                              int playerIndex,
-                              const Car* cars, int carCount) {
+                              int playerIndex, const Car* cars, int carCount) {
     // If there's only one car (player), return invalid
     if (carCount <= 1) {
         return INVALID_CAR_INDEX;

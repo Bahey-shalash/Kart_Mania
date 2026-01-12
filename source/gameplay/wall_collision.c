@@ -155,7 +155,7 @@ static const QuadrantWalls quadrantWalls[9] = {
  * Returns: true if collision detected, false otherwise
  */
 static inline bool Wall_SegmentCollision(const WallSegment* wall, int carX, int carY,
-                                          int radius) {
+                                         int radius) {
     if (wall->type == WALL_HORIZONTAL) {
         int distY = (carY > wall->fixed_coord) ? (carY - wall->fixed_coord)
                                                : (wall->fixed_coord - carY);

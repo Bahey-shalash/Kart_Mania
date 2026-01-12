@@ -40,7 +40,8 @@
  * Returns: true if all channels within tolerance, false otherwise
  */
 static inline bool Terrain_ColorMatches5bit(int r5, int g5, int b5, int targetR5,
-                                             int targetG5, int targetB5, int tolerance) {
+                                            int targetG5, int targetB5,
+                                            int tolerance) {
     return (abs(r5 - targetR5) <= tolerance && abs(g5 - targetG5) <= tolerance &&
             abs(b5 - targetB5) <= tolerance);
 }
@@ -60,12 +61,12 @@ static inline bool Terrain_ColorMatches5bit(int r5, int g5, int b5, int targetR5
 static inline bool Terrain_IsGrayTrack5bit(int r5, int g5, int b5) {
     // Check for main gray (12,12,12)
     if (Terrain_ColorMatches5bit(r5, g5, b5, GRAY_MAIN_R5, GRAY_MAIN_G5, GRAY_MAIN_B5,
-                                  COLOR_TOLERANCE_5BIT))
+                                 COLOR_TOLERANCE_5BIT))
         return true;
 
     // Check for light gray (14,14,14)
-    if (Terrain_ColorMatches5bit(r5, g5, b5, GRAY_LIGHT_R5, GRAY_LIGHT_G5, GRAY_LIGHT_B5,
-                                  COLOR_TOLERANCE_5BIT))
+    if (Terrain_ColorMatches5bit(r5, g5, b5, GRAY_LIGHT_R5, GRAY_LIGHT_G5,
+                                 GRAY_LIGHT_B5, COLOR_TOLERANCE_5BIT))
         return true;
 
     return false;
@@ -132,7 +133,7 @@ bool Terrain_IsOnSand(int x, int y, QuadrantID quad) {
 
     // Check 2: If matches sand colors, IS sand
     return Terrain_ColorMatches5bit(r5, g5, b5, SAND_PRIMARY_R5, SAND_PRIMARY_G5,
-                                     SAND_PRIMARY_B5, COLOR_TOLERANCE_5BIT) ||
+                                    SAND_PRIMARY_B5, COLOR_TOLERANCE_5BIT) ||
            Terrain_ColorMatches5bit(r5, g5, b5, SAND_SECONDARY_R5, SAND_SECONDARY_G5,
-                                     SAND_SECONDARY_B5, COLOR_TOLERANCE_5BIT);
+                                    SAND_SECONDARY_B5, COLOR_TOLERANCE_5BIT);
 }

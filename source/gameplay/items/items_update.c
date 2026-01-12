@@ -108,8 +108,7 @@ static void Items_ReceiveMultiplayerUpdates(RaceState* raceState) {
         if (itemData.speed > 0) {
             fireProjectileInternal(itemData.itemType, &itemData.position,
                                    itemData.angle512, itemData.speed,
-                                   INVALID_CAR_INDEX, false,
-                                   itemData.shooterCarIndex);
+                                   INVALID_CAR_INDEX, false, itemData.shooterCarIndex);
         } else {
             placeHazardInternal(itemData.itemType, &itemData.position, false);
         }
@@ -182,8 +181,7 @@ static void Items_TickItemImmunity(TrackItem* item, const RaceState* raceState) 
         if (item->shooterCarIndex >= 0 &&
             item->shooterCarIndex < raceState->carCount) {
             const Car* shooter = &raceState->cars[item->shooterCarIndex];
-            Q16_8 distFromShooter =
-                Vec2_Distance(&item->position, &shooter->position);
+            Q16_8 distFromShooter = Vec2_Distance(&item->position, &shooter->position);
 
             if (distFromShooter >= IMMUNITY_MIN_DISTANCE) {
                 item->immunityTimer = 0;
@@ -191,8 +189,7 @@ static void Items_TickItemImmunity(TrackItem* item, const RaceState* raceState) 
         }
     } else if (item->immunityTimer == -1) {
         if (!item->hasCompletedLap && item->waypointsVisited > 0) {
-            int waypointDiff =
-                abs(item->currentWaypoint - item->startingWaypoint);
+            int waypointDiff = abs(item->currentWaypoint - item->startingWaypoint);
 
             if (waypointDiff <= WAYPOINT_LAP_THRESHOLD &&
                 item->waypointsVisited > 100) {
@@ -226,8 +223,7 @@ static void updateHoming(TrackItem* item, const Car* cars, int carCount) {
     updateHomingTargetLock(item, cars, carCount, isMultiplayer);
 
     Vec2 targetPoint = item->position;
-    updateHomingTargetPoint(item, cars, carCount, isMultiplayer, state,
-                            &targetPoint);
+    updateHomingTargetPoint(item, cars, carCount, isMultiplayer, state, &targetPoint);
     applyHomingTurn(item, &targetPoint);
 }
 
@@ -363,8 +359,7 @@ static void applyProjectileHit(TrackItem* item, Car* car) {
 }
 
 static bool isHazardHit(const TrackItem* item, const Car* car) {
-    return checkItemCarCollision(&item->position, &car->position,
-                                 item->hitbox_width);
+    return checkItemCarCollision(&item->position, &car->position, item->hitbox_width);
 }
 
 static void applyHazardHit(TrackItem* item, Car* car, int carIndex, Car* cars,
@@ -433,7 +428,8 @@ static void explodeBomb(const Vec2* position, Car* cars, int carCount) {
         if (dist <= BOMB_EXPLOSION_RADIUS) {
             // Stop car completely
             cars[i].speed = 0;
-            cars[i].angle512 = (cars[i].angle512 + ANGLE_HALF) & ANGLE_MASK;  // 180° flip
+            cars[i].angle512 =
+                (cars[i].angle512 + ANGLE_HALF) & ANGLE_MASK;  // 180° flip
 
             // Knockback away from bomb
             Vec2 knockbackDir = Vec2_Sub(cars[i].position, *position);

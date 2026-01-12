@@ -26,7 +26,8 @@
 // PUBLIC CONSTANTS
 //=============================================================================
 
-// Note: MAX_CARS, MAX_CHECKPOINTS, QUAD_OFFSET, FINISH_DELAY_FRAMES moved to game_constants.h
+// Note: MAX_CARS, MAX_CHECKPOINTS, QUAD_OFFSET, FINISH_DELAY_FRAMES moved to
+// game_constants.h
 
 //=============================================================================
 // PUBLIC TYPES
@@ -44,11 +45,11 @@ typedef enum {
  * Countdown sequence states before race starts.
  */
 typedef enum {
-    COUNTDOWN_3 = 0,       // Display "3"
-    COUNTDOWN_2,           // Display "2"
-    COUNTDOWN_1,           // Display "1"
-    COUNTDOWN_GO,          // Display "GO!"
-    COUNTDOWN_FINISHED     // Race started, countdown done
+    COUNTDOWN_3 = 0,    // Display "3"
+    COUNTDOWN_2,        // Display "2"
+    COUNTDOWN_1,        // Display "1"
+    COUNTDOWN_GO,       // Display "GO!"
+    COUNTDOWN_FINISHED  // Race started, countdown done
 } CountdownState;
 
 /**
@@ -63,25 +64,25 @@ typedef struct {
  * Complete race state including all cars, lap tracking, and finish status.
  */
 typedef struct {
-    bool raceStarted;          // Race has been initialized
-    bool raceFinished;         // Race completed (all laps done)
+    bool raceStarted;   // Race has been initialized
+    bool raceFinished;  // Race completed (all laps done)
 
-    GameMode gameMode;         // SinglePlayer or MultiPlayer
-    Map currentMap;            // Current track being raced
+    GameMode gameMode;  // SinglePlayer or MultiPlayer
+    Map currentMap;     // Current track being raced
 
-    int carCount;              // Number of cars in race (1 for single, up to 8 for multi)
-    int playerIndex;           // Index of local player (0 for single, varies for multi)
-    Car cars[MAX_CARS];        // All car states
+    int carCount;        // Number of cars in race (1 for single, up to 8 for multi)
+    int playerIndex;     // Index of local player (0 for single, varies for multi)
+    Car cars[MAX_CARS];  // All car states
 
-    int totalLaps;             // Laps required to complete race
+    int totalLaps;  // Laps required to complete race
 
-    int checkpointCount;       // Number of checkpoints (currently unused)
+    int checkpointCount;  // Number of checkpoints (currently unused)
     CheckpointBox checkpoints[MAX_CHECKPOINTS];
 
-    int finishDelayTimer;      // Frames to wait before showing end screen (5 seconds)
-    int finalTimeMin;          // Total race time (minutes)
-    int finalTimeSec;          // Total race time (seconds, 0-59)
-    int finalTimeMsec;         // Total race time (milliseconds, 0-999)
+    int finishDelayTimer;  // Frames to wait before showing end screen (5 seconds)
+    int finalTimeMin;      // Total race time (minutes)
+    int finalTimeSec;      // Total race time (seconds, 0-59)
+    int finalTimeMsec;     // Total race time (milliseconds, 0-999)
 } RaceState;
 
 //=============================================================================

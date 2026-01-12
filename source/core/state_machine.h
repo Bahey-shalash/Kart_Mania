@@ -1,8 +1,9 @@
 /**
  * File: state_machine.h
  * ---------------------
- * Description: Game state machine interface. Manages state transitions, initialization,
- *              and cleanup for all game states (HOME_PAGE, GAMEPLAY, SETTINGS, etc.).
+ * Description: Game state machine interface. Manages state transitions,
+ * initialization, and cleanup for all game states (HOME_PAGE, GAMEPLAY, SETTINGS,
+ * etc.).
  *
  * Authors: Bahey Shalash, Hugo Svolgaard
  * Version: 1.0

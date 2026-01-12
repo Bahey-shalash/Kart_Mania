@@ -53,7 +53,7 @@ static const char* StoragePB_MapToString(Map map) {
  * Returns: true if first time is faster (less than) second time
  */
 static bool StoragePB_IsTimeFaster(int min1, int sec1, int msec1, int min2, int sec2,
-                                    int msec2) {
+                                   int msec2) {
     if (min1 < min2)
         return true;
     if (min1 > min2)
@@ -153,7 +153,8 @@ bool StoragePB_SaveBestTime(Map map, int min, int sec, int msec) {
                 if (strcmp(mapStr, StoragePB_MapToString(map)) == 0) {
                     // Update this line with new time
                     snprintf(lines[lineCount], sizeof(lines[lineCount]),
-                             "%s=%02d:%02d.%03d\n", StoragePB_MapToString(map), min, sec, msec);
+                             "%s=%02d:%02d.%03d\n", StoragePB_MapToString(map), min,
+                             sec, msec);
                     updatedExisting = true;
                 } else {
                     // Keep existing line

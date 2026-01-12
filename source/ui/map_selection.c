@@ -3,9 +3,9 @@
  * ----------------------
  * Description: Implementation of map selection screen. Uses dual-layer graphics with
  *              transparency to create dynamic selection highlights. The sub screen has
- *              a menu UI (BG0) with transparent areas, and selection tiles (BG1) underneath
- *              that change color to indicate which map is selected. The main screen shows
- *              map thumbnails with animated clouds scrolling over them.
+ *              a menu UI (BG0) with transparent areas, and selection tiles (BG1)
+ * underneath that change color to indicate which map is selected. The main screen
+ * shows map thumbnails with animated clouds scrolling over them.
  *
  * Authors: Bahey Shalash, Hugo Svolgaard
  * Version: 1.0

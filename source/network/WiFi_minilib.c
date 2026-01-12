@@ -16,8 +16,8 @@
  * 1. TIMEOUT WATCHDOGS (Critical Fix)
  *    Problem: Original code used infinite loops for AP scanning and connection.
  *             If WiFi was off or AP unavailable, the game would freeze forever.
- *    Solution: Added WIFI_SCAN_TIMEOUT_FRAMES (5s) and WIFI_CONNECT_TIMEOUT_FRAMES (10s)
- *              with frame-based watchdog counters. Game now returns gracefully on timeout.
+ *    Solution: Added WIFI_SCAN_TIMEOUT_FRAMES (5s) and WIFI_CONNECT_TIMEOUT_FRAMES
+ * (10s) with frame-based watchdog counters. Game now returns gracefully on timeout.
  *
  * 2. WIFI LIFECYCLE MANAGEMENT (Hardware Bug Fix)
  *    Problem: Original called Wifi_InitDefault() in initWiFi(), causing "works once"
@@ -61,7 +61,8 @@
 #include <stdio.h>
 #include "../core/game_constants.h"
 
-// Note: LOCAL_PORT, OUT_PORT, WIFI_SCAN_TIMEOUT_FRAMES, WIFI_CONNECT_TIMEOUT_FRAMES moved to game_constants.h
+// Note: LOCAL_PORT, OUT_PORT, WIFI_SCAN_TIMEOUT_FRAMES, WIFI_CONNECT_TIMEOUT_FRAMES
+// moved to game_constants.h
 
 //=============================================================================
 // MODULE STATE

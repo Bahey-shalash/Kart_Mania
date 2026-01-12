@@ -4,7 +4,8 @@
  * Description: Map selection screen for Kart Mania. Displays three racing maps
  *              (Scorching Sands, Alpine Rush, Neon Circuit) with thumbnail previews
  *              and allows player to choose which track to race on. Features animated
- *              cloud background and dual-layer transparency for selection highlighting.
+ *              cloud background and dual-layer transparency for selection
+ * highlighting.
  *
  * Authors: Bahey Shalash, Hugo Svolgaard
  * Version: 1.0
@@ -18,7 +19,8 @@
  *
  *   Sub Screen (Bottom):
  *     - BG0 (priority 0): Menu UI with transparent areas (front layer)
- *     - BG1 (priority 1): Selection tiles positioned under transparent areas (back layer)
+ *     - BG1 (priority 1): Selection tiles positioned under transparent areas (back
+ * layer)
  *     - BG0 has transparent regions where selection highlights should appear
  *     - BG1 tiles underneath show through these transparent areas
  *     - When selected, BG1 tile color changes from BLACK to WHITE

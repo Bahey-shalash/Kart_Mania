@@ -26,8 +26,8 @@
  * Represents a single waypoint on the racing line for projectile navigation.
  */
 typedef struct {
-    Vec2 pos;       // Position (Q16.8 fixed-point)
-    int next;       // Index of next waypoint
+    Vec2 pos;  // Position (Q16.8 fixed-point)
+    int next;  // Index of next waypoint
 } Waypoint;
 
 //=============================================================================

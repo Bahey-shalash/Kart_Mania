@@ -25,9 +25,11 @@
 //=============================================================================
 // Private Constants
 //=============================================================================
-// Note: SCREEN_WIDTH, SCREEN_HEIGHT, MAP_SIZE, MAX_SCROLL_X/Y moved to game_constants.h
-#define COUNTDOWN_NUMBER_DURATION 60  // Frames per countdown number (moved from COUNTDOWN_FRAMES_PER_STEP)
-#define COUNTDOWN_GO_DURATION 60      // Frames for "GO!" display
+// Note: SCREEN_WIDTH, SCREEN_HEIGHT, MAP_SIZE, MAX_SCROLL_X/Y moved to
+// game_constants.h
+#define COUNTDOWN_NUMBER_DURATION \
+    60  // Frames per countdown number (moved from COUNTDOWN_FRAMES_PER_STEP)
+#define COUNTDOWN_GO_DURATION 60  // Frames for "GO!" display
 
 typedef enum {
     CP_STATE_START = 0,
@@ -254,7 +256,7 @@ void Race_Reset(void) {
     KartMania.raceStarted = true;
     KartMania.raceFinished = false;
     itemButtonHeldLast = false;
-    
+
     // Reset finish tracking
     KartMania.finishDelayTimer = 0;
     KartMania.finalTimeMin = 0;
@@ -284,7 +286,7 @@ void Race_MarkAsCompleted(int min, int sec, int msec) {
     KartMania.finalTimeMin = min;
     KartMania.finalTimeSec = sec;
     KartMania.finalTimeMsec = msec;
-    
+
     // Stop race timer
     irqDisable(IRQ_TIMER1);
     irqClear(IRQ_TIMER1);
@@ -302,15 +304,20 @@ static void Race_CalculateScroll(const Car* player, int* outScrollX, int* outScr
     *outScrollX = carCenterX - (SCREEN_WIDTH / 2);
     *outScrollY = carCenterY - (SCREEN_HEIGHT / 2);
 
-    if (*outScrollX < 0) *outScrollX = 0;
-    if (*outScrollY < 0) *outScrollY = 0;
-    if (*outScrollX > MAX_SCROLL_X) *outScrollX = MAX_SCROLL_X;
-    if (*outScrollY > MAX_SCROLL_Y) *outScrollY = MAX_SCROLL_Y;
+    if (*outScrollX < 0)
+        *outScrollX = 0;
+    if (*outScrollY < 0)
+        *outScrollY = 0;
+    if (*outScrollX > MAX_SCROLL_X)
+        *outScrollX = MAX_SCROLL_X;
+    if (*outScrollY > MAX_SCROLL_Y)
+        *outScrollY = MAX_SCROLL_Y;
 }
 
 // Helper: Update network synchronization (multiplayer only)
 static void Race_UpdateNetworkSync(Car* player) {
-    if (!isMultiplayerRace) return;
+    if (!isMultiplayerRace)
+        return;
 
     networkUpdateCounter++;
     if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
@@ -332,7 +339,8 @@ void Race_Tick(void) {
         return;
     }
 
-    if (!Race_IsActive()) return;
+    if (!Race_IsActive())
+        return;
 
     Car* player = &KartMania.cars[KartMania.playerIndex];
 
@@ -363,7 +371,6 @@ void Race_Tick(void) {
     Race_UpdateNetworkSync(player);
 }
 
-
 //=============================================================================
 // Countdown Tick - Only handles network sync, no game logic
 //=============================================================================
@@ -372,12 +379,12 @@ void Race_CountdownTick(void) {
     if (!Race_IsCountdownActive() || !isMultiplayerRace) {
         return;
     }
-    
+
     // Network sync only - share spawn positions
     networkUpdateCounter++;
     if (networkUpdateCounter >= 4) {  // Every 4 frames = 15Hz
         Car* player = &KartMania.cars[KartMania.playerIndex];
-        
+
         // Send my car's spawn position
         Multiplayer_SendCarState(player);
 
@@ -479,21 +486,21 @@ static void checkCheckpointProgression(const Car* car, int carIndex) {
 //=============================================================================
 static bool checkFinishLineCross(const Car* car, int carIndex) {
     int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
-    
+
     bool isNowAbove = (carY < FINISH_LINE_Y);
     bool crossedLine = !wasAboveFinishLine[carIndex] && isNowAbove;
     wasAboveFinishLine[carIndex] = isNowAbove;
-    
+
     if (crossedLine && !hasCompletedFirstCrossing[carIndex]) {
         hasCompletedFirstCrossing[carIndex] = true;
         return false;
     }
-    
+
     if (crossedLine && cpState[carIndex] == CP_STATE_READY_FOR_LAP) {
         cpState[carIndex] = CP_STATE_START;
         return true;
     }
-    
+
     return false;
 }
 //=============================================================================
@@ -502,7 +509,7 @@ static bool checkFinishLineCross(const Car* car, int carIndex) {
 static void applyTerrainEffects(Car* car) {
     int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
     int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
-    
+
     if (Terrain_IsOnSand(carX, carY, loadedQuadrant)) {
         car->friction = SAND_FRICTION;
         if (car->speed > SAND_MAX_SPEED) {
@@ -534,12 +541,12 @@ static void initCarAtSpawn(Car* car, int spawnPosition) {
         car->friction = FRICTION_50CC;
         return;
     }
-    
+
     // Normal spawning logic for connected players
-    int column = (spawnPosition % 2);  // 0 = left (even), 1 = right (odd) 
+    int column = (spawnPosition % 2);      // 0 = left (even), 1 = right (odd)
     int x = START_LINE_X + (column * 32);  // Left column at 904, right at 936
-    int y = START_LINE_Y + (spawnPosition * 24);     
-    
+    int y = START_LINE_Y + (spawnPosition * 24);
+
     Vec2 spawnPos = Vec2_FromInt(x, y);
     car->position = spawnPos;
     car->speed = 0;
@@ -563,7 +570,7 @@ static void handlePlayerInput(Car* player, int carIndex) {
     if (KartMania.raceFinished) {
         return;
     }
-    
+
     scanKeys();
     uint32 held = keysHeld();
 
@@ -668,17 +675,17 @@ void Race_PauseISR(void) {
     if (debounceFrames > 0) {
         return;  // Ignore bounces
     }
-    
+
     // Check if START is actually pressed (not released)
     scanKeys();
     if (!(keysHeld() & KEY_START)) {
         return;  // Button was released, ignore
     }
-    
+
     // Toggle pause state
     isPaused = !isPaused;
     debounceFrames = DEBOUNCE_DELAY;
-    
+
     if (isPaused) {
         RaceTick_TimerPause();
     } else {

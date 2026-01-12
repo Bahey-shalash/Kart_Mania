@@ -309,8 +309,7 @@ static void retransmitUnackedPackets(void) {
 }
 
 static void resendJoinIfNeeded(uint32_t currentTime) {
-    if (currentTime < joinResendDeadlineMs &&
-        currentTime - lastJoinResendMs >= 300) {
+    if (currentTime < joinResendDeadlineMs && currentTime - lastJoinResendMs >= 300) {
         NetworkPacket joinAgain = {
             .version = PROTOCOL_VERSION,
             .msgType = MSG_LOBBY_JOIN,
@@ -368,12 +367,11 @@ static void handleLobbyPacket(const NetworkPacket* packet, uint32_t currentTime)
             players[packet->playerID].lastPacketTime = currentTime;
             players[packet->playerID].lastSeqNumReceived = packet->seqNum;
 
-            NetworkPacket updateAck = {
-                .version = PROTOCOL_VERSION,
-                .msgType = MSG_LOBBY_ACK,
-                .playerID = myPlayerID,
-                .seqNum = 0,
-                .payload.ack = {.ackSeqNum = packet->seqNum}};
+            NetworkPacket updateAck = {.version = PROTOCOL_VERSION,
+                                       .msgType = MSG_LOBBY_ACK,
+                                       .playerID = myPlayerID,
+                                       .seqNum = 0,
+                                       .payload.ack = {.ackSeqNum = packet->seqNum}};
             sendData((char*)&updateAck, sizeof(NetworkPacket));
             break;
         }

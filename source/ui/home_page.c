@@ -65,11 +65,11 @@ typedef struct {
 #define HOME_HL_PAL_BASE 251  // Base palette index for selection tiles
 
 // Menu layout constants
-#define HOME_MENU_X 32          // Menu left edge (pixels)
-#define HOME_MENU_WIDTH 192     // Menu item width (pixels)
-#define HOME_MENU_HEIGHT 40     // Menu item height (pixels)
-#define HOME_MENU_SPACING 54    // Vertical spacing between items (pixels)
-#define HOME_MENU_Y_START 24    // First menu item Y position (pixels)
+#define HOME_MENU_X 32        // Menu left edge (pixels)
+#define HOME_MENU_WIDTH 192   // Menu item width (pixels)
+#define HOME_MENU_HEIGHT 40   // Menu item height (pixels)
+#define HOME_MENU_SPACING 54  // Vertical spacing between items (pixels)
+#define HOME_MENU_Y_START 24  // First menu item Y position (pixels)
 
 // Highlight tile positioning
 #define HIGHLIGHT_TILE_X 6       // Highlight rectangle left edge (tile cols)
@@ -78,7 +78,7 @@ typedef struct {
 
 // UI layout macro for menu item hitboxes
 #define MENU_ITEM_ROW(i)                                                        \
-    {HOME_MENU_X, HOME_MENU_Y_START + (i)*HOME_MENU_SPACING, HOME_MENU_WIDTH, \
+    {HOME_MENU_X, HOME_MENU_Y_START + (i) * HOME_MENU_SPACING, HOME_MENU_WIDTH, \
      HOME_MENU_HEIGHT}
 
 //=============================================================================

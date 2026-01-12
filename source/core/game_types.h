@@ -34,13 +34,13 @@
  *   REINIT_HOME → HOME_PAGE (special: forces full reinit after WiFi failure)
  */
 typedef enum {
-    HOME_PAGE,           // Main menu
-    MAPSELECTION,        // Track selection screen (single player)
-    MULTIPLAYER_LOBBY,   // Multiplayer waiting room
-    GAMEPLAY,            // Active racing
-    PLAYAGAIN,           // Post-race options (retry/home)
-    SETTINGS,            // Settings menu (WiFi, audio toggles)
-    REINIT_HOME          // Forces home page reinit after WiFi failure
+    HOME_PAGE,          // Main menu
+    MAPSELECTION,       // Track selection screen (single player)
+    MULTIPLAYER_LOBBY,  // Multiplayer waiting room
+    GAMEPLAY,           // Active racing
+    PLAYAGAIN,          // Post-race options (retry/home)
+    SETTINGS,           // Settings menu (WiFi, audio toggles)
+    REINIT_HOME         // Forces home page reinit after WiFi failure
 } GameState;
 
 //=============================================================================
@@ -52,10 +52,10 @@ typedef enum {
  * NONEMAP is a sentinel value for "no map selected".
  */
 typedef enum {
-    NONEMAP,          // No map selected (sentinel value)
-    ScorchingSands,   // Desert track (Lap count: 2)
-    AlpinRush,        // Mountain track (Lap count: 10)
-    NeonCircuit       // City track (Lap count: 10)
+    NONEMAP,         // No map selected (sentinel value)
+    ScorchingSands,  // Desert track (Lap count: 2)
+    AlpinRush,       // Mountain track (Lap count: 10)
+    NeonCircuit      // City track (Lap count: 10)
 } Map;
 
 //=============================================================================

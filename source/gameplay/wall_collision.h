@@ -42,10 +42,10 @@ typedef enum {
  *   - min_range/max_range define Y extent
  */
 typedef struct {
-    WallType type;        // Orientation: horizontal or vertical
-    int fixed_coord;      // Fixed axis coordinate (X for vertical, Y for horizontal)
-    int min_range;        // Start of variable axis range
-    int max_range;        // End of variable axis range
+    WallType type;    // Orientation: horizontal or vertical
+    int fixed_coord;  // Fixed axis coordinate (X for vertical, Y for horizontal)
+    int min_range;    // Start of variable axis range
+    int max_range;    // End of variable axis range
 } WallSegment;
 
 /**
@@ -53,7 +53,7 @@ typedef struct {
  */
 typedef struct {
     const WallSegment* segments;  // Array of wall segments
-    int count;                     // Number of segments
+    int count;                    // Number of segments
 } QuadrantWalls;
 
 //=============================================================================

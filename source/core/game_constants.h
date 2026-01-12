@@ -3,7 +3,8 @@
  * ----------------------
  * Description: Central location for all game-tunable constants and magic numbers.
  *              This header defines physics values, collision thresholds, durations,
- *              rendering constants, and other numeric values used throughout the codebase.
+ *              rendering constants, and other numeric values used throughout the
+ * codebase.
  *
  * Authors: Bahey Shalash, Hugo Svolgaard
  * Version: 1.0
@@ -19,11 +20,11 @@
 // Screen & Map Dimensions
 //=============================================================================
 
-#define SCREEN_WIDTH 256    // Nintendo DS screen width in pixels
-#define SCREEN_HEIGHT 192   // Nintendo DS screen height in pixels
-#define MAP_SIZE 1024       // Full map size in pixels (1024×1024)
-#define QUADRANT_SIZE 512   // Size of double quadrant (for bounds checking)
-#define QUAD_OFFSET 256     // Quadrant offset size (256×256 per quadrant)
+#define SCREEN_WIDTH 256   // Nintendo DS screen width in pixels
+#define SCREEN_HEIGHT 192  // Nintendo DS screen height in pixels
+#define MAP_SIZE 1024      // Full map size in pixels (1024×1024)
+#define QUADRANT_SIZE 512  // Size of double quadrant (for bounds checking)
+#define QUAD_OFFSET 256    // Quadrant offset size (256×256 per quadrant)
 
 // Scroll limits
 #define MAX_SCROLL_X (MAP_SIZE - SCREEN_WIDTH)   // 768
@@ -130,10 +131,10 @@
 
 // Projectile & hazard lifetimes (in seconds)
 #define PROJECTILE_LIFETIME_SECONDS \
-    20                             // Max lifetime for green/red shells and missiles
-#define BOMB_LIFETIME_SECONDS 2    // Time until bomb auto-explodes
+    20                              // Max lifetime for green/red shells and missiles
+#define BOMB_LIFETIME_SECONDS 2     // Time until bomb auto-explodes
 #define BANANA_LIFETIME_SECONDS 30  // Bananas despawn after 30 seconds
-#define ITEM_LIFETIME_INFINITE -1  // Marker for items that never expire
+#define ITEM_LIFETIME_INFINITE -1   // Marker for items that never expire
 
 //=============================================================================
 // Item Effect Constants
@@ -216,9 +217,9 @@
 // Race Display & UI Timing
 //=============================================================================
 
-#define FINISH_DISPLAY_FRAMES 150        // 2.5 seconds at 60fps for final time display
-#define FINISH_DELAY_FRAMES (5 * 60)     // 5 seconds at 60fps before showing end screen
-#define COUNTDOWN_FRAMES_PER_STEP 60     // 1 second per countdown number at 60fps
+#define FINISH_DISPLAY_FRAMES 150     // 2.5 seconds at 60fps for final time display
+#define FINISH_DELAY_FRAMES (5 * 60)  // 5 seconds at 60fps before showing end screen
+#define COUNTDOWN_FRAMES_PER_STEP 60  // 1 second per countdown number at 60fps
 
 //=============================================================================
 // Special Values & Sentinels
@@ -231,27 +232,28 @@
 // Car Physics Constants
 //=============================================================================
 
-#define CAR_NAME_MAX_LENGTH 31  // Maximum length for car name (without null terminator)
+#define CAR_NAME_MAX_LENGTH \
+    31  // Maximum length for car name (without null terminator)
 
 //=============================================================================
 // Terrain Detection Constants (RGB 5-bit values)
 //=============================================================================
 
 // Track colors (gray)
-#define GRAY_MAIN_R5 12     // Main gray track R channel (5-bit)
-#define GRAY_MAIN_G5 12     // Main gray track G channel (5-bit)
-#define GRAY_MAIN_B5 12     // Main gray track B channel (5-bit)
-#define GRAY_LIGHT_R5 14    // Light gray track R channel (5-bit)
-#define GRAY_LIGHT_G5 14    // Light gray track G channel (5-bit)
-#define GRAY_LIGHT_B5 14    // Light gray track B channel (5-bit)
+#define GRAY_MAIN_R5 12   // Main gray track R channel (5-bit)
+#define GRAY_MAIN_G5 12   // Main gray track G channel (5-bit)
+#define GRAY_MAIN_B5 12   // Main gray track B channel (5-bit)
+#define GRAY_LIGHT_R5 14  // Light gray track R channel (5-bit)
+#define GRAY_LIGHT_G5 14  // Light gray track G channel (5-bit)
+#define GRAY_LIGHT_B5 14  // Light gray track B channel (5-bit)
 
 // Sand colors (beige/tan)
-#define SAND_PRIMARY_R5 20      // Primary sand R channel (5-bit)
-#define SAND_PRIMARY_G5 18      // Primary sand G channel (5-bit)
-#define SAND_PRIMARY_B5 12      // Primary sand B channel (5-bit)
-#define SAND_SECONDARY_R5 22    // Secondary sand R channel (5-bit)
-#define SAND_SECONDARY_G5 20    // Secondary sand G channel (5-bit)
-#define SAND_SECONDARY_B5 14    // Secondary sand B channel (5-bit)
+#define SAND_PRIMARY_R5 20    // Primary sand R channel (5-bit)
+#define SAND_PRIMARY_G5 18    // Primary sand G channel (5-bit)
+#define SAND_PRIMARY_B5 12    // Primary sand B channel (5-bit)
+#define SAND_SECONDARY_R5 22  // Secondary sand R channel (5-bit)
+#define SAND_SECONDARY_G5 20  // Secondary sand G channel (5-bit)
+#define SAND_SECONDARY_B5 14  // Secondary sand B channel (5-bit)
 
 // Tolerance for color matching
 #define COLOR_TOLERANCE_5BIT 1  // ±1 unit tolerance per channel
@@ -266,11 +268,11 @@
 // Network Constants
 //=============================================================================
 
-#define LOCAL_PORT 8888             // Local UDP port for multiplayer
-#define OUT_PORT 8888               // Remote UDP port for multiplayer
-#define WIFI_SCAN_TIMEOUT_FRAMES 300    // 5 seconds at 60Hz for WiFi scan
+#define LOCAL_PORT 8888                  // Local UDP port for multiplayer
+#define OUT_PORT 8888                    // Remote UDP port for multiplayer
+#define WIFI_SCAN_TIMEOUT_FRAMES 300     // 5 seconds at 60Hz for WiFi scan
 #define WIFI_CONNECT_TIMEOUT_FRAMES 600  // 10 seconds at 60Hz for connection
-#define WIFI_RETRY_MAX 3            // Maximum WiFi connection retry attempts
+#define WIFI_RETRY_MAX 3                 // Maximum WiFi connection retry attempts
 
 //=============================================================================
 // Item Navigation Constants

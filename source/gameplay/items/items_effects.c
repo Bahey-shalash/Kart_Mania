@@ -45,8 +45,7 @@ void Items_UpdatePlayerEffects(Car* player, PlayerItemEffects* effects) {
 
     // Update oil slow effect (distance-based)
     if (effects->oilSlowActive) {
-        Q16_8 distTraveled =
-            Vec2_Distance(&player->position, &effects->oilSlowStart);
+        Q16_8 distTraveled = Vec2_Distance(&player->position, &effects->oilSlowStart);
         if (distTraveled >= OIL_SLOW_DISTANCE) {
             effects->oilSlowActive = false;
             // Note: Friction/accel recovery is handled automatically by

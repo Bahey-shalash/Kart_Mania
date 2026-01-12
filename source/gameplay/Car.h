@@ -163,8 +163,7 @@ static inline Car emptyCar(const char* name) {
  *   friction  - Friction multiplier (0-256)
  */
 void Car_Init(Car* car, const Vec2* pos, const char* name, Q16_8 maxSpeed,
-              Q16_8 accelRate,
-              Q16_8 friction);
+              Q16_8 accelRate, Q16_8 friction);
 
 /**
  * Function: Car_Reset

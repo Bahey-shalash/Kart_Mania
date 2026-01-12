@@ -45,7 +45,7 @@
 #define GREEN_SHELL_SPEED_MULT FixedDiv(IntToFixed(3), IntToFixed(2))  // 1.5x
 #define RED_SHELL_SPEED_MULT FixedDiv(IntToFixed(6), IntToFixed(5))    // 1.2x
 #define MISSILE_SPEED_MULT FixedDiv(IntToFixed(17), IntToFixed(10))    // 1.7x
-#define SPEED_BOOST_MULT IntToFixed(2)  // 2x max speed
+#define SPEED_BOOST_MULT IntToFixed(2)                                 // 2x max speed
 
 // Note: Applying a second speed boost while one is active will reset
 // the timer to full duration but maintain the original maxSpeed reference,

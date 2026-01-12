@@ -56,8 +56,7 @@ extern u16* oilSlickGfx;
  *   shooterCarIndex - Index of car that fired the projectile
  */
 void fireProjectileInternal(Item type, const Vec2* pos, int angle512, Q16_8 speed,
-                            int targetCarIndex, bool sendNetwork,
-                            int shooterCarIndex);
+                            int targetCarIndex, bool sendNetwork, int shooterCarIndex);
 
 /**
  * Function: placeHazardInternal
