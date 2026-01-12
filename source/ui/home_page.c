@@ -73,8 +73,8 @@ typedef struct {
 
 // Highlight tile positioning
 #define HIGHLIGHT_TILE_X 6       // Highlight rectangle left edge (tile cols)
-#define HIGHLIGHT_TILE_WIDTH 20  // Highlight rectangle width (tiles)
-#define HIGHLIGHT_TILE_HEIGHT 3  // Highlight rectangle height (tiles)
+#define HIGHLIGHT_TILE_WIDTH 21  // Highlight rectangle width (tiles)
+#define HIGHLIGHT_TILE_HEIGHT 4  // Highlight rectangle height (tiles)
 
 // UI layout macro for menu item hitboxes
 #define MENU_ITEM_ROW(i)                                                        \
