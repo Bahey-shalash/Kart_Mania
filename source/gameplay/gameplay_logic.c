@@ -485,10 +485,12 @@ static void checkCheckpointProgression(const Car* car, int carIndex) {
 // Finish Line Detection
 //=============================================================================
 static bool checkFinishLineCross(const Car* car, int carIndex) {
+    int carX = FixedToInt(car->position.x) + CAR_SPRITE_CENTER_OFFSET;
     int carY = FixedToInt(car->position.y) + CAR_SPRITE_CENTER_OFFSET;
 
+    bool isWithinFinishLineX = (carX >= FINISH_LINE_X_MIN && carX <= FINISH_LINE_X_MAX);
     bool isNowAbove = (carY < FINISH_LINE_Y);
-    bool crossedLine = !wasAboveFinishLine[carIndex] && isNowAbove;
+    bool crossedLine = !wasAboveFinishLine[carIndex] && isNowAbove && isWithinFinishLineX;
     wasAboveFinishLine[carIndex] = isNowAbove;
 
     if (crossedLine && !hasCompletedFirstCrossing[carIndex]) {
