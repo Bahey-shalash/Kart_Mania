@@ -1,3 +1,5 @@
 # Override GitHub language detection
 *.html linguist-detectable=false
 figures/** linguist-documentation
+figures/gameplayKART/* linguist-documentation
+figures/entities/* linguist-documentation
