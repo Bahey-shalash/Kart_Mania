@@ -10,6 +10,7 @@ Nintendo DS homebrew kart racer with singleplayer time trials and local WiFi mul
 - Full item set: bananas, oil, turbo mushroom (control invert), speed boost, green/red shells, bombs, missiles.
 - Animated dual-screen menus (home, settings, map select, play again) with touch or D-pad navigation.
 - Persistent settings/best times saved to SD; WiFi preference stored but stack always stays alive.
+- Gameplay physics and movement use **fixed-point arithmetic** for deterministic behavior and performance on Nintendo DS hardware (no FPU).
 
 ## Documentation
 - Main wiki: [docs/wiki.md](docs/wiki.md)
